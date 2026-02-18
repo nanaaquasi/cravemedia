@@ -111,13 +111,15 @@ export default function Home() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/25">
             C
           </div>
-          <span className="text-lg font-semibold tracking-tight">CurateAI</span>
+          <span className="text-lg font-semibold tracking-tight">
+            cravemedia
+          </span>
         </div>
 
         <button
           onClick={() => setShowSavedLists(true)}
           className="relative p-2.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
-          aria-label="Saved lists"
+          aria-label="My Cravings"
         >
           <svg
             width="20"
@@ -139,18 +141,19 @@ export default function Home() {
         </button>
       </header>
 
-      {/* "What are you in the mood for?" + Search form - centered */}
+      {/* "What are you craving?" + Search form - centered */}
       <div className="flex-1 flex flex-col justify-center">
-        <div className="text-center max-w-lg mx-auto px-4 sm:px-6 mb-4 sm:mb-6">
+        <div className="text-center max-w-lg mx-auto px-4 sm:px-6 mb-10 sm:mb-6">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradientShift_6s_ease_infinite]">
-              What are you in
+              What are you
             </span>
             <br />
-            <span className="text-white">the mood for?</span>
+            <span className="text-white">craving?</span>
           </h1>
-          <p className="text-[var(--text-secondary)] text-lg">
-            Discover movies, shows & books
+          <p className="text-[var(--text-secondary)] text-base leading-relaxed max-w-md mx-auto">
+            Let us guide you to your next favorite show, movie, or book through
+            personalized journeys that actually make sense.
           </p>
         </div>
 

@@ -31,7 +31,9 @@ export default function QueryInputBar({
 }: QueryInputBarProps) {
   const [query, setQuery] = useState("");
   const [placeholder, setPlaceholder] = useState(placeholders[0]);
-  const [showSuggestions, setShowSuggestions] = useState(showSuggestionsByDefault);
+  const [showSuggestions, setShowSuggestions] = useState(
+    showSuggestionsByDefault,
+  );
 
   // Rotate placeholder after mount (client-only) to avoid hydration mismatch
   useEffect(() => {
@@ -196,7 +198,7 @@ export default function QueryInputBar({
             maxLength={500}
             disabled={isLoading}
             className="flex-1 bg-transparent text-base md:text-lg text-white placeholder:text-white/50 outline-none disabled:opacity-50 min-w-0"
-            aria-label="Describe what you want to watch or read"
+            aria-label="Tell us what you're craving"
           />
           <div className="flex items-center gap-1 flex-shrink-0">
             {query.length > 0 && (
@@ -253,7 +255,7 @@ export default function QueryInputBar({
             AI
           </span>
           <span className="text-sm text-white/50">
-            CurateAI may create unexpected results.
+            cravemedia may create unexpected results.
           </span>
         </div>
       </div>

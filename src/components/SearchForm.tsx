@@ -102,7 +102,7 @@ export default function SearchForm({
               maxLength={500}
               disabled={isLoading}
               className="flex-1 bg-transparent text-2xl text-white outline-none resize-none min-h-[140px] disabled:opacity-50 caret-white relative"
-              aria-label="Describe what you want to watch or read"
+              aria-label="Tell us what you're craving"
             />
             <div className="flex items-center justify-end gap-2 mt-4">
               {!isEmpty && (
@@ -158,7 +158,7 @@ export default function SearchForm({
             AI
           </span>
           <span className="text-sm text-white/45">
-            CurateAI may create unexpected results.
+            cravemedia may create unexpected results.
           </span>
         </div>
       </div>

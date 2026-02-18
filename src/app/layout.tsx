@@ -15,11 +15,11 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "CurateAI — Discover Movies, TV Shows & Books",
+  title: "Cravemedia — Discover Movies, TV Shows & Books",
   description:
-    "AI-powered media recommendations. Describe what you're in the mood for and get curated lists of movies, TV shows, and books.",
+    "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.",
   openGraph: {
-    title: "CurateAI — Discover Movies, TV Shows & Books",
+    title: "Cravemedia — Discover Movies, TV Shows & Books",
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     type: "website",

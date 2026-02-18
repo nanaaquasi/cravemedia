@@ -57,11 +57,11 @@ export default function SavedListsPanel({
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[var(--bg-primary)]/90 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-white/5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Saved Lists</h2>
+            <h2 className="text-lg font-semibold">My Cravings</h2>
             <button
               onClick={onClose}
               className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label="Close saved lists"
+              aria-label="Close my cravings"
             >
               <svg
                 width="18"
@@ -86,7 +86,7 @@ export default function SavedListsPanel({
             <div className="text-center py-16">
               <p className="text-4xl mb-3">📋</p>
               <p className="text-[var(--text-secondary)] text-sm">
-                No saved lists yet
+                No saved cravings yet
               </p>
               <p className="text-[var(--text-muted)] text-xs mt-1">
                 Add items from recommendations to create a list
