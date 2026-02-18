@@ -279,7 +279,6 @@ function SearchContent() {
                   <p className="text-sm text-purple-300/80 mb-2 flex items-center gap-1.5">
                     {results.collectionDescription}
                   </p>
-                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
                   <div className="flex flex-wrap items-center gap-3 mb-4">
                     <ContentTypeSelector
                       selected={contentType}
@@ -295,6 +294,7 @@ function SearchContent() {
                   >
                     Save list
                   </button>
+                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
                 </aside>
 
                 {/* Right: Cards grid - 3 per row on desktop, 7/12 of width */}
