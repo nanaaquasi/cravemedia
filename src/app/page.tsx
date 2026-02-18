@@ -19,7 +19,6 @@ const SUGGESTION_QUERIES = [
   "Dark psychological thrillers that make you question reality",
   "Cozy feel-good stories for a rainy day",
   "Epic sci-fi world building like Dune",
-  "The Marvel Avengers series in order",
   "Hidden gems from the 2010s",
   "Stories about found family and belonging",
   "Movies that will make you cry",
