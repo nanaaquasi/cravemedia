@@ -339,10 +339,9 @@ function SearchContent() {
                   onSaveJourney={handleSaveJourney}
                   onAddToList={handleAddToList}
                   onMoreLikeThis={handleMoreLikeThis}
+                  onRefine={handleRefine}
+                  isLoading={isLoading}
                 />
-                <div className="px-4 sm:px-6 md:px-8 pb-6">
-                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
-                </div>
               </div>
             )}
         </div>

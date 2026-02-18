@@ -5,6 +5,7 @@ import Link from "next/link";
 import { JourneyItem, JourneyResponse } from "@/lib/types";
 import { useJourneyProgress } from "@/hooks/useJourneyProgress";
 import { useState } from "react";
+import RefineBar from "@/components/RefineBar";
 
 interface JourneyPathProps {
   journey: JourneyResponse;
@@ -12,6 +13,8 @@ interface JourneyPathProps {
   onSaveJourney: () => void;
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
+  onRefine?: (feedback: string) => void;
+  isLoading?: boolean;
 }
 
 function formatRuntime(totalMinutes: number): string {
@@ -27,6 +30,8 @@ export default function JourneyPath({
   onSaveJourney,
   onAddToList,
   onMoreLikeThis,
+  onRefine,
+  isLoading = false,
 }: JourneyPathProps) {
   const { getProgressForJourney, markWatched } = useJourneyProgress(journeyId);
   const progress = getProgressForJourney(journeyId);
@@ -75,6 +80,7 @@ export default function JourneyPath({
           >
             Save journey
           </button>
+          {onRefine && <RefineBar onRefine={onRefine} isLoading={isLoading} />}
         </div>
       </aside>
 
