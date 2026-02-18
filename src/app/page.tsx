@@ -9,6 +9,13 @@ import SavedListsPanel from "@/components/SavedListsPanel";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
 
+const ROTATING_WORDS = [
+  "craving?",
+  "in the mood for?",
+  "looking for?",
+  "obsessed with?",
+];
+
 const SUGGESTION_QUERIES = [
   "Dark psychological thrillers that make you question reality",
   "Cozy feel-good stories for a rainy day",
@@ -27,6 +34,21 @@ export default function Home() {
   const { lists, deleteList, removeItemFromList, exportListAsText } =
     useLists();
   const refine = useIntentRefine();
+
+  // Cycling headline word
+  const [wordIndex, setWordIndex] = useState(0);
+  const [isFading, setIsFading] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsFading(true);
+      setTimeout(() => {
+        setWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
+        setIsFading(false);
+      }, 400);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Navigate to search when refinement completes
   useEffect(() => {
@@ -149,7 +171,11 @@ export default function Home() {
               What are you
             </span>
             <br />
-            <span className="text-white">craving?</span>
+            <span
+              className={`text-white inline-block transition-all duration-400 ${isFading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}
+            >
+              {ROTATING_WORDS[wordIndex]}
+            </span>
           </h1>
           <p className="text-[var(--text-secondary)] text-base leading-relaxed max-w-md mx-auto">
             Let us guide you to your next favorite show, movie, or book through
