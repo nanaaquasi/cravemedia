@@ -170,7 +170,7 @@ export default function IntentRefineStep({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onModeSelected("list")}
-                className="group relative p-6 rounded-2xl border border-white/10 bg-white/[0.04] hover:border-purple-500/40 hover:bg-purple-500/[0.06] transition-all duration-300 cursor-pointer text-left"
+                className="group liquid-glass p-6 rounded-2xl hover:border-purple-500/40 transition-all duration-300 cursor-pointer text-left"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
@@ -219,7 +219,7 @@ export default function IntentRefineStep({
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onModeSelected("journey")}
-                className="group relative p-6 rounded-2xl border border-white/10 bg-white/[0.04] hover:border-pink-500/40 hover:bg-pink-500/[0.06] transition-all duration-300 cursor-pointer text-left"
+                className="group liquid-glass p-6 rounded-2xl hover:border-pink-500/40 transition-all duration-300 cursor-pointer text-left"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">

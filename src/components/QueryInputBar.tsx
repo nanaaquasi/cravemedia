@@ -105,7 +105,7 @@ export default function QueryInputBar({
       {/* Suggestions - above input when dropdown, below when inline (bottom sheet) */}
       {shouldShowSuggestions && !showSuggestionsByDefault && (
         <div className="absolute bottom-full left-0 right-0 mb-3 max-h-64 overflow-y-auto z-10">
-          <div className="rounded-2xl overflow-hidden bg-black/40 backdrop-blur-xl border border-white/[0.08] shadow-2xl">
+          <div className="rounded-2xl overflow-hidden liquid-glass-strong shadow-2xl">
             {hasQuickSuggestions && (
               <div className="p-3">
                 <p className="px-3 pb-2 text-sm font-medium text-white/50 uppercase tracking-wider">

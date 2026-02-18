@@ -68,10 +68,8 @@ export default function SearchForm({
 
         {/* Big Typeform-like input - textarea with cycling placeholder ideas */}
         <div
-          className={`relative rounded-3xl bg-[#1a1a1f] border transition-all duration-200 min-h-[200px] ${
-            isEmpty
-              ? "border-white/[0.06] hover:border-white/[0.1]"
-              : "border-white/[0.1]"
+          className={`relative rounded-3xl liquid-glass-strong transition-all duration-200 min-h-[200px] ${
+            isEmpty ? "" : "ring-1 ring-purple-500/40"
           }`}
         >
           <div className="relative min-h-[200px] flex flex-col p-5 sm:p-8">

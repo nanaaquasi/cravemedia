@@ -32,7 +32,7 @@ export default function RecommendationItem({
       : null;
 
   const cardProps = {
-    className: `group stagger-item relative rounded-2xl overflow-hidden bg-[var(--bg-card)] border border-white/[0.06] hover:border-white/10 hover:bg-white/[0.06] transition-all duration-300 block ${detailHref ? "cursor-pointer" : "cursor-default"}`,
+    className: `group stagger-item liquid-glass rounded-2xl transition-all duration-300 block ${detailHref ? "cursor-pointer" : "cursor-default"}`,
     style: { animationDelay: `${index * 50}ms` } as React.CSSProperties,
     onMouseEnter: () => setShowActions(true),
     onMouseLeave: () => setShowActions(false),

@@ -100,7 +100,7 @@ export default function JourneyPath({
                     ? "border-purple-500/60 bg-purple-500/10 ring-2 ring-purple-500/30"
                     : isLocked
                       ? "border-white/[0.04] bg-white/[0.02] opacity-60"
-                      : "border-white/[0.06] bg-[var(--bg-card)] hover:border-white/10"
+                      : "liquid-glass"
                 }`}
                 onMouseEnter={() => setShowActionsFor(position)}
                 onMouseLeave={() => setShowActionsFor(null)}
