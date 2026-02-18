@@ -37,7 +37,7 @@ export default function ContentTypeSelector({
           key={type.value}
           onClick={() => onChange(type.value)}
           className={`
-            flex items-center gap-2 px-5 py-1.5 md:py-2 rounded-full text-sm md:text-lg font-medium flex-shrink-0
+            flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium flex-shrink-0
             transition-all duration-200 cursor-pointer whitespace-nowrap
             ${
               selected === type.value

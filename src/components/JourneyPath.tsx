@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { JourneyItem, JourneyResponse } from "@/lib/types";
 import { useJourneyProgress } from "@/hooks/useJourneyProgress";
 import { useState } from "react";
 import RefineBar from "@/components/RefineBar";
+import JourneyItemCard from "@/components/JourneyItemCard";
 
 interface JourneyPathProps {
   journey: JourneyResponse;
@@ -100,128 +99,17 @@ export default function JourneyPath({
           return (
             <div key={`${item.title}-${position}`} className="w-full">
               {/* Node Card */}
-              <div
-                className={`relative rounded-2xl overflow-hidden border transition-all duration-300 ${
-                  isCurrent
-                    ? "border-purple-500/60 bg-purple-500/10 ring-2 ring-purple-500/30"
-                    : isLocked
-                      ? "border-white/[0.04] bg-white/[0.02] opacity-60"
-                      : "liquid-glass"
-                }`}
-                onMouseEnter={() => setShowActionsFor(position)}
-                onMouseLeave={() => setShowActionsFor(null)}
-              >
-                {isCurrent && (
-                  <div className="absolute top-3 left-3 z-10 px-2 py-1 rounded-full bg-purple-500/90 text-xs font-bold text-white">
-                    YOU ARE HERE
-                  </div>
-                )}
-                <div className="flex flex-col sm:flex-row gap-4 p-4">
-                  {/* Poster */}
-                  <div className="relative w-full sm:w-32 aspect-[2/3] flex-shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/30">
-                    {item.posterUrl ? (
-                      <Image
-                        src={item.posterUrl}
-                        alt={item.title}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                        sizes="128px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl">
-                        {item.type === "movie"
-                          ? "🎬"
-                          : item.type === "tv"
-                            ? "📺"
-                            : "📚"}
-                      </div>
-                    )}
-                    {item.rating && (
-                      <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-xs font-medium text-amber-300">
-                        ★ {item.rating}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-[var(--text-muted)]">
-                        Step {position} of {journey.itemCount}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[var(--text-muted)]">
-                        {item.difficultyLevel}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-[var(--text-secondary)] mb-2">
-                      {item.creator} · {item.year}
-                      {item.runtime && ` · ${item.runtime}`}
-                    </p>
-
-                    <div className="mb-2">
-                      <p className="text-xs font-medium text-[var(--text-muted)] mb-0.5">
-                        Why this step
-                      </p>
-                      <p className="text-sm text-[var(--text-secondary)]">
-                        {item.whyThisPosition}
-                      </p>
-                    </div>
-
-                    {item.whatYoullLearn && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {item.keyThemes?.slice(0, 4).map((theme) => (
-                          <span
-                            key={theme}
-                            className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-[var(--text-muted)]"
-                          >
-                            {theme}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap gap-2">
-                      {!isLocked && (
-                        <button
-                          onClick={() => markWatched(journeyId, position)}
-                          className="text-xs px-3 py-1.5 rounded-full bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors cursor-pointer"
-                        >
-                          Mark watched
-                        </button>
-                      )}
-                      {(item.type === "movie" || item.type === "tv") &&
-                        item.externalId && (
-                          <Link
-                            href={`/media/${item.type}/${item.externalId}`}
-                            className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors"
-                          >
-                            Details
-                          </Link>
-                        )}
-                      {onAddToList && showActionsFor === position && (
-                        <button
-                          onClick={() => onAddToList(item)}
-                          className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors cursor-pointer"
-                        >
-                          Add to list
-                        </button>
-                      )}
-                      {onMoreLikeThis && showActionsFor === position && (
-                        <button
-                          onClick={() => onMoreLikeThis(item)}
-                          className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors cursor-pointer"
-                        >
-                          More like this
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <JourneyItemCard
+                item={item}
+                journeyId={journeyId}
+                isCurrent={isCurrent}
+                isLocked={isLocked!}
+                setShowActionsFor={setShowActionsFor}
+                showActionsFor={showActionsFor}
+                onMarkWatched={markWatched}
+                onAddToList={onAddToList}
+                onMoreLikeThis={onMoreLikeThis}
+              />
 
               {/* Transition to next */}
               {item.transitionToNext && idx < journey.items.length - 1 && (

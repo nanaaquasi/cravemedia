@@ -10,9 +10,9 @@ import ContentTypeSelector from "@/components/ContentTypeSelector";
 import RecommendationItem from "@/components/RecommendationItem";
 import JourneyPath from "@/components/JourneyPath";
 import CuratingLoader from "@/components/CuratingLoader";
-import SavedListsPanel from "@/components/SavedListsPanel";
 import FloatingSearchButton from "@/components/FloatingSearchButton";
 import RefineBar from "@/components/RefineBar";
+import Toast from "@/components/Toast";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
 const VALID_TYPES = new Set<ContentType>(VALID_CONTENT_TYPES);
@@ -21,17 +21,10 @@ function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [contentType, setContentType] = useState<ContentType>("all");
-  const [showSavedLists, setShowSavedLists] = useState(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const { results, journeyResults, isLoading, error, fetchRecommendations } =
     useRecommendations();
-  const {
-    lists,
-    createList,
-    deleteList,
-    removeItemFromList,
-    exportListAsText,
-  } = useLists();
+  const { lists, createList } = useLists();
 
   const q = searchParams.get("q");
   const type = searchParams.get("type") as ContentType | null;
@@ -160,48 +153,9 @@ function SearchContent() {
 
   return (
     <main className="min-h-screen flex flex-col relative pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
-      {/* Header */}
-      <header className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between">
-        <button
-          onClick={() => router.push("/")}
-          className="flex items-center gap-2 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/25">
-            C
-          </div>
-          <span className="text-lg font-semibold tracking-tight group-hover:text-purple-300 transition-colors">
-            cravemedia
-          </span>
-        </button>
-
-        <button
-          onClick={() => setShowSavedLists(true)}
-          className="relative p-2.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
-          aria-label="My Cravings"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-          </svg>
-          {lists.length > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-purple-500 text-[10px] font-bold flex items-center justify-center">
-              {lists.length}
-            </span>
-          )}
-        </button>
-      </header>
-
       {/* Content area - always show results view on /search */}
       <div className="flex-1 flex flex-col min-h-0 pb-24 sm:pb-28">
-        <div className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 md:px-6 lg:px-6 max-w-6xl lg:max-w-7xl xl:max-w-[85rem] mx-auto w-full">
+        <div className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 md:px-6 lg:px-0 max-w-6xl lg:max-w-7xl xl:max-w-[90rem] mx-auto w-full">
           {/* Back button + View mode toggle */}
           {(results || journeyResults) && (
             <div className="animate-fade-in-up">
@@ -223,7 +177,7 @@ function SearchContent() {
               </button>
 
               {/* List / Journey toggle */}
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <button
                   onClick={() => handleViewModeChange("list")}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors cursor-pointer ${
@@ -352,21 +306,7 @@ function SearchContent() {
         isLoading={isLoading}
       />
 
-      {saveToast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 glass rounded-full px-5 py-2.5 text-base text-green-300 animate-fade-in-up">
-          ✓ {saveToast}
-        </div>
-      )}
-
-      <SavedListsPanel
-        lists={lists}
-        isOpen={showSavedLists}
-        onClose={() => setShowSavedLists(false)}
-        onDeleteList={deleteList}
-        onRemoveItem={removeItemFromList}
-        onExport={exportListAsText}
-        onMoreLikeThis={handleMoreLikeThis}
-      />
+      <Toast message={saveToast} onClose={() => setSaveToast(null)} />
     </main>
   );
 }

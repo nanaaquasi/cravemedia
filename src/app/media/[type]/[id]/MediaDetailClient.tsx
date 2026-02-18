@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export interface MediaDetails {
   title: string;
@@ -25,7 +23,6 @@ interface MediaDetailClientProps {
 }
 
 export default function MediaDetailClient({ details }: MediaDetailClientProps) {
-  const router = useRouter();
   const [showTrailerModal, setShowTrailerModal] = useState(false);
 
   useEffect(() => {
@@ -49,35 +46,7 @@ export default function MediaDetailClient({ details }: MediaDetailClientProps) {
     : null;
 
   return (
-    <main className="min-h-screen flex flex-col overflow-x-hidden pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
-      {/* Header */}
-      <header className="py-4 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-1 text-[var(--text-secondary)] hover:text-white transition-colors cursor-pointer"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Back
-        </button>
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xs font-bold">
-            C
-          </div>
-          <span className="text-sm font-semibold text-[var(--text-secondary)] group-hover:text-white transition-colors">
-            cravemedia
-          </span>
-        </Link>
-      </header>
-
+    <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       {/* Hero */}
       <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
         {details.backdropUrl ? (

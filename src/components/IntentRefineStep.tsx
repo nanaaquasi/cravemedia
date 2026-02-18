@@ -242,8 +242,8 @@ export default function IntentRefineStep({
                   <h3 className="text-lg font-bold text-white">Journey</h3>
                 </div>
                 <p className="text-sm text-white/50 leading-relaxed">
-                  An ordered path through a topic, from beginner to advanced.
-                  Perfect for deep-diving into a genre or theme.
+                  A carefully curated path where every story leads to the next.
+                  Start anywhere. End transformed.
                 </p>
                 <div className="absolute bottom-4 right-5 text-white/20 group-hover:text-pink-400/60 transition-colors">
                   <svg

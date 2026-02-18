@@ -56,8 +56,8 @@ export default function SearchForm({
   };
 
   return (
-    <div className="w-full flex flex-col items-center pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] pb-8 sm:pb-12 mt-15">
-      <div className="w-full max-w-2xl mx-auto px-4 sm:px-6">
+    <div className="w-full flex flex-col items-center pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] pb-8 sm:pb-12 mt-4 sm:mt-12">
+      <div className="w-full max-w-2xl mx-auto px-0 sm:px-6">
         {/* Content type selector */}
         <div className="mb-4 sm:mb-6 flex flex-col items-center gap-3">
           <ContentTypeSelector
@@ -66,13 +66,12 @@ export default function SearchForm({
           />
         </div>
 
-        {/* Big Typeform-like input - textarea with cycling placeholder ideas */}
         <div
-          className={`relative rounded-3xl liquid-glass-strong transition-all duration-200 min-h-[200px] ${
+          className={`relative rounded-3xl liquid-glass-strong transition-all duration-200 min-h-[140px] sm:min-h-[200px] ${
             isEmpty ? "" : "ring-1 ring-purple-500/40"
           }`}
         >
-          <div className="relative min-h-[200px] flex flex-col p-5 sm:p-8">
+          <div className="relative min-h-[140px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
             {/* Custom placeholder overlay with smooth fade transition */}
             {isEmpty && ideas.length > 0 && (
               <div
@@ -81,7 +80,7 @@ export default function SearchForm({
                 }`}
                 onTransitionEnd={handlePlaceholderFadeEnd}
               >
-                <span className="text-2xl text-white/50 leading-relaxed">
+                <span className="text-lg sm:text-2xl text-white/50 leading-relaxed">
                   {ideas[suggestionIndex]}
                 </span>
               </div>
@@ -99,7 +98,7 @@ export default function SearchForm({
               placeholder=""
               maxLength={500}
               disabled={isLoading}
-              className="flex-1 bg-transparent text-2xl text-white outline-none resize-none min-h-[140px] disabled:opacity-50 caret-white relative"
+              className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[140px] disabled:opacity-50 caret-white relative"
               aria-label="Tell us what you're craving"
             />
             <div className="flex items-center justify-end gap-2 mt-4">
