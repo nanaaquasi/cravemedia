@@ -12,6 +12,7 @@ import JourneyPath from "@/components/JourneyPath";
 import CuratingLoader from "@/components/CuratingLoader";
 import SavedListsPanel from "@/components/SavedListsPanel";
 import FloatingSearchButton from "@/components/FloatingSearchButton";
+import RefineBar from "@/components/RefineBar";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
 const VALID_TYPES = new Set<ContentType>(VALID_CONTENT_TYPES);
@@ -124,6 +125,20 @@ function SearchContent() {
     [viewMode, q, type, router],
   );
 
+  const handleRefine = useCallback(
+    (feedback: string) => {
+      if (!q || !type) return;
+      const refinedQuery = `${q} (refine: ${feedback})`;
+      const params = new URLSearchParams({
+        q: refinedQuery,
+        type,
+        mode: viewMode,
+      });
+      router.replace(`/search?${params.toString()}`);
+    },
+    [q, type, viewMode, router],
+  );
+
   const handleMoreLikeThis = useCallback(
     (item: EnrichedRecommendation | JourneyItem) => {
       const query = `More ${item.type === "book" ? "books" : item.type === "tv" ? "TV shows" : "movies"} like "${item.title}" by ${item.creator}`;
@@ -233,9 +248,10 @@ function SearchContent() {
             </div>
           )}
 
-          {isLoading && !results && !journeyResults && (
-            <CuratingLoader mode={viewMode} />
-          )}
+          {isLoading &&
+            (viewMode === "journey" ? !journeyResults : !results) && (
+              <CuratingLoader mode={viewMode} />
+            )}
 
           {error && (
             <div className="text-center py-16 sm:py-20 px-4 sm:px-6 animate-fade-in-up">
@@ -278,6 +294,7 @@ function SearchContent() {
                   >
                     Save list
                   </button>
+                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
                 </aside>
 
                 {/* Right: Cards grid - 3 per row on desktop, 7/12 of width */}
@@ -323,6 +340,9 @@ function SearchContent() {
                   onAddToList={handleAddToList}
                   onMoreLikeThis={handleMoreLikeThis}
                 />
+                <div className="px-4 sm:px-6 md:px-8 pb-6">
+                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
+                </div>
               </div>
             )}
         </div>
