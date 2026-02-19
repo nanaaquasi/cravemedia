@@ -8,10 +8,11 @@ import { ContentType } from "@/lib/types";
  * - ["movie", "tv", "book"] — All three
  * - ["movie"] — Movies only
  */
-export const ENABLED_MEDIA_TYPES: ("movie" | "tv" | "book")[] = [
+export const ENABLED_MEDIA_TYPES: ("movie" | "tv" | "book" | "anime")[] = [
   "movie",
   "tv",
   "book",
+  "anime",
 ];
 
 /** All valid content types: "all" + enabled media types */
@@ -32,6 +33,8 @@ export function getTypeLabel(type: ContentType): string {
       return "TV shows";
     case "book":
       return "books";
+    case "anime":
+      return "anime";
     case "all":
       return ENABLED_MEDIA_TYPES.map((t) => getTypeLabel(t)).join(" and ");
     default:

@@ -1,8 +1,5 @@
 import { ContentType } from "./types";
-import {
-  ENABLED_MEDIA_TYPES,
-  getTypeLabel,
-} from "@/config/media-types";
+import { ENABLED_MEDIA_TYPES, getTypeLabel } from "@/config/media-types";
 
 function getTypeFieldRule(): string {
   const types = ENABLED_MEDIA_TYPES.map((t) => `"${t}"`).join(" or ");
@@ -27,7 +24,8 @@ CRITICAL REQUIREMENTS:
 3. TEACH PROGRESSIVELY: Introduce concepts/techniques gradually
 4. SHOW EVOLUTION: Include mix of eras/styles showing how the genre/topic developed
 5. EXPLAIN TRANSITIONS: Every "transitionToNext" must be specific and insightful
-6. Return ONLY valid JSON, no markdown, no code fences, no explanation
+6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or popularity, YOU MUST STRICTLY ADHERE TO IT. Do not recommend items that violate these explicit constraints.
+7. Return ONLY valid JSON, no markdown, no code fences, no explanation
 ${typeFieldRule}
 ${onlyRecommendRule}
 
@@ -43,7 +41,7 @@ Response format (use exact field names):
       "title": "Exact title for API lookup",
       "creator": "Director/Showrunner/Author name",
       "year": 2020,
-      "type": "movie",
+      "type": "${type === "all" ? "movie" : type}",
       "description": "Brief summary of the work",
       "genres": ["Genre1", "Genre2"],
       "whyThisPosition": "If position 1: why start here. Otherwise: why this comes after the previous",

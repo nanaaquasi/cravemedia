@@ -27,15 +27,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+import { ListsProvider } from "@/context/ListsContext";
+
+// ...
+
+import { createClient } from "@/lib/supabase/server";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <html lang="en" className={dmSans.variable}>
       <body className="bg-gradient-mesh min-h-screen">
-        <GlobalLayout>{children}</GlobalLayout>
+        <ListsProvider>
+          <GlobalLayout user={user}>{children}</GlobalLayout>
+        </ListsProvider>
       </body>
     </html>
   );

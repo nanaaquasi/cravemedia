@@ -79,11 +79,16 @@ export default function JourneyItemCard({
               {item.type === "movie" ? "🎬" : item.type === "tv" ? "📺" : "📚"}
             </div>
           )}
-          {item.rating && (
-            <div className="absolute top-1 right-1 z-20 px-1.5 py-0.5 rounded bg-black/60 text-xs font-medium text-amber-300">
-              ★ {item.rating}
+          <div className="absolute top-1 right-1 z-20 flex gap-1">
+            <div className="px-1.5 py-0.5 rounded bg-black/60 text-xs font-medium text-white/90 capitalize">
+              {item.type === "tv" ? "TV" : item.type}
             </div>
-          )}
+            {item.rating && (
+              <div className="px-1.5 py-0.5 rounded bg-black/60 text-xs font-medium text-amber-300">
+                ★ {item.rating}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Content */}

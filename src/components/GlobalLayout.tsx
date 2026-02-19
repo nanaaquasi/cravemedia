@@ -6,11 +6,14 @@ import SavedListsPanel from "@/components/SavedListsPanel";
 import { useLists } from "@/hooks/useLists";
 import { useRouter } from "next/navigation";
 import { EnrichedRecommendation } from "@/lib/types";
+import { User } from "@supabase/supabase-js";
 
 export default function GlobalLayout({
   children,
+  user,
 }: {
   children: React.ReactNode;
+  user: User | null;
 }) {
   const [showSavedLists, setShowSavedLists] = useState(false);
   const { lists, deleteList, removeItemFromList, exportListAsText } =
@@ -25,7 +28,7 @@ export default function GlobalLayout({
 
   return (
     <>
-      <Header onOpenSavedLists={() => setShowSavedLists(true)} />
+      <Header onOpenSavedLists={() => setShowSavedLists(true)} user={user} />
       <div className="pt-20 flex flex-col min-h-screen">{children}</div>
       <SavedListsPanel
         lists={lists}

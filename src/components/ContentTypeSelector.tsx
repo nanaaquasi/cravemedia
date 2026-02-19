@@ -4,12 +4,13 @@ import { ContentType } from "@/lib/types";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 
 const TYPE_OPTIONS: Record<
-  "movie" | "tv" | "book",
+  "movie" | "tv" | "book" | "anime",
   { label: string; icon: string }
 > = {
   movie: { label: "Movies", icon: "🎬" },
   tv: { label: "TV Shows", icon: "📺" },
   book: { label: "Books", icon: "📚" },
+  anime: { label: "Anime", icon: "🎌" },
 };
 
 const types = [
@@ -31,13 +32,13 @@ export default function ContentTypeSelector({
   onChange,
 }: ContentTypeSelectorProps) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide md:text-lg">
+    <div className="flex flex-wrap md:flex-nowrap items-center justify-center gap-2 overflow-x-visible md:overflow-x-auto pb-1 scrollbar-hide">
       {types.map((type) => (
         <button
           key={type.value}
           onClick={() => onChange(type.value)}
           className={`
-            flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium flex-shrink-0
+            flex items-center gap-1.5 md:gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium flex-shrink-0
             transition-all duration-200 cursor-pointer whitespace-nowrap
             ${
               selected === type.value
@@ -47,7 +48,7 @@ export default function ContentTypeSelector({
           `}
           aria-pressed={selected === type.value}
         >
-          <span className="text-lg">{type.icon}</span>
+          <span className="text-base md:text-lg leading-none">{type.icon}</span>
           {type.label}
         </button>
       ))}

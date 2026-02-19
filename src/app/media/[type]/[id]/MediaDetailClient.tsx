@@ -15,7 +15,10 @@ export interface MediaDetails {
   genres: string[];
   directors: string[];
   trailerKey: string | null;
-  type: "movie" | "tv";
+  type: "movie" | "tv" | "anime";
+  episodes?: number | null;
+  studios?: string[];
+  format?: string;
 }
 
 interface MediaDetailClientProps {
@@ -45,6 +48,13 @@ export default function MediaDetailClient({ details }: MediaDetailClientProps) {
     ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1`
     : null;
 
+  const typeLabel =
+    details.type === "movie"
+      ? "Movie"
+      : details.type === "tv"
+        ? "TV Show"
+        : (details.format ?? "Anime");
+
   return (
     <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       {/* Hero */}
@@ -65,17 +75,21 @@ export default function MediaDetailClient({ details }: MediaDetailClientProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent" />
         <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6">
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-white/90 mb-2">
-            {details.type === "movie" ? "Movie" : "TV Show"}
+            {typeLabel}
           </span>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg">
             {details.title}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-white/80">
             {year && <span>{year}</span>}
-            {details.runtime && (
+            {(details.runtime || details.episodes) && (
               <>
                 <span className="text-white/50">·</span>
-                <span>{details.runtime}</span>
+                <span>
+                  {details.episodes
+                    ? `${details.episodes} eps`
+                    : details.runtime}
+                </span>
               </>
             )}
           </div>
@@ -101,7 +115,11 @@ export default function MediaDetailClient({ details }: MediaDetailClientProps) {
               </div>
             ) : (
               <div className="aspect-[2/3] rounded-xl bg-[var(--bg-card)] border border-white/[0.06] flex items-center justify-center text-4xl">
-                {details.type === "movie" ? "🎬" : "📺"}
+                {details.type === "movie"
+                  ? "🎬"
+                  : details.type === "tv"
+                    ? "📺"
+                    : "🎌"}
               </div>
             )}
           </div>
@@ -136,6 +154,17 @@ export default function MediaDetailClient({ details }: MediaDetailClientProps) {
                 </svg>
                 Play trailer
               </button>
+            )}
+
+            {details.studios && details.studios.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                  Studios
+                </p>
+                <p className="text-[var(--text-primary)]">
+                  {details.studios.join(", ")}
+                </p>
+              </div>
             )}
 
             {details.directors.length > 0 && (

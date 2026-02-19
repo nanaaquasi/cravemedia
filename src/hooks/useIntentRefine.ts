@@ -25,11 +25,14 @@ export function useIntentRefine() {
       previousAnswers: RefineAnswer[],
     ): Promise<RefineResponse | null> => {
       try {
-        const res = await fetch("/api/refine", {
+        const minTime = new Promise((resolve) => setTimeout(resolve, 800));
+        const request = fetch("/api/refine", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query, type, previousAnswers }),
         });
+
+        const [_, res] = await Promise.all([minTime, request]);
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => null);

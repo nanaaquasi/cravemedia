@@ -1,8 +1,5 @@
 import { ContentType } from "./types";
-import {
-  ENABLED_MEDIA_TYPES,
-  getTypeLabel,
-} from "@/config/media-types";
+import { ENABLED_MEDIA_TYPES, getTypeLabel } from "@/config/media-types";
 
 function getTypeFieldRule(): string {
   const types = ENABLED_MEDIA_TYPES.map((t) => `"${t}"`).join(" or ");
@@ -38,7 +35,7 @@ Response format:
       "title": "Title of the work",
       "creator": "Director/Showrunner/Author name",
       "year": 2020,
-      "type": "movie",
+      "type": "${type === "all" ? "movie" : type}",
       "description": "Why this fits the query - contextual explanation",
       "genres": ["Genre1", "Genre2"]
     }

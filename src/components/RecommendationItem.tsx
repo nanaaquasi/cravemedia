@@ -22,12 +22,25 @@ export default function RecommendationItem({
   const [showActions, setShowActions] = useState(false);
 
   const typeIcon =
-    item.type === "movie" ? "🎬" : item.type === "tv" ? "📺" : "📚";
+    item.type === "movie"
+      ? "🎬"
+      : item.type === "tv"
+        ? "📺"
+        : item.type === "book"
+          ? "📚"
+          : "🎌";
   const typeBadge =
-    item.type === "movie" ? "Movie" : item.type === "tv" ? "TV" : "Book";
+    item.type === "movie"
+      ? "Movie"
+      : item.type === "tv"
+        ? "TV"
+        : item.type === "book"
+          ? "Book"
+          : "Anime";
 
   const detailHref =
-    (item.type === "movie" || item.type === "tv") && item.externalId
+    (item.type === "movie" || item.type === "tv" || item.type === "anime") &&
+    item.externalId
       ? `/media/${item.type}/${item.externalId}`
       : null;
 

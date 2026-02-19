@@ -42,8 +42,12 @@ export default function Home() {
   // Cycling headline word
   const [wordIndex, setWordIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
+    // Prefetch search page for faster transition
+    router.prefetch("/search");
+
     const interval = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
@@ -52,18 +56,28 @@ export default function Home() {
       }, 400);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
   // Navigate to search when refinement completes
   useEffect(() => {
-    if (refine.step === "complete") {
+    if (refine.step === "complete" && !isNavigating) {
+      setIsNavigating(true);
       const query = refine.refinedQuery || pendingQuery;
       const params = new URLSearchParams({ q: query, type: contentType });
       if (pendingMode === "journey") {
         params.set("mode", "journey");
       }
-      refine.reset();
+
       router.push(`/search?${params.toString()}`);
+
+      // Cleanup refine state only after delay/unmount to prevent flash
+      // The component will unmount on navigation, so this timeout acts as a backup
+      setTimeout(() => {
+        if (window.location.pathname === "/") {
+          setIsNavigating(false);
+          refine.reset();
+        }
+      }, 2000);
     }
   }, [
     refine.step,
@@ -73,6 +87,7 @@ export default function Home() {
     pendingMode,
     router,
     refine,
+    isNavigating,
   ]);
 
   // Step 1: User submits a query → show mode selection (static, no AI call)
@@ -95,6 +110,7 @@ export default function Home() {
   const handleSkipRefine = useCallback(() => {
     refine.skipRefine();
     setShowModeSelect(false);
+    setIsNavigating(true);
     // Navigate with original query
     const params = new URLSearchParams({ q: pendingQuery, type: contentType });
     if (pendingMode === "journey") {
@@ -103,7 +119,7 @@ export default function Home() {
     router.push(`/search?${params.toString()}`);
   }, [refine, pendingQuery, contentType, pendingMode, router]);
 
-  const isRefining = showModeSelect || refine.step !== "idle";
+  const isRefining = showModeSelect || refine.step !== "idle" || isNavigating;
 
   return (
     <main className="flex-1 flex flex-col relative pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
@@ -112,7 +128,7 @@ export default function Home() {
         <IntentRefineStep
           questions={refine.questions}
           round={refine.round}
-          isLoading={refine.step === "loading"}
+          isLoading={refine.step === "loading" || isNavigating}
           onSubmitAnswers={(answers) =>
             refine.submitAnswers(pendingQuery, contentType, answers)
           }

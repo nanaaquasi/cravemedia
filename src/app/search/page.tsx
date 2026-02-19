@@ -1,7 +1,11 @@
 "use client";
 
+import { saveJourneyData } from "@/app/actions/journey";
+import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
+
 import { useState, useCallback, useEffect, useMemo, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ContentType, EnrichedRecommendation, JourneyItem } from "@/lib/types";
 import { useRecommendations, RecommendMode } from "@/hooks/useRecommendations";
 import { useLists } from "@/hooks/useLists";
@@ -13,38 +17,75 @@ import CuratingLoader from "@/components/CuratingLoader";
 import FloatingSearchButton from "@/components/FloatingSearchButton";
 import RefineBar from "@/components/RefineBar";
 import Toast from "@/components/Toast";
+import SaveJourneyModal from "@/components/SaveJourneyModal";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
-const VALID_TYPES = new Set<ContentType>(VALID_CONTENT_TYPES);
+// ...
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [contentType, setContentType] = useState<ContentType>("all");
+  const pathname = usePathname();
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    checkUser();
+  }, [supabase]);
+
   const { results, journeyResults, isLoading, error, fetchRecommendations } =
     useRecommendations();
-  const { lists, createList } = useLists();
+  const { lists, createList, refreshLists } = useLists();
 
   const q = searchParams.get("q");
-  const type = searchParams.get("type") as ContentType | null;
+  const typeParam = searchParams.get("type");
+  const contentType = (
+    VALID_CONTENT_TYPES.includes(typeParam as ContentType) ? typeParam : "all"
+  ) as ContentType;
+
   const modeParam = searchParams.get("mode");
   const viewMode: RecommendMode = modeParam === "journey" ? "journey" : "list";
 
   useEffect(() => {
-    if (q && type && VALID_TYPES.has(type)) {
-      setContentType(type);
-      fetchRecommendations(q, type, viewMode);
-    } else if (!q || !type) {
+    if (q && typeParam) {
+      fetchRecommendations(q, contentType, viewMode);
+    } else if (!q || !typeParam) {
       router.replace("/");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-fetch when q/type/viewMode change
-  }, [q, type, viewMode]);
+  }, [q, typeParam, contentType, viewMode, fetchRecommendations, router]);
+
+  const handleContentTypeChange = useCallback(
+    (newType: ContentType) => {
+      if (!q) return;
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("type", newType);
+      router.replace(`/search?${params.toString()}`);
+    },
+    [q, searchParams, router],
+  );
+
+  const handleAuthGuard = useCallback(() => {
+    if (!user) {
+      const currentUrl = `${pathname}?${searchParams.toString()}`;
+      router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
+      return false;
+    }
+    return true;
+  }, [user, pathname, searchParams, router]);
 
   const handleAddToList = useCallback(
-    (item: EnrichedRecommendation) => {
+    (item: EnrichedRecommendation | JourneyItem) => {
+      if (!handleAuthGuard()) return;
+
       const source = results ?? journeyResults;
       if (source) {
+        // ... (existing logic)
         const name =
           "journeyTitle" in source
             ? source.journeyTitle
@@ -55,21 +96,23 @@ function SearchContent() {
             : source.collectionDescription;
         const existingList = lists.find((l) => l.name === name);
         if (!existingList) {
-          createList(name, description, [item]);
+          createList(name, description, [item as EnrichedRecommendation]);
         } else {
           createList(name, description, [
             ...existingList.items.filter((i) => i.title !== item.title),
-            item,
+            item as EnrichedRecommendation,
           ]);
         }
         setSaveToast(`Added "${item.title}" to list`);
         setTimeout(() => setSaveToast(null), 2000);
       }
     },
-    [results, journeyResults, lists, createList],
+    [results, journeyResults, lists, createList, handleAuthGuard],
   );
 
   const handleSaveAll = useCallback(() => {
+    if (!handleAuthGuard()) return;
+
     if (results) {
       createList(
         results.collectionTitle,
@@ -81,55 +124,74 @@ function SearchContent() {
       );
       setTimeout(() => setSaveToast(null), 2500);
     }
-  }, [results, createList]);
+  }, [results, createList, handleAuthGuard]);
 
   const handleSaveJourney = useCallback(() => {
-    if (journeyResults) {
-      createList(
-        journeyResults.journeyTitle,
-        journeyResults.description,
-        journeyResults.items,
-        {
-          isJourney: true,
-          journeyMetadata: journeyResults.items.map((item) => ({
-            position: item.position,
-            whyThisPosition: item.whyThisPosition,
-            whatYoullLearn: item.whatYoullLearn,
-            transitionToNext: item.transitionToNext,
-            difficultyLevel: item.difficultyLevel,
-          })),
-        },
-      );
-      setSaveToast(
-        `Saved "${journeyResults.journeyTitle}" with ${journeyResults.items.length} items`,
-      );
-      setTimeout(() => setSaveToast(null), 2500);
-    }
-  }, [journeyResults, createList]);
+    if (!handleAuthGuard()) return;
+    setIsSaveModalOpen(true);
+  }, [handleAuthGuard]);
+
+  const handleConfirmSaveJourney = useCallback(
+    async ({
+      title,
+      goalAmount,
+      goalUnit,
+    }: {
+      title: string;
+      goalAmount?: number;
+      goalUnit?: string;
+    }) => {
+      if (journeyResults && q) {
+        // Show saving state
+        setSaveToast("Saving journey...");
+
+        try {
+          const result = await saveJourneyData({
+            title,
+            query: q,
+            goal_amount: goalAmount,
+            goal_unit: goalUnit,
+            results: journeyResults,
+          });
+
+          if (result.success) {
+            setSaveToast(`Saved "${title}" to your profile`);
+            // Refresh the lists (sidebar) to show the new journey
+            await refreshLists();
+          } else {
+            setSaveToast(`Error: ${result.error}`);
+          }
+        } catch (e) {
+          setSaveToast("Failed to save journey");
+        }
+
+        setTimeout(() => setSaveToast(null), 2500);
+      }
+    },
+    [journeyResults, q, refreshLists],
+  );
 
   const handleViewModeChange = useCallback(
     (mode: RecommendMode) => {
       if (mode === viewMode) return;
-      if (q && type) {
-        const params = new URLSearchParams({ q, type, mode });
+      if (q && contentType) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("mode", mode);
         router.replace(`/search?${params.toString()}`);
       }
     },
-    [viewMode, q, type, router],
+    [viewMode, q, contentType, searchParams, router],
   );
 
   const handleRefine = useCallback(
     (feedback: string) => {
-      if (!q || !type) return;
+      if (!q || !contentType) return;
       const refinedQuery = `${q} (refine: ${feedback})`;
-      const params = new URLSearchParams({
-        q: refinedQuery,
-        type,
-        mode: viewMode,
-      });
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("q", refinedQuery);
       router.replace(`/search?${params.toString()}`);
     },
-    [q, type, viewMode, router],
+    [q, contentType, searchParams, router],
   );
 
   const handleMoreLikeThis = useCallback(
@@ -138,7 +200,6 @@ function SearchContent() {
       const itemType = item.type;
       const params = new URLSearchParams({ q: query, type: itemType });
       router.replace(`/search?${params.toString()}`);
-      setContentType(itemType);
     },
     [router],
   );
@@ -236,7 +297,7 @@ function SearchContent() {
                   <div className="flex flex-wrap items-center gap-3 mb-4">
                     <ContentTypeSelector
                       selected={contentType}
-                      onChange={setContentType}
+                      onChange={handleContentTypeChange}
                     />
                     <p className="text-base text-[var(--text-muted)]">
                       {filteredItems.length} recommendations
@@ -288,7 +349,7 @@ function SearchContent() {
                   journeyId={getJourneyIdFromResults(
                     journeyResults.journeyTitle,
                     q ?? "",
-                    type ?? "all",
+                    contentType,
                   )}
                   onSaveJourney={handleSaveJourney}
                   onAddToList={handleAddToList}
@@ -307,6 +368,15 @@ function SearchContent() {
       />
 
       <Toast message={saveToast} onClose={() => setSaveToast(null)} />
+
+      {journeyResults && (
+        <SaveJourneyModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          defaultTitle={journeyResults.journeyTitle}
+          onConfirm={handleConfirmSaveJourney}
+        />
+      )}
     </main>
   );
 }

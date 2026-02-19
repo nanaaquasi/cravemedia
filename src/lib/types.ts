@@ -1,10 +1,10 @@
-export type ContentType = "movie" | "tv" | "book" | "all";
+export type ContentType = "movie" | "tv" | "book" | "anime" | "all";
 
 export interface AIRecommendation {
   title: string;
   creator: string;
   year: number;
-  type: "movie" | "tv" | "book";
+  type: "movie" | "tv" | "book" | "anime";
   description: string;
   genres: string[];
 }
@@ -53,7 +53,7 @@ export interface JourneyItemRaw {
   title: string;
   creator: string;
   year: number;
-  type: "movie" | "tv" | "book";
+  type: "movie" | "tv" | "book" | "anime";
   description?: string;
   genres?: string[];
   whyThisPosition: string;

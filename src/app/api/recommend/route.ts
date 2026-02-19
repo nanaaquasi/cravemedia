@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateRecommendations, generateJourney } from "@/lib/ai";
 import { enrichMovieOrTV } from "@/lib/tmdb";
 import { enrichBook } from "@/lib/books";
+import { enrichAnime } from "@/lib/anilist";
 import {
   getCachedRecommendation,
   setCachedRecommendation,
@@ -32,7 +33,11 @@ function parseRuntimeMinutes(runtime: string | null): number {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query, type, mode = "list" } = body as {
+    const {
+      query,
+      type,
+      mode = "list",
+    } = body as {
       query: string;
       type: ContentType;
       mode?: "list" | "journey";
@@ -76,6 +81,8 @@ export async function POST(request: NextRequest) {
 
       const enrichmentPromises = aiResponse.items.map(
         async (raw: JourneyItemRaw): Promise<JourneyItem> => {
+          const effectiveType = type !== "all" ? type : raw.type;
+
           try {
             let enriched: {
               posterUrl: string | null;
@@ -83,22 +90,30 @@ export async function POST(request: NextRequest) {
               runtime: string | null;
               externalId: string | null;
             };
-            if (raw.type === "book") {
+            if (effectiveType === "book") {
               enriched = await enrichBook(raw.title, raw.creator);
+            } else if (effectiveType === "anime") {
+              enriched = await enrichAnime(raw.title, raw.year);
             } else {
               enriched = await enrichMovieOrTV(
                 raw.title,
                 raw.year,
-                raw.type,
+                effectiveType as "movie" | "tv",
               );
             }
             return {
               ...raw,
+              type: effectiveType,
               description: raw.description ?? raw.whyThisPosition,
               genres: raw.genres ?? raw.keyThemes,
               posterUrl: enriched.posterUrl,
               rating: enriched.rating,
-              ratingSource: raw.type === "book" ? "Google Books" : "TMDB",
+              ratingSource:
+                effectiveType === "book"
+                  ? "Google Books"
+                  : effectiveType === "anime"
+                    ? "Anilist"
+                    : "TMDB",
               runtime: enriched.runtime,
               externalId: enriched.externalId,
               difficultyLevel: raw.difficultyLevel,
@@ -121,7 +136,8 @@ export async function POST(request: NextRequest) {
 
       const enrichedItems = await Promise.all(enrichmentPromises);
       const totalRuntimeMinutes =
-        aiResponse.total_runtime_minutes ?? aiResponse.totalRuntimeMinutes ??
+        aiResponse.total_runtime_minutes ??
+        aiResponse.totalRuntimeMinutes ??
         enrichedItems.reduce(
           (sum, item) => sum + parseRuntimeMinutes(item.runtime),
           0,
@@ -150,17 +166,39 @@ export async function POST(request: NextRequest) {
 
     const enrichmentPromises = aiResponse.items.map(
       async (item): Promise<EnrichedRecommendation> => {
+        // If the user requested a specific type (e.g. "anime"), force the item to be treated as such
+        // even if the AI labeled it "tv" or "movie".
+        const effectiveType = type !== "all" ? type : item.type;
+
         try {
-          if (item.type === "book") {
+          if (effectiveType === "book") {
             const enriched = await enrichBook(item.title, item.creator);
-            return { ...item, ratingSource: "Google Books", ...enriched };
+            return {
+              ...item,
+              type: effectiveType,
+              ratingSource: "Google Books",
+              ...enriched,
+            };
+          } else if (effectiveType === "anime") {
+            const enriched = await enrichAnime(item.title, item.year);
+            return {
+              ...item,
+              type: effectiveType,
+              ratingSource: "Anilist",
+              ...enriched,
+            };
           } else {
             const enriched = await enrichMovieOrTV(
               item.title,
               item.year,
-              item.type,
+              effectiveType as "movie" | "tv",
             );
-            return { ...item, ratingSource: "TMDB", ...enriched };
+            return {
+              ...item,
+              type: effectiveType as "movie" | "tv",
+              ratingSource: "TMDB",
+              ...enriched,
+            };
           }
         } catch {
           return {

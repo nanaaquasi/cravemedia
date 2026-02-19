@@ -320,10 +320,12 @@ export default function IntentRefineStep({
     >
       <AnimatedBackground />
 
-      {/* Header */}
-      <div className="relative z-10 flex items-center justify-between py-5 px-2">
-        {/* Progress dots */}
-        <div className="flex items-center gap-2">
+      <AnimatedBackground />
+
+      {/* Question content — vertically centered */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
+        {/* Progress Dots - Top Centered */}
+        <div className="flex items-center gap-2 mb-8">
           {Array.from({ length: progressDotCount }).map((_, i) => {
             let dotClass = "bg-white/20";
             if (i === currentQuestionIndex)
@@ -338,16 +340,6 @@ export default function IntentRefineStep({
           })}
         </div>
 
-        <button
-          onClick={onSkip}
-          className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-        >
-          Skip
-        </button>
-      </div>
-
-      {/* Question content — vertically centered */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={`${round}-${currentQuestionIndex}`}
@@ -372,7 +364,7 @@ export default function IntentRefineStep({
             </p>
 
             {/* Options — pills */}
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
               {currentQuestion.options.map((option) => {
                 const isSelected = currentSelections.includes(option);
                 return (
@@ -410,25 +402,35 @@ export default function IntentRefineStep({
                 );
               })}
             </div>
+
+            {/* Actions: Continue & Skip */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleContinue}
+                disabled={!hasSelection}
+                className={`order-1 sm:order-2 px-8 py-3.5 rounded-full font-semibold text-base transition-all duration-300 cursor-pointer ${
+                  hasSelection
+                    ? "bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110"
+                    : "bg-white/6 text-white/30 cursor-not-allowed"
+                }`}
+              >
+                {isLastQuestion ? "Get Recommendations" : "Continue"}
+              </motion.button>
+
+              <button
+                onClick={onSkip}
+                className="order-2 sm:order-1 text-sm text-white/30 hover:text-white/60 transition-colors cursor-pointer px-4 py-2"
+              >
+                Skip
+              </button>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Footer — Continue button */}
-      <div className="relative z-10 pb-8 sm:pb-12 flex justify-center">
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleContinue}
-          disabled={!hasSelection}
-          className={`px-8 py-3.5 rounded-full font-semibold text-base transition-all duration-300 cursor-pointer ${
-            hasSelection
-              ? "bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110"
-              : "bg-white/6 text-white/30 cursor-not-allowed"
-          }`}
-        >
-          {isLastQuestion ? "Get Recommendations" : "Continue"}
-        </motion.button>
-      </div>
+      {/* Spacer to balance vertical alignment */}
+      <div className="h-12" />
     </motion.div>
   );
 }
