@@ -26,6 +26,7 @@ export default function Header({
 
   const handleLogout = async () => {
     setIsDropdownOpen(false);
+    await supabase.auth.signOut();
     await signout();
   };
 

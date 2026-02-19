@@ -21,3 +21,14 @@ export interface Collection {
   items?: { image_url: string | null }[];
   item_count?: number;
 }
+
+export interface CollectionItem {
+  id: string;
+  collection_id: string;
+  media_id: string;
+  media_type: string;
+  title: string | null;
+  image_url: string | null;
+  metadata: any;
+  created_at: string;
+}

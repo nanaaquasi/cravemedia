@@ -71,7 +71,7 @@ export function AccountView({
 
   return (
     <div className="min-h-screen pb-20 font-sans">
-      <div className="max-w-6xl mx-auto px-4 md:px-8 mt-6">
+      <div className="max-w-6xl mx-auto mt-6">
         <ProfileHeader profile={profile} email={email} stats={finalStats} />
         <ProfileNav activeTab={activeTab} onTabChange={setActiveTab} />
 

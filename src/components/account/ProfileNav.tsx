@@ -37,7 +37,7 @@ export function ProfileNav({ activeTab, onTabChange }: ProfileNavProps) {
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={`
-              flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-medium transition-all whitespace-nowrap
+              flex items-center gap-2 px-2.5 md:px-5 py-2.5 rounded-2xl text-sm font-medium transition-all whitespace-nowrap
               ${
                 isActive
                   ? "bg-zinc-800 text-white border border-zinc-700 shadow-lg shadow-black/20"

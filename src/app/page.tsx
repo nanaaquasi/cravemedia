@@ -140,9 +140,9 @@ export default function Home() {
 
       {/* "What are you craving?" + Search form - centered */}
       <div className="flex-1 flex flex-col justify-center">
-        <div className="text-center w-full max-w-3xl mx-auto px-4 sm:px-6 mb-2 sm:mb-6">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradientShift_6s_ease_infinite]">
+        <div className="text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 sm:mb-6">
+          <h1 className="text-4xl md:text-7xl font-bold tracking-tight mb-4">
+            <span className="bg-linear-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-size-[200%_auto] animate-[gradientShift_6s_ease_infinite]">
               What are you
             </span>
             <br />
@@ -152,7 +152,7 @@ export default function Home() {
               {ROTATING_WORDS[wordIndex]}
             </span>
           </h1>
-          <p className="text-[var(--text-secondary)] text-base leading-relaxed max-w-md mx-auto px-4 sm:px-0">
+          <p className="text-(--text-secondary) text-base md:text-lg leading-relaxed ">
             Discover your next favorite show, movie, or book through
             personalized journeys that actually make sense.
           </p>

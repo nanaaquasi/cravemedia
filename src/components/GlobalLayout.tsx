@@ -29,7 +29,7 @@ export default function GlobalLayout({
   return (
     <>
       <Header onOpenSavedLists={() => setShowSavedLists(true)} user={user} />
-      <div className="pt-20 flex flex-col min-h-screen px-5 md:px-10 lg:px-10 xl:px-20">
+      <div className="pt-20 flex flex-col min-h-screen px-4 md:px-10 lg:px-10 xl:px-20">
         {children}
       </div>
       <SavedListsPanel

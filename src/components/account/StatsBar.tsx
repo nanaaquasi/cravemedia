@@ -38,7 +38,7 @@ export function StatsBar({ stats }: StatsBarProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div className="hidden grid-cols-2 md:grid-cols-4 gap-4 mb-8">
       {items.map((item) => (
         <div
           key={item.label}

@@ -2,10 +2,19 @@
 import { signout } from "@/app/auth/actions";
 import { LogOut } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/client";
+
 export function SignOutButton() {
+  const supabase = createClient();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    await signout();
+  };
+
   return (
     <button
-      onClick={() => signout()}
+      onClick={handleSignOut}
       className="flex items-center gap-2 bg-black/50 hover:bg-black/70 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-xs font-medium text-zinc-300 hover:text-white transition-all"
     >
       <LogOut className="w-3 h-3" />

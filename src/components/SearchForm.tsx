@@ -56,7 +56,7 @@ export default function SearchForm({
   };
 
   return (
-    <div className="w-full flex flex-col items-center pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] pb-8 sm:pb-12 mt-4 sm:mt-12">
+    <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-12">
       <div className="w-full max-w-4xl mx-auto px-0 sm:px-6">
         {/* Content type selector */}
         <div className="mb-4 sm:mb-6 flex flex-col items-center gap-3">

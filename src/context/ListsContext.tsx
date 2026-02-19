@@ -10,6 +10,7 @@ import {
 } from "react";
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 export interface CreateListOptions {
   isJourney?: boolean;
@@ -43,10 +44,20 @@ export interface ListsContextType {
 
 const ListsContext = createContext<ListsContextType | undefined>(undefined);
 
-export function ListsProvider({ children }: { children: ReactNode }) {
+export function ListsProvider({
+  children,
+  user: initialUser = null,
+}: {
+  children: ReactNode;
+  user?: User | null;
+}) {
   const [lists, setLists] = useState<SavedList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(initialUser);
+
+  useEffect(() => {
+    setUser(initialUser);
+  }, [initialUser]);
   const supabase = createClient();
 
   // Local storage fallback for non-auth users

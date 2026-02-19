@@ -46,7 +46,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={dmSans.variable}>
       <body className="bg-gradient-mesh min-h-screen">
-        <ListsProvider>
+        <ListsProvider user={user}>
           <GlobalLayout user={user}>{children}</GlobalLayout>
         </ListsProvider>
       </body>

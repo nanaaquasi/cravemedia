@@ -20,7 +20,7 @@ export function ProfileHeader({ profile, email, stats }: ProfileHeaderProps) {
       <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex items-center px-6 md:px-10 gap-6">
+      <div className="relative z-10 h-full flex items-center px-4 md:px-6 lg:px-8 xl:px-10 gap-6">
         {/* Avatar Circle */}
         <div className="flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full p-1 bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
           <div className="w-full h-full rounded-full overflow-hidden relative bg-zinc-800">
