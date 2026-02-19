@@ -57,8 +57,8 @@ export async function saveJourneyData(data: {
     description: journeyData.description,
     content_type: inferredType, // This is required in new schema
     total_items: journeyData.items?.length || 0,
-    total_runtime_minutes: journeyData.total_runtime_minutes,
-    difficulty_progression: journeyData.difficulty_progression,
+    total_runtime_minutes: journeyData.totalRuntimeMinutes,
+    difficulty_progression: journeyData.difficultyProgression,
     items: journeyData.items || [], // Store the items JSON
     intent_answers: data.refinement_steps || [], // Store Q&A history
     status: "wishlist", // Default status
