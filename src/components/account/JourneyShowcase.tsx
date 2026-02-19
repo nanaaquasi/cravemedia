@@ -1,8 +1,10 @@
 import { Play, Calendar, Star } from "lucide-react";
 import Link from "next/link";
 
+import { Tables } from "@/lib/supabase/database.types";
+
 interface JourneyShowcaseProps {
-  journeys: Journey[];
+  journeys: Tables<"journeys">[];
   title?: string;
 }
 
