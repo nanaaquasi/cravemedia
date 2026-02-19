@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { useLists } from "@/hooks/useLists";
+import { LogOut, User as UserIcon, ChevronDown } from "lucide-react";
+import { signout } from "@/app/auth/actions";
 
 interface HeaderProps {
   onOpenSavedLists: () => void;
@@ -16,9 +18,30 @@ export default function Header({
   user: initialUser,
 }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { lists } = useLists();
   const [user, setUser] = useState<User | null>(initialUser);
   const supabase = createClient();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleLogout = async () => {
+    setIsDropdownOpen(false);
+    await signout();
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setUser(initialUser);
@@ -45,7 +68,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 md:px-8 py-4 sm:py-5 flex items-center justify-between transition-all duration-300 border-b ${
+      className={`fixed top-0 left-0 right-0 z-50 px-5 md:px-10 lg:px-20 py-4 sm:py-5 flex items-center justify-between transition-all duration-300 border-b ${
         isScrolled
           ? "bg-black/50 backdrop-blur-md border-white/5 py-3 sm:py-4"
           : "bg-transparent border-transparent"
@@ -91,18 +114,55 @@ export default function Header({
         </button>
 
         {user ? (
-          <Link
-            href="/account"
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-white/10 transition-transform active:scale-95 ${
-              isScrolled ? "hover:border-white/30" : "hover:border-white/20"
-            }`}
-          >
-            {/* Fallback avatar if no image - or use shared component if available */}
-            {/* For now simple placeholder */}
-            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white">
-              {user.email?.[0].toUpperCase() || "U"}
-            </div>
-          </Link>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className={`flex items-center gap-2 p-1 pr-2 rounded-full border transition-all active:scale-95 ${
+                isScrolled
+                  ? "bg-white/10 border-white/10 hover:border-white/30"
+                  : "bg-white/4 border-white/10 hover:border-white/20"
+              } ${isDropdownOpen ? "border-purple-500/50 bg-white/15" : ""}`}
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden">
+                <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                  {user.email?.[0].toUpperCase() || "U"}
+                </div>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-white/50 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 py-2 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
+                <div className="px-4 py-2 border-b border-white/5 mb-1">
+                  <p className="text-xs text-white/40 truncate font-medium">
+                    Signed in as
+                  </p>
+                  <p className="text-sm text-white/90 truncate font-semibold">
+                    {user.email}
+                  </p>
+                </div>
+
+                <Link
+                  href="/account"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <UserIcon className="w-4 h-4" />
+                  <span>Profile</span>
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <Link
             href="/login"

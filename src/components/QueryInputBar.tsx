@@ -173,11 +173,11 @@ export default function QueryInputBar({
         <div
           className={`flex items-center gap-3 rounded-2xl px-4 py-4 transition-all duration-200 ${
             isFocused
-              ? "bg-white/[0.08] border border-white/[0.12] shadow-lg shadow-black/20"
-              : "bg-white/[0.05] border border-white/[0.06]"
+              ? "bg-white/8 border border-white/12 shadow-lg shadow-black/20"
+              : "bg-white/5 border border-white/6"
           }`}
         >
-          <span className="text-2xl flex-shrink-0 opacity-90 drop-shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+          <span className="text-2xl shrink-0 opacity-90 drop-shadow-[0_0_10px_rgba(168,85,247,0.3)]">
             {typeIcon}
           </span>
           <input
@@ -200,7 +200,7 @@ export default function QueryInputBar({
             className="flex-1 bg-transparent text-base md:text-lg text-white placeholder:text-white/50 outline-none disabled:opacity-50 min-w-0"
             aria-label="Tell us what you're craving"
           />
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {query.length > 0 && (
               <button
                 onClick={() => setQuery("")}

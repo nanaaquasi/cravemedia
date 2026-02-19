@@ -9,7 +9,7 @@ import JourneyItemCard from "@/components/JourneyItemCard";
 interface JourneyPathProps {
   journey: JourneyResponse;
   journeyId: string;
-  onSaveJourney: () => void;
+  onSaveJourney?: () => void;
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
   onRefine?: (feedback: string) => void;
@@ -73,12 +73,14 @@ export default function JourneyPath({
               {completedCount}/{journey.itemCount} completed
             </span>
           </div>
-          <button
-            onClick={onSaveJourney}
-            className="hidden lg:inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-          >
-            Save journey
-          </button>
+          {onSaveJourney && (
+            <button
+              onClick={onSaveJourney}
+              className="hidden lg:inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+            >
+              Save journey
+            </button>
+          )}
           {onRefine && <RefineBar onRefine={onRefine} isLoading={isLoading} />}
         </div>
       </aside>
@@ -138,12 +140,14 @@ export default function JourneyPath({
         <div className="text-xs font-medium text-[var(--text-muted)] mt-2">
           FINISH
         </div>
-        <button
-          onClick={onSaveJourney}
-          className="lg:hidden w-full mt-4 py-2.5 px-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-        >
-          Save journey
-        </button>
+        {onSaveJourney && (
+          <button
+            onClick={onSaveJourney}
+            className="lg:hidden w-full mt-4 py-2.5 px-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+          >
+            Save journey
+          </button>
+        )}
       </div>
     </div>
   );

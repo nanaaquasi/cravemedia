@@ -69,7 +69,7 @@ export async function getProfileDashboardData(
   }
 }
 
-function getDefaultStats(userId: string): UserStats {
+export function getDefaultStats(userId: string): UserStats {
   return {
     user_id: userId,
     total_journeys_completed: 0,

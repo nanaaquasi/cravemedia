@@ -140,7 +140,7 @@ export default function Home() {
 
       {/* "What are you craving?" + Search form - centered */}
       <div className="flex-1 flex flex-col justify-center">
-        <div className="text-center w-full max-w-lg mx-auto px-4 sm:px-6 mb-2 sm:mb-6">
+        <div className="text-center w-full max-w-3xl mx-auto px-4 sm:px-6 mb-2 sm:mb-6">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradientShift_6s_ease_infinite]">
               What are you

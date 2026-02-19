@@ -9,61 +9,39 @@ import { StatsBar } from "./StatsBar";
 import { CurrentJourney } from "./CurrentJourney";
 import { JourneyShowcase } from "./JourneyShowcase";
 import { ActivityFeed } from "./ActivityFeed";
-import {
-  NoJourneysEmptyState,
-  NoActivityEmptyState,
-  NoFriendsEmptyState,
-} from "./EmptyStates";
-import {
-  getProfileDashboardData,
-  ProfileDashboardData,
-  subscribeToUserActivity,
-} from "./queries";
+import { NoJourneysEmptyState, NoActivityEmptyState } from "./EmptyStates";
+import { ProfileDashboardData, subscribeToUserActivity } from "./queries";
 import { Profile, Collection } from "@/lib/supabase/types";
-import { Clock, BookOpen, Bell, Plus, LayoutGrid, Loader2 } from "lucide-react";
+import { Clock, Plus, LayoutGrid, Loader2 } from "lucide-react";
 
 interface AccountViewProps {
   profile: Profile | null;
   email?: string;
-  collections: Collection[];
-  stats: {
-    followers: number;
-    following: number;
-  };
+  initialCollections: Collection[];
+  initialDashboardData: ProfileDashboardData;
 }
 
 export function AccountView({
   profile,
   email,
-  collections: initialCollections,
-  stats: initialStats,
+  initialCollections,
+  initialDashboardData,
 }: AccountViewProps) {
   const [activeTab, setActiveTab] = useState("Overview");
   const [dashboardData, setDashboardData] =
-    useState<ProfileDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+    useState<ProfileDashboardData>(initialDashboardData);
 
   useEffect(() => {
-    async function loadData() {
-      if (profile?.id) {
-        try {
-          const data = await getProfileDashboardData(profile.id);
-          setDashboardData(data);
-        } catch (error) {
-          console.error("Failed to load dashboard data:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadData();
+    // We already have initial data from server, but we can refresh if needed
+    // or just rely on the server data for the first render.
+    // The current implementation blocked render with loading=true.
+    // Now we initialize with server data and loading=false.
 
     // Subscribe to realtime updates
     if (profile?.id) {
       const channel = subscribeToUserActivity(profile.id, (newActivity) => {
         setDashboardData((prev) => {
-          if (!prev) return null;
+          if (!prev) return prev;
           return {
             ...prev,
             recentActivity: [newActivity, ...prev.recentActivity].slice(0, 10),
@@ -77,7 +55,7 @@ export function AccountView({
     }
   }, [profile?.id]);
 
-  if (loading) {
+  if (!dashboardData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -87,8 +65,8 @@ export function AccountView({
 
   // Combine initial props with fetched data
   const finalStats = {
-    followers: dashboardData?.followersCount ?? initialStats.followers,
-    following: dashboardData?.followingCount ?? initialStats.following,
+    followers: dashboardData.followersCount,
+    following: dashboardData.followingCount,
   };
 
   return (
@@ -113,6 +91,29 @@ export function AccountView({
                   journeys={dashboardData.wishlistJourneys}
                   title="Saved Journeys"
                 />
+              )}
+
+              {/* Saved Collections Preview */}
+              {initialCollections.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <LayoutGrid className="w-5 h-5 text-purple-400" />
+                      Saved Collections
+                    </h2>
+                    <button
+                      onClick={() => setActiveTab("Collections")}
+                      className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    >
+                      View All
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {initialCollections.slice(0, 3).map((col) => (
+                      <CollectionCard key={col.id} collection={col} />
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* If no current and no saved, show empty state */}

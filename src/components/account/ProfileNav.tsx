@@ -20,8 +20,8 @@ export function ProfileNav({ activeTab, onTabChange }: ProfileNavProps) {
   const tabs = [
     { id: "Overview", label: "Overview", icon: LayoutGrid },
     { id: "Journeys", label: "Journeys", icon: Map },
-    { id: "Activity", label: "Activity", icon: Activity },
     { id: "Collections", label: "Collections", icon: BookOpen },
+    { id: "Activity", label: "Activity", icon: Activity },
     { id: "WatchList", label: "WatchList", icon: Clock },
     { id: "Stats", label: "Stats", icon: BarChart },
   ];

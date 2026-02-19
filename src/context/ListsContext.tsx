@@ -10,7 +10,6 @@ import {
 } from "react";
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export interface CreateListOptions {
   isJourney?: boolean;
@@ -51,10 +50,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
 
   // Local storage fallback for non-auth users
-  const [localLists, setLocalLists] = useLocalStorage<SavedList[]>(
-    "saved-lists",
-    [],
-  );
+  const [localLists, setLocalLists] = useState<SavedList[]>([]);
 
   // Check auth state
   useEffect(() => {
@@ -101,6 +97,59 @@ export function ListsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshLists();
   }, [refreshLists]);
+
+  // Set up realtime subscriptions for automatic updates
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to collections and journeys owned by the user
+    const collectionsChannel = supabase
+      .channel("collections-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "collections",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => refreshLists(),
+      )
+      .subscribe();
+
+    const itemsChannel = supabase
+      .channel("collection-items-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "collection_items",
+        },
+        () => refreshLists(),
+      )
+      .subscribe();
+
+    const journeysChannel = supabase
+      .channel("journeys-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "journeys",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => refreshLists(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(collectionsChannel);
+      supabase.removeChannel(itemsChannel);
+      supabase.removeChannel(journeysChannel);
+    };
+  }, [user, supabase, refreshLists]);
 
   // Keep local lists in sync if not logged in
   useEffect(() => {

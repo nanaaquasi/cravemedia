@@ -18,6 +18,7 @@ import FloatingSearchButton from "@/components/FloatingSearchButton";
 import RefineBar from "@/components/RefineBar";
 import Toast from "@/components/Toast";
 import SaveJourneyModal from "@/components/SaveJourneyModal";
+import SaveCollectionModal from "@/components/SaveCollectionModal";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
 // ...
@@ -28,6 +29,8 @@ function SearchContent() {
   const pathname = usePathname();
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isSaveCollectionModalOpen, setIsSaveCollectionModalOpen] =
+    useState(false);
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
 
@@ -112,19 +115,25 @@ function SearchContent() {
 
   const handleSaveAll = useCallback(() => {
     if (!handleAuthGuard()) return;
+    setIsSaveCollectionModalOpen(true);
+  }, [handleAuthGuard]);
 
-    if (results) {
-      createList(
-        results.collectionTitle,
-        results.collectionDescription,
-        results.items,
-      );
-      setSaveToast(
-        `Saved "${results.collectionTitle}" with ${results.items.length} items`,
-      );
-      setTimeout(() => setSaveToast(null), 2500);
-    }
-  }, [results, createList, handleAuthGuard]);
+  const handleConfirmSaveCollection = useCallback(
+    async ({ title, description }: { title: string; description?: string }) => {
+      if (results) {
+        setSaveToast("Saving collection...");
+        try {
+          await createList(title, description || "", results.items);
+          setSaveToast(`Saved "${title}" with ${results.items.length} items`);
+          await refreshLists();
+        } catch {
+          setSaveToast("Failed to save collection");
+        }
+        setTimeout(() => setSaveToast(null), 2500);
+      }
+    },
+    [results, createList, refreshLists],
+  );
 
   const handleSaveJourney = useCallback(() => {
     if (!handleAuthGuard()) return;
@@ -161,7 +170,7 @@ function SearchContent() {
           } else {
             setSaveToast(`Error: ${result.error}`);
           }
-        } catch (e) {
+        } catch {
           setSaveToast("Failed to save journey");
         }
 
@@ -375,6 +384,16 @@ function SearchContent() {
           onClose={() => setIsSaveModalOpen(false)}
           defaultTitle={journeyResults.journeyTitle}
           onConfirm={handleConfirmSaveJourney}
+        />
+      )}
+
+      {results && (
+        <SaveCollectionModal
+          isOpen={isSaveCollectionModalOpen}
+          onClose={() => setIsSaveCollectionModalOpen(false)}
+          defaultTitle={results.collectionTitle}
+          defaultDescription={results.collectionDescription}
+          onConfirm={handleConfirmSaveCollection}
         />
       )}
     </main>
