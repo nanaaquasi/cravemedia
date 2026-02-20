@@ -16,6 +16,8 @@ import {
   GripVertical,
   Edit2,
   Check,
+  Bookmark,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -25,6 +27,7 @@ import MediaSearchModal from "@/components/MediaSearchModal";
 import {
   toggleCollectionVisibility,
   reorderCollectionItems,
+  cloneCollection,
 } from "@/app/actions/collection";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
@@ -47,12 +50,19 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+interface OwnerProfile {
+  username: string | null;
+  fullName: string | null;
+  avatarUrl: string | null;
+}
+
 interface CollectionDetailClientProps {
   collection: Collection;
   items: CollectionItem[];
   isOwner: boolean;
   isPublic: boolean;
   user: User | null;
+  ownerProfile?: OwnerProfile;
 }
 
 export default function CollectionDetailClient({
@@ -61,11 +71,13 @@ export default function CollectionDetailClient({
   isOwner,
   isPublic: initialIsPublic,
   user,
+  ownerProfile,
 }: CollectionDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -144,7 +156,7 @@ export default function CollectionDetailClient({
       : "";
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen pb-12">
       {/* Header / Navigation */}
       <div className="mb-6 sm:mb-8 flex flex-col justify-start">
         <Link
@@ -162,21 +174,68 @@ export default function CollectionDetailClient({
 
       {!isOwner && (
         <div className="animate-fade-in-up mb-8 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <h3 className="text-white font-medium mb-1">
-              Created by someone else
-            </h3>
-            <p className="text-sm text-white/70">
-              Create your own customized collection of your favorite movies, TV
-              shows, and books.
-            </p>
+          <div className="flex items-center gap-3">
+            {ownerProfile?.avatarUrl ? (
+              <img
+                src={ownerProfile.avatarUrl}
+                alt=""
+                className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 border-2 border-purple-500/30 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
+                {(
+                  ownerProfile?.fullName?.[0] ||
+                  ownerProfile?.username?.[0] ||
+                  "?"
+                ).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <h3 className="text-white font-medium">
+                Curated by{" "}
+                <span className="text-purple-300">
+                  {ownerProfile?.fullName ||
+                    (ownerProfile?.username
+                      ? `@${ownerProfile.username}`
+                      : "a fellow explorer")}
+                </span>
+              </h3>
+              <p className="text-sm text-white/60">
+                Save this collection to your library to keep it.
+              </p>
+            </div>
           </div>
-          <Link
-            href="/"
-            className="whitespace-nowrap px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
-          >
-            Create Your Own
-          </Link>
+          {user ? (
+            <button
+              onClick={async () => {
+                setIsCloning(true);
+                const result = await cloneCollection(collection.id);
+                setIsCloning(false);
+                if (result.error) {
+                  setToastMessage(result.error);
+                } else if (result.newCollectionId) {
+                  router.push(`/collections/${result.newCollectionId}`);
+                }
+              }}
+              disabled={isCloning}
+              className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              {isCloning ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Bookmark className="w-4 h-4" />
+              )}
+              {isCloning ? "Saving..." : "Save to My Collections"}
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+            >
+              <Bookmark className="w-4 h-4" />
+              Sign in to Save
+            </Link>
+          )}
         </div>
       )}
 
@@ -373,6 +432,25 @@ export default function CollectionDetailClient({
         onClose={() => setIsShareModalOpen(false)}
         url={shareUrl}
         title={collection.name}
+        isPublic={isPublic}
+        contentType="collection"
+        onMakePublic={
+          isOwner
+            ? async () => {
+                setIsPublic(true);
+                const result = await toggleCollectionVisibility(
+                  collection.id,
+                  true,
+                );
+                if (!result.success) {
+                  setIsPublic(false);
+                  setToastMessage("Failed to update visibility");
+                } else {
+                  setToastMessage("Collection is now public");
+                }
+              }
+            : undefined
+        }
       />
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />

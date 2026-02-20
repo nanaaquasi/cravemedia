@@ -32,6 +32,13 @@ export async function generateMetadata({
     ogParams.set("posters", posters.join(","));
   }
 
+  const ogImage = {
+    url: `/api/og?${ogParams.toString()}`,
+    width: 1200,
+    height: 630,
+    alt: journey.title,
+  };
+
   return {
     title: `${journey.title} - Cravemedia Journey`,
     description:
@@ -40,14 +47,14 @@ export async function generateMetadata({
       title: journey.title,
       description:
         journey.description || "A personalized media journey on Cravemedia",
-      images: [`/api/og?${ogParams.toString()}`],
+      images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: journey.title,
       description:
         journey.description || "A personalized media journey on Cravemedia",
-      images: [`/api/og?${ogParams.toString()}`],
+      images: [ogImage],
     },
   };
 }

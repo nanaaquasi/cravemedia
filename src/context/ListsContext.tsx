@@ -185,6 +185,7 @@ export function ListsProvider({
         items: items as EnrichedRecommendation[],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        isPublic: options?.isPublic ?? false,
         ...(options?.isJourney && { isJourney: true }),
         ...(options?.journeyMetadata && {
           journeyMetadata: options.journeyMetadata,

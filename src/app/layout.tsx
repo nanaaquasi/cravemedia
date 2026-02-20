@@ -30,6 +30,28 @@ export const metadata: Metadata = {
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     type: "website",
+    images: [
+      {
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Cravemedia — Discover Movies, TV Shows & Books",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cravemedia — Discover Movies, TV Shows & Books",
+    description:
+      "AI-powered media recommendations based on your mood and preferences.",
+    images: [
+      {
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Cravemedia — Discover Movies, TV Shows & Books",
+      },
+    ],
   },
 };
 

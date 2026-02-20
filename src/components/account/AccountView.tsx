@@ -158,7 +158,7 @@ export function AccountView({
                 <div className="lg:col-span-2">
                   <JourneyShowcase journeys={dashboardData.completedJourneys} />
                 </div>
-                <div>
+                <div className="hidden">
                   <ActivityFeed activities={dashboardData.recentActivity} />
                 </div>
               </div>
@@ -193,7 +193,7 @@ export function AccountView({
 
           {/* Activity Tab */}
           {activeTab === "Activity" && dashboardData && (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto hidden">
               <h2 className="text-xl font-bold text-white mb-6">
                 Activity Feed
               </h2>

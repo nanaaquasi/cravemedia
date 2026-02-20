@@ -34,6 +34,13 @@ export async function generateMetadata({
     ogParams.set("posters", posters.join(","));
   }
 
+  const ogImage = {
+    url: `/api/og?${ogParams.toString()}`,
+    width: 1200,
+    height: 630,
+    alt: collection.name,
+  };
+
   return {
     title: `${collection.name} - Cravemedia Collection`,
     description:
@@ -42,14 +49,14 @@ export async function generateMetadata({
       title: collection.name,
       description:
         collection.description || "A custom media collection on Cravemedia",
-      images: [`/api/og?${ogParams.toString()}`],
+      images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: collection.name,
       description:
         collection.description || "A custom media collection on Cravemedia",
-      images: [`/api/og?${ogParams.toString()}`],
+      images: [ogImage],
     },
   };
 }
@@ -90,25 +97,43 @@ export default async function CollectionDetailPage({
     notFound();
   }
 
-  // Fetch items in the collection
-  const { data: items, error: itemsError } = await supabase
-    .from("collection_items")
-    .select("*")
-    .eq("collection_id", id)
-    .order("position", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+  // Fetch items and owner profile in parallel
+  const [itemsResult, ownerProfileResult] = await Promise.all([
+    supabase
+      .from("collection_items")
+      .select("*")
+      .eq("collection_id", id)
+      .order("position", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    !isOwner
+      ? supabase
+          .from("profiles")
+          .select("username, full_name, avatar_url")
+          .eq("id", collection.user_id)
+          .single()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  if (itemsError) {
-    console.error("Error fetching collection items:", itemsError);
+  if (itemsResult.error) {
+    console.error("Error fetching collection items:", itemsResult.error);
   }
 
   return (
     <CollectionDetailClient
       collection={collection}
-      items={items || []}
+      items={itemsResult.data || []}
       isOwner={isOwner}
       isPublic={isPublic}
       user={user}
+      ownerProfile={
+        ownerProfileResult.data
+          ? {
+              username: ownerProfileResult.data.username,
+              fullName: ownerProfileResult.data.full_name,
+              avatarUrl: ownerProfileResult.data.avatar_url,
+            }
+          : undefined
+      }
     />
   );
 }

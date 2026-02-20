@@ -41,6 +41,7 @@ export interface SavedList {
   items: EnrichedRecommendation[];
   createdAt: string;
   updatedAt: string;
+  isPublic?: boolean;
   isJourney?: boolean;
   journeyMetadata?: Array<{
     position: number;

@@ -36,16 +36,16 @@ export async function GET() {
       collections?.map((c) => ({
         id: c.id,
         name: c.name,
-        description: "Collection", // Schema doesn't have description on collection table yet
+        description: "Collection",
         items: c.collection_items.map((i: any) => ({
           ...i.metadata,
           title: i.title || i.metadata?.title || "Untitled",
           posterUrl: i.image_url || i.metadata?.posterUrl,
           type: i.media_type || i.metadata?.type || "movie",
-          // Map other fields back if needed
         })) as EnrichedRecommendation[],
         createdAt: c.created_at,
-        updatedAt: c.created_at, // Use created_at if updated_at is missing
+        updatedAt: c.created_at,
+        isPublic: c.is_public ?? false,
         isJourney: false,
       })) || [];
 
@@ -79,6 +79,7 @@ export async function GET() {
           items: listItems,
           createdAt: j.created_at,
           updatedAt: j.updated_at || j.created_at,
+          isPublic: j.is_public ?? false,
           isJourney: true,
           journeyMetadata: items.map((item) => ({
             position: item.position,

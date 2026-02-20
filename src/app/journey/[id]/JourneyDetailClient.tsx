@@ -97,6 +97,25 @@ export default function JourneyDetailClient({
         onClose={() => setIsShareModalOpen(false)}
         url={shareUrl}
         title={journey.journeyTitle}
+        isPublic={isPublic}
+        contentType="journey"
+        onMakePublic={
+          isOwner
+            ? async () => {
+                setIsPublic(true);
+                const result = await toggleJourneyVisibility(
+                  journeyId,
+                  true,
+                );
+                if (!result.success) {
+                  setIsPublic(false);
+                  setToastMessage("Failed to update visibility");
+                } else {
+                  setToastMessage("Journey is now public");
+                }
+              }
+            : undefined
+        }
       />
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />

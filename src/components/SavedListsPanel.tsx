@@ -7,6 +7,8 @@ import { Share2, Copy, Trash2, Check } from "lucide-react";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ShareModal from "./ShareModal";
 import { User } from "@supabase/supabase-js";
+import { toggleCollectionVisibility } from "@/app/actions/collection";
+import { toggleJourneyVisibility } from "@/app/actions/journey";
 
 interface SavedListsPanelProps {
   lists: SavedList[];
@@ -37,6 +39,7 @@ export default function SavedListsPanel({
   const [shareConfig, setShareConfig] = useState<{
     url: string;
     title: string;
+    list: SavedList;
   } | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -67,7 +70,7 @@ export default function SavedListsPanel({
       ? `${baseUrl}/journey/${list.id}`
       : `${baseUrl}/collections/${list.id}`;
 
-    setShareConfig({ url, title: list.name });
+    setShareConfig({ url, title: list.name, list });
     setIsShareModalOpen(true);
   };
 
@@ -298,6 +301,21 @@ export default function SavedListsPanel({
           onClose={() => setIsShareModalOpen(false)}
           url={shareConfig.url}
           title={shareConfig.title}
+          isPublic={shareConfig.list.isPublic ?? false}
+          contentType={shareConfig.list.isJourney ? "journey" : "collection"}
+          onMakePublic={async () => {
+            const list = shareConfig.list;
+            const result = list.isJourney
+              ? await toggleJourneyVisibility(list.id, true)
+              : await toggleCollectionVisibility(list.id, true);
+
+            if (result.success) {
+              setShareConfig({
+                ...shareConfig,
+                list: { ...list, isPublic: true },
+              });
+            }
+          }}
         />
       )}
     </>

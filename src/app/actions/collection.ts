@@ -59,13 +59,13 @@ export async function cloneCollection(collectionId: string) {
     return { error: "You do not have permission to clone this collection." };
   }
 
-  // Insert the clone
   const { data: newCollection, error: insertError } = await supabase
     .from("collections")
     .insert({
       user_id: user.id,
-      name: `${collectionToClone.name} (Copy)`,
-      is_public: false, // cloned collections are private by default
+      name: collectionToClone.name,
+      description: collectionToClone.description ?? null,
+      is_public: false,
     })
     .select("id")
     .single();
@@ -87,6 +87,7 @@ export async function cloneCollection(collectionId: string) {
         image_url: item.image_url,
         title: item.title,
         metadata: item.metadata,
+        position: item.position,
       }),
     );
 

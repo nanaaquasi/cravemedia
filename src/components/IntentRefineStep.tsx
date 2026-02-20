@@ -18,45 +18,41 @@ interface IntentRefineStepProps {
 /* ─── shared background ────────────────────────────────────────────────── */
 function AnimatedBackground() {
   return (
-    <>
-      <div className="absolute inset-0" aria-hidden>
-        <motion.div
-          className="absolute top-[20%] left-[25%] rounded-full blur-[120px] w-[350px] h-[350px] -translate-x-1/2 -translate-y-1/2"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(88,28,135,0.45) 0%, transparent 70%)",
-          }}
-          animate={{
-            x: [0, 60, -40, 0],
-            y: [0, -40, 50, 0],
-            scale: [1, 1.15, 0.9, 1],
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute top-[60%] left-[65%] rounded-full blur-[120px] w-[320px] h-[320px] -translate-x-1/2 -translate-y-1/2"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(190,24,93,0.4) 0%, transparent 70%)",
-          }}
-          animate={{
-            x: [0, -50, 40, 0],
-            y: [0, 30, -45, 0],
-            scale: [1, 0.95, 1.1, 1],
-          }}
-          transition={{
-            duration: 7,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1,
-          }}
-        />
-      </div>
-      <div
-        className="absolute inset-0 backdrop-blur-[60px] bg-black/20"
-        aria-hidden
+    <div className="absolute inset-0 overflow-hidden" aria-hidden>
+      <motion.div
+        className="absolute top-[20%] left-[25%] rounded-full w-[350px] h-[350px] -translate-x-1/2 -translate-y-1/2 will-change-transform"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(88,28,135,0.45) 0%, transparent 70%)",
+          filter: "blur(120px)",
+        }}
+        animate={{
+          x: [0, 60, -40, 0],
+          y: [0, -40, 50, 0],
+          scale: [1, 1.15, 0.9, 1],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       />
-    </>
+      <motion.div
+        className="absolute top-[60%] left-[65%] rounded-full w-[320px] h-[320px] -translate-x-1/2 -translate-y-1/2 will-change-transform"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(190,24,93,0.4) 0%, transparent 70%)",
+          filter: "blur(120px)",
+        }}
+        animate={{
+          x: [0, -50, 40, 0],
+          y: [0, 30, -45, 0],
+          scale: [1, 0.95, 1.1, 1],
+        }}
+        transition={{
+          duration: 7,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+      />
+    </div>
   );
 }
 
@@ -318,8 +314,6 @@ export default function IntentRefineStep({
           "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
       }}
     >
-      <AnimatedBackground />
-
       <AnimatedBackground />
 
       {/* Question content — vertically centered */}
