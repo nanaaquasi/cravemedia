@@ -32,4 +32,16 @@ export interface CollectionItem {
   metadata: any;
   position?: number;
   created_at: string;
+  status?:
+    | "not_seen"
+    | "watching"
+    | "on_hold"
+    | "watched"
+    | "dropped"
+    | "not_interested";
+  finished_at?: string | null;
+  item_rating?: number | null;
+  review_text?: string | null;
+  runtime_minutes?: number | null;
+  contains_spoilers?: boolean;
 }

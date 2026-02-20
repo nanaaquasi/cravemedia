@@ -12,7 +12,8 @@ import { JourneyShowcase } from "./JourneyShowcase";
 import { ActivityFeed } from "./ActivityFeed";
 import { NoJourneysEmptyState, NoActivityEmptyState } from "./EmptyStates";
 import { ProfileDashboardData, subscribeToUserActivity } from "./queries";
-import { Profile, Collection } from "@/lib/supabase/types";
+import { Profile, Collection, CollectionItem } from "@/lib/supabase/types";
+import { InProgressMedia } from "./InProgressMedia";
 import { Clock, Plus, LayoutGrid, Loader2 } from "lucide-react";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
 import { useLists } from "@/hooks/useLists";
@@ -23,6 +24,7 @@ interface AccountViewProps {
   email?: string;
   initialCollections: Collection[];
   initialDashboardData: ProfileDashboardData;
+  inProgressItems: CollectionItem[];
 }
 
 export function AccountView({
@@ -30,6 +32,7 @@ export function AccountView({
   email,
   initialCollections,
   initialDashboardData,
+  inProgressItems,
 }: AccountViewProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
@@ -112,6 +115,8 @@ export function AccountView({
           {activeTab === "Overview" && dashboardData && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <StatsBar stats={dashboardData.stats} />
+
+              <InProgressMedia items={inProgressItems} />
 
               {dashboardData.currentJourney ? (
                 <CurrentJourney journey={dashboardData.currentJourney} />

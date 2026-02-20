@@ -188,3 +188,345 @@ export async function reorderCollectionItems(
   revalidatePath(`/collections/${collectionId}`);
   return { success: true };
 }
+
+export async function deleteCollection(collectionId: string) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in to delete." };
+  }
+
+  const { data: collection, error: fetchError } = await supabase
+    .from("collections")
+    .select("user_id")
+    .eq("id", collectionId)
+    .single();
+
+  if (fetchError || !collection) {
+    return { error: "Collection not found" };
+  }
+
+  if (collection.user_id !== user.id) {
+    return { error: "You do not have permission to delete this collection." };
+  }
+
+  await supabase.from("collection_items").delete().eq("collection_id", collectionId);
+  const { error } = await supabase
+    .from("collections")
+    .delete()
+    .eq("id", collectionId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/account");
+  return { success: true };
+}
+
+/** Parse runtime string to minutes (e.g. "130 min" -> 130, "2h 30m" -> 150) */
+function parseRuntimeMinutes(runtime: string | null | undefined): number | null {
+  if (!runtime || typeof runtime !== "string") return null;
+  const s = runtime.trim().toLowerCase();
+  const minMatch = /(\d+)\s*min/.exec(s);
+  if (minMatch) return Number.parseInt(minMatch[1], 10);
+  const hourMatch = /(\d+)\s*h/.exec(s);
+  const minPart = /(\d+)\s*m/.exec(s);
+  if (hourMatch) {
+    const hours = Number.parseInt(hourMatch[1], 10);
+    const mins = minPart ? Number.parseInt(minPart[1], 10) : 0;
+    return hours * 60 + mins;
+  }
+  if (minPart) return Number.parseInt(minPart[1], 10);
+  const pagesMatch = /(\d+)\s*pages?/i.exec(s);
+  if (pagesMatch) return Number.parseInt(pagesMatch[1], 10) * 2; // ~2 min/page estimate
+  return null;
+}
+
+const WATCH_STATUSES = [
+  "not_seen",
+  "watching",
+  "on_hold",
+  "watched",
+  "dropped",
+  "not_interested",
+] as const;
+
+export type WatchStatus = (typeof WATCH_STATUSES)[number];
+
+export async function updateCollectionItemStatus(
+  itemId: string,
+  collectionId: string,
+  newStatus: WatchStatus,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: collection, error: fetchError } = await supabase
+    .from("collections")
+    .select("user_id")
+    .eq("id", collectionId)
+    .single();
+
+  if (fetchError || !collection) {
+    return { error: "Collection not found" };
+  }
+
+  if (collection.user_id !== user.id) {
+    return { error: "You do not have permission to update this collection." };
+  }
+
+  const { data: item, error: itemError } = await supabase
+    .from("collection_items")
+    .select("*")
+    .eq("id", itemId)
+    .eq("collection_id", collectionId)
+    .maybeSingle();
+
+  if (itemError) {
+    return { error: itemError.message };
+  }
+
+  if (!item) {
+    return {
+      error:
+        "Item not found. If you recently set up this project, run: supabase db push",
+    };
+  }
+
+  const isWatched = newStatus === "watched";
+
+  const updateData: Record<string, unknown> = {
+    status: newStatus,
+    finished_at: isWatched ? new Date().toISOString() : null,
+  };
+  if (!isWatched) {
+    updateData.item_rating = null;
+    updateData.review_text = null;
+  }
+
+  const itemWithOptional = item as { runtime_minutes?: number | null };
+  if (isWatched && !itemWithOptional.runtime_minutes) {
+    const meta = item.metadata as { runtime?: string } | null;
+    const parsed = parseRuntimeMinutes(meta?.runtime);
+    if (parsed != null) {
+      updateData.runtime_minutes = parsed;
+    }
+  } else if (!isWatched) {
+    updateData.runtime_minutes = null;
+  }
+
+  const { error } = await supabase
+    .from("collection_items")
+    .update(updateData)
+    .eq("id", itemId)
+    .eq("collection_id", collectionId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/collections/${collectionId}`);
+  revalidatePath("/account");
+  return { success: true };
+}
+
+export async function updateMediaStatusAcrossCollections(
+  mediaId: string,
+  mediaType: string,
+  newStatus: WatchStatus,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: userCollections } = await supabase
+    .from("collections")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (!userCollections?.length) {
+    return { error: "No collections found." };
+  }
+
+  const collectionIds = userCollections.map((c) => c.id);
+  const isWatched = newStatus === "watched";
+
+  const updateData: Record<string, unknown> = {
+    status: newStatus,
+    finished_at: isWatched ? new Date().toISOString() : null,
+  };
+  if (!isWatched) {
+    updateData.item_rating = null;
+    updateData.review_text = null;
+    updateData.runtime_minutes = null;
+  }
+
+  const { error } = await supabase
+    .from("collection_items")
+    .update(updateData)
+    .eq("media_id", mediaId)
+    .eq("media_type", mediaType)
+    .in("collection_id", collectionIds);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  for (const cid of collectionIds) {
+    revalidatePath(`/collections/${cid}`);
+  }
+  revalidatePath("/account");
+  revalidatePath(`/media/${mediaType}/${mediaId}`);
+  return { success: true };
+}
+
+export async function reviewCollectionItem(
+  itemId: string,
+  collectionId: string,
+  data: { rating?: number; review?: string; containsSpoilers?: boolean },
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: collection, error: fetchError } = await supabase
+    .from("collections")
+    .select("user_id")
+    .eq("id", collectionId)
+    .single();
+
+  if (fetchError || !collection) {
+    return { error: "Collection not found" };
+  }
+
+  if (collection.user_id !== user.id) {
+    return { error: "You do not have permission to update this collection." };
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (data.rating != null) {
+    const r = Math.max(1, Math.min(5, data.rating));
+    updateData.item_rating = r;
+  }
+  if (data.review !== undefined) {
+    updateData.review_text = data.review?.trim() || null;
+  }
+  if (data.containsSpoilers !== undefined) {
+    updateData.contains_spoilers = data.containsSpoilers;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return { success: true };
+  }
+
+  const { error } = await supabase
+    .from("collection_items")
+    .update(updateData)
+    .eq("id", itemId)
+    .eq("collection_id", collectionId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/collections/${collectionId}`);
+  revalidatePath("/account");
+  return { success: true };
+}
+
+export async function reviewMediaAcrossCollections(
+  mediaId: string,
+  mediaType: string,
+  data: { rating?: number; review?: string; containsSpoilers?: boolean },
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: userCollections } = await supabase
+    .from("collections")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (!userCollections?.length) {
+    return { error: "No collections found. Add this media to a collection first." };
+  }
+
+  const collectionIds = userCollections.map((c) => c.id);
+
+  const { data: items } = await supabase
+    .from("collection_items")
+    .select("id, collection_id")
+    .eq("media_id", mediaId)
+    .eq("media_type", mediaType)
+    .in("collection_id", collectionIds);
+
+  if (!items?.length) {
+    return { error: "Media not found in any of your collections." };
+  }
+
+  const updateData: Record<string, unknown> = {};
+  if (data.rating != null) {
+    const r = Math.max(1, Math.min(5, data.rating));
+    updateData.item_rating = r;
+  }
+  if (data.review !== undefined) {
+    updateData.review_text = data.review?.trim() || null;
+  }
+  if (data.containsSpoilers !== undefined) {
+    updateData.contains_spoilers = data.containsSpoilers;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return { success: true };
+  }
+
+  const { error } = await supabase
+    .from("collection_items")
+    .update(updateData)
+    .eq("media_id", mediaId)
+    .eq("media_type", mediaType)
+    .in("collection_id", collectionIds);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  for (const cid of collectionIds) {
+    revalidatePath(`/collections/${cid}`);
+  }
+  revalidatePath("/account");
+  revalidatePath(`/media/${mediaType}/${mediaId}`);
+  return { success: true };
+}

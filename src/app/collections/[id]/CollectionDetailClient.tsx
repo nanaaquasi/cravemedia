@@ -16,19 +16,33 @@ import {
   GripVertical,
   Edit2,
   Check,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Pause,
+  Play,
+  XCircle,
   Bookmark,
   Loader2,
+  Trash2,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ShareModal from "@/components/ShareModal";
 import MediaSearchModal from "@/components/MediaSearchModal";
+import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import Modal from "@/components/Modal";
 import {
   toggleCollectionVisibility,
   reorderCollectionItems,
   cloneCollection,
   updateCollection,
+  deleteCollection,
+  updateCollectionItemStatus,
+  type WatchStatus,
+  reviewCollectionItem,
 } from "@/app/actions/collection";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
@@ -77,6 +91,12 @@ export default function CollectionDetailClient({
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<CollectionItem | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSpoilers, setReviewSpoilers] = useState(false);
+  const [isSavingReview, setIsSavingReview] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCloning, setIsCloning] = useState(false);
   const [isEditingCollection, setIsEditingCollection] = useState(false);
@@ -89,12 +109,23 @@ export default function CollectionDetailClient({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(items);
+  const [prevItems, setPrevItems] = useState(items);
 
-  useEffect(() => {
-    // Sync items if external changes occur (like adding/deleting)
-    // In a robust app, we should check if lengths or ids changed
-    setOrderedItems(items);
-  }, [items]);
+  if (items !== prevItems) {
+    setPrevItems(items);
+    const prevIds = new Set(orderedItems.map((i) => i.id));
+    const nextIds = new Set(items.map((i) => i.id));
+    const idsChanged =
+      prevIds.size !== nextIds.size ||
+      [...prevIds].some((id) => !nextIds.has(id));
+
+    if (idsChanged) {
+      setOrderedItems(items);
+    } else {
+      const freshById = new Map(items.map((i) => [i.id, i]));
+      setOrderedItems(orderedItems.map((i) => freshById.get(i.id) ?? i));
+    }
+  }
 
   const router = useRouter();
   const { addItemToList } = useLists();
@@ -136,6 +167,15 @@ export default function CollectionDetailClient({
     setIsEditingCollection(false);
   };
 
+  const handleDeleteCollection = async () => {
+    const result = await deleteCollection(collection.id);
+    if (result.error) {
+      setToastMessage(result.error);
+    } else {
+      router.push("/account");
+    }
+  };
+
   const handleToggleVisibility = async () => {
     const newIsPublic = !isPublic;
     setIsPublic(newIsPublic);
@@ -147,6 +187,56 @@ export default function CollectionDetailClient({
       setToastMessage(
         `Collection is now ${newIsPublic ? "public" : "private"}`,
       );
+    }
+  };
+
+  const handleStatusChange = async (itemId: string, newStatus: WatchStatus) => {
+    setOrderedItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              status: newStatus,
+              finished_at:
+                newStatus === "watched" ? new Date().toISOString() : null,
+            }
+          : item,
+      ),
+    );
+
+    const result = await updateCollectionItemStatus(
+      itemId,
+      collection.id,
+      newStatus,
+    );
+    if (result.error) {
+      setToastMessage(result.error);
+      setOrderedItems(items);
+    }
+  };
+
+  const handleOpenReview = (item: CollectionItem) => {
+    setReviewItem(item);
+    setReviewRating(item.item_rating ?? 0);
+    setReviewText(item.review_text ?? "");
+    setReviewSpoilers(item.contains_spoilers ?? false);
+  };
+
+  const handleSaveReview = async () => {
+    if (!reviewItem) return;
+    setIsSavingReview(true);
+    const result = await reviewCollectionItem(reviewItem.id, collection.id, {
+      rating: reviewRating || undefined,
+      review: reviewText.trim() || undefined,
+      containsSpoilers: reviewSpoilers,
+    });
+    setIsSavingReview(false);
+    if (result.error) {
+      setToastMessage(result.error);
+    } else {
+      setReviewItem(null);
+      setToastMessage("Review saved");
+      router.refresh();
     }
   };
 
@@ -282,6 +372,14 @@ export default function CollectionDetailClient({
             <span className="text-zinc-500 text-xs font-medium">
               {items.length} titles
             </span>
+            {isOwner && orderedItems.length > 0 && (
+              <span className="text-zinc-500 text-xs font-medium">
+                {orderedItems.filter(
+                  (i) => i.status === "watched" || i.status === "dropped",
+                ).length}
+                /{orderedItems.length} finished
+              </span>
+            )}
             {isOwner && (
               <button
                 onClick={handleToggleVisibility}
@@ -380,8 +478,8 @@ export default function CollectionDetailClient({
             )}
           </div>
 
-          {!isEditingCollection && (
-            collection.description ? (
+          {!isEditingCollection &&
+            (collection.description ? (
               <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed">
                 {collection.description}
               </p>
@@ -396,8 +494,7 @@ export default function CollectionDetailClient({
               >
                 Add a description...
               </button>
-            ) : null
-          )}
+            ) : null)}
         </div>
 
         {/* Lower actions positioned to the right */}
@@ -463,6 +560,14 @@ export default function CollectionDetailClient({
               <span>Add Item</span>
             </button>
             <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border bg-white/5 text-red-400/80 border-white/10 hover:bg-red-500/10 hover:text-red-400"
+              title="Delete collection"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete</span>
+            </button>
+            <button
               className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer border border-white/5 flex items-center justify-center"
               title="More options"
             >
@@ -501,6 +606,9 @@ export default function CollectionDetailClient({
                   index={index}
                   viewMode={viewMode}
                   isEditMode={isEditMode}
+                  isOwner={isOwner}
+                  onStatusChange={handleStatusChange}
+                  onOpenReview={handleOpenReview}
                 />
               ))}
             </div>
@@ -535,6 +643,97 @@ export default function CollectionDetailClient({
         onSelect={handleAddItem}
       />
 
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteCollection}
+        title="Delete collection?"
+        description={`Are you sure you want to delete "${collection.name}"? This cannot be undone.`}
+      />
+
+      {/* Review Modal */}
+      <Modal
+        isOpen={!!reviewItem}
+        onClose={() => !isSavingReview && setReviewItem(null)}
+        maxSize="sm"
+      >
+        {reviewItem && (
+          <div className="pt-2">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Rate & review
+            </h3>
+            <p className="text-zinc-400 text-sm mb-4 truncate">
+              {(reviewItem.metadata as { title?: string })?.title ??
+                reviewItem.title ??
+                "Untitled"}
+            </p>
+            <div className="flex gap-1 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  className="p-1 rounded transition-colors cursor-pointer"
+                >
+                  <Star
+                    className={`w-8 h-8 ${
+                      star <= reviewRating
+                        ? "text-amber-400 fill-amber-400"
+                        : "text-zinc-500 hover:text-amber-400/50"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value.slice(0, 280))}
+              placeholder="Add a short review (optional)"
+              rows={3}
+              maxLength={280}
+              disabled={isSavingReview}
+              className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:border-purple-500 focus:outline-none resize-none disabled:opacity-50 mb-4"
+            />
+            <p className="text-zinc-500 text-xs mb-3">
+              {reviewText.length}/280
+            </p>
+            <label className="flex items-center gap-2 mb-4 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={reviewSpoilers}
+                onChange={(e) => setReviewSpoilers(e.target.checked)}
+                disabled={isSavingReview}
+                className="w-4 h-4 rounded border-white/20 bg-black/50 text-purple-500 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm text-zinc-300">
+                This review contains spoilers
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => !isSavingReview && setReviewItem(null)}
+                disabled={isSavingReview}
+                className="flex-1 py-2.5 rounded-xl font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveReview}
+                disabled={isSavingReview}
+                className="flex-1 py-2.5 rounded-xl font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSavingReview ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
@@ -566,11 +765,84 @@ export default function CollectionDetailClient({
   );
 }
 
+const WATCH_STATUSES: {
+  value: WatchStatus;
+  icon: typeof CheckCircle;
+  label: string;
+  bookLabel: string;
+  color: string;
+}[] = [
+  {
+    value: "watched",
+    icon: CheckCircle,
+    label: "Watched",
+    bookLabel: "Read",
+    color: "green",
+  },
+  {
+    value: "dropped",
+    icon: EyeOff,
+    label: "Dropped",
+    bookLabel: "Dropped",
+    color: "red",
+  },
+  {
+    value: "watching",
+    icon: Play,
+    label: "Watching",
+    bookLabel: "Reading",
+    color: "blue",
+  },
+  {
+    value: "on_hold",
+    icon: Pause,
+    label: "On Hold",
+    bookLabel: "On Hold",
+    color: "amber",
+  },
+  {
+    value: "not_seen",
+    icon: Eye,
+    label: "Not Seen",
+    bookLabel: "Not Seen",
+    color: "zinc",
+  },
+  {
+    value: "not_interested",
+    icon: XCircle,
+    label: "Not Interested",
+    bookLabel: "Not Interested",
+    color: "zinc",
+  },
+];
+
+function getStatusColorClasses(color: string, isActive: boolean): string {
+  const colorMap: Record<string, string> = {
+    green: isActive
+      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+      : "bg-black/50 text-white/80 hover:bg-black/60 hover:text-white",
+    red: isActive
+      ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+      : "bg-black/50 text-white/80 hover:bg-black/60 hover:text-white",
+    blue: isActive
+      ? "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+      : "bg-black/50 text-white/80 hover:bg-black/60 hover:text-white",
+    amber: isActive
+      ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+      : "bg-black/50 text-white/80 hover:bg-black/60 hover:text-white",
+    zinc: "bg-black/50 text-white/80 hover:bg-black/60 hover:text-white",
+  };
+  return colorMap[color] ?? colorMap.zinc;
+}
+
 interface SortableItemWrapperProps {
   dbItem: CollectionItem;
   index: number;
   viewMode: "grid" | "list";
   isEditMode: boolean;
+  isOwner: boolean;
+  onStatusChange: (itemId: string, status: WatchStatus) => void;
+  onOpenReview: (item: CollectionItem) => void;
 }
 
 function SortableItemWrapper({
@@ -578,7 +850,13 @@ function SortableItemWrapper({
   index,
   viewMode,
   isEditMode,
+  isOwner,
+  onStatusChange,
+  onOpenReview,
 }: SortableItemWrapperProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const {
     attributes,
     listeners,
@@ -596,24 +874,142 @@ function SortableItemWrapper({
   };
 
   const item = dbItem.metadata as unknown as EnrichedRecommendation;
+  const rawStatus = dbItem.status as string | undefined;
+  const currentStatus: WatchStatus =
+    rawStatus === "finished"
+      ? "watched"
+      : rawStatus === "unfinished"
+        ? "not_seen"
+        : rawStatus && WATCH_STATUSES.some((s) => s.value === rawStatus)
+          ? (rawStatus as WatchStatus)
+          : "not_seen";
+  const isBook = dbItem.media_type === "book";
+  const isWatched = currentStatus === "watched";
+  const isCompleted =
+    currentStatus === "watched" || currentStatus === "dropped";
+
+  const currentConfig =
+    WATCH_STATUSES.find((s) => s.value === currentStatus) ?? WATCH_STATUSES[4];
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [dropdownOpen]);
+
+  const StatusIcon = currentConfig.icon;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isEditMode ? "animate-pulse-slow" : ""}`}
+      className={`relative group ${isEditMode ? "animate-pulse-slow" : ""} ${
+        isCompleted ? "ring-1 ring-green-500/30 rounded-2xl" : ""
+      }`}
     >
       <RecommendationItem item={item} index={index} viewMode={viewMode} />
-      {isEditMode && (
-        <button
-          {...attributes}
-          {...listeners}
-          className="absolute top-2 left-2 z-20 p-2 bg-black/60 backdrop-blur rounded-lg cursor-grab active:cursor-grabbing text-white md:opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity outline-none"
-          title="Drag to reorder"
-          aria-label="Drag to reorder item"
-        >
-          <GripVertical className="w-5 h-5" />
-        </button>
+      {isOwner && (
+        <>
+          {isEditMode && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="absolute top-2 left-2 z-20 p-2 bg-black/60 backdrop-blur rounded-lg cursor-grab active:cursor-grabbing text-white md:opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity outline-none"
+              title="Drag to reorder"
+              aria-label="Drag to reorder item"
+            >
+              <GripVertical className="w-5 h-5" />
+            </button>
+          )}
+          {/* Bottom-right of poster: status + review, visible on hover alongside the Movie tag */}
+          <div
+            ref={dropdownRef}
+            className={`absolute z-20 flex items-center gap-1 ${
+              viewMode === "grid"
+                ? "bottom-[4.5rem] right-3"
+                : "right-3 top-1/2 -translate-y-1/2"
+            } opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200`}
+          >
+            {isWatched && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenReview(dbItem);
+                }}
+                className="p-2 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 backdrop-blur-sm transition-colors cursor-pointer"
+                title="Rate & review"
+                aria-label="Rate and review"
+              >
+                <Star className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDropdownOpen((prev) => !prev);
+              }}
+              className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 cursor-pointer ${getStatusColorClasses(
+                "green",
+                currentStatus !== "not_seen",
+              )}`}
+              title="Watch status"
+              aria-label="Change watch status"
+              aria-expanded={dropdownOpen}
+            >
+              <StatusIcon className="w-4 h-4" />
+            </button>
+            {dropdownOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {WATCH_STATUSES.map((opt) => {
+                  const Icon = opt.icon;
+                  const label = isBook ? opt.bookLabel : opt.label;
+                  const isSelected = opt.value === currentStatus;
+                  return (
+                    <button
+                      key={opt.value}
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onStatusChange(dbItem.id, opt.value);
+                        setDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                        isSelected
+                          ? "bg-white/10 text-white"
+                          : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

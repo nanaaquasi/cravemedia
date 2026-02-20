@@ -99,9 +99,151 @@ export interface TMDBCrewMember {
   job: string;
 }
 
+export interface TMDBCastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
 export interface TMDBGenre {
   id: number;
   name: string;
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profileUrl: string | null;
+}
+
+export interface RecommendedTitle {
+  id: number;
+  title: string;
+  posterUrl: string | null;
+  voteAverage: number;
+  type: "movie" | "tv";
+}
+
+export interface EpisodeRating {
+  seasonNumber: number;
+  episodeNumber: number;
+  voteAverage: number;
+  name: string;
+}
+
+export type EpisodeQualityData = EpisodeRating[][];
+
+interface TMDBSeasonEpisode {
+  episode_number: number;
+  vote_average: number;
+  name: string;
+}
+
+interface TMDBSeasonResponse {
+  episodes?: TMDBSeasonEpisode[];
+}
+
+export interface SeasonEpisode {
+  episodeNumber: number;
+  name: string;
+  overview: string | null;
+  airDate: string | null;
+  stillUrl: string | null;
+  voteAverage: number;
+  voteCount: number;
+}
+
+export interface TVSeasonDetails {
+  seasonNumber: number;
+  overview: string | null;
+  posterPath: string | null;
+  airDate: string | null;
+  voteAverage: number;
+  voteCount: number;
+  episodes: SeasonEpisode[];
+}
+
+interface TMDBSeasonEpisodeFull {
+  episode_number: number;
+  name: string;
+  overview: string | null;
+  air_date: string | null;
+  still_path: string | null;
+  vote_average: number;
+  vote_count: number;
+}
+
+interface TMDBSeasonDetailsResponse {
+  season_number: number;
+  overview: string | null;
+  poster_path: string | null;
+  air_date: string | null;
+  vote_average: number;
+  vote_count: number;
+  episodes: TMDBSeasonEpisodeFull[];
+}
+
+export async function getTVSeasonDetails(
+  seriesId: number,
+  seasonNumber: number,
+): Promise<TVSeasonDetails> {
+  const data = await tmdbFetch<TMDBSeasonDetailsResponse>(
+    `/tv/${seriesId}/season/${seasonNumber}`,
+  );
+  return {
+    seasonNumber: data.season_number ?? seasonNumber,
+    overview: data.overview ?? null,
+    posterPath: data.poster_path,
+    airDate: data.air_date ?? null,
+    voteAverage: data.vote_average ?? 0,
+    voteCount: data.vote_count ?? 0,
+    episodes: (data.episodes ?? []).map((ep) => ({
+      episodeNumber: ep.episode_number,
+      name: ep.name ?? "",
+      overview: ep.overview ?? null,
+      airDate: ep.air_date ?? null,
+      stillUrl: ep.still_path
+        ? `${TMDB_IMAGE_BASE}/w300${ep.still_path}`
+        : null,
+      voteAverage: ep.vote_average ?? 0,
+      voteCount: ep.vote_count ?? 0,
+    })),
+  };
+}
+
+export async function getTVEpisodeRatings(
+  seriesId: number,
+): Promise<EpisodeQualityData> {
+  const tvData = await tmdbFetch<{ number_of_seasons?: number }>(
+    `/tv/${seriesId}`,
+  );
+  const numSeasons = tvData.number_of_seasons ?? 0;
+  if (numSeasons < 1) return [];
+
+  const result: EpisodeRating[][] = [];
+
+  for (let s = 1; s <= numSeasons; s++) {
+    try {
+      const seasonData = await tmdbFetch<TMDBSeasonResponse>(
+        `/tv/${seriesId}/season/${s}`,
+      );
+      const episodes = seasonData.episodes ?? [];
+      const seasonRatings: EpisodeRating[] = episodes.map((ep) => ({
+        seasonNumber: s,
+        episodeNumber: ep.episode_number,
+        voteAverage: ep.vote_average ?? 0,
+        name: ep.name ?? "",
+      }));
+      result.push(seasonRatings);
+    } catch {
+      result.push([]);
+    }
+  }
+
+  return result;
 }
 
 export interface MediaDetailsResponse {
@@ -117,6 +259,12 @@ export interface MediaDetailsResponse {
   directors: string[];
   trailerKey: string | null;
   type: "movie" | "tv";
+  cast: CastMember[];
+  recommendations: RecommendedTitle[];
+  releaseStatus: string | null;
+  originalLanguage: string | null;
+  originCountry: string[];
+  writers: string[];
 }
 
 interface TMDBDetailsWithAppend {
@@ -133,8 +281,23 @@ interface TMDBDetailsWithAppend {
   number_of_seasons?: number;
   episode_run_time?: number[];
   genres?: TMDBGenre[];
+  status?: string;
+  original_language?: string;
+  origin_country?: string[];
+  production_countries?: { iso_3166_1: string; name: string }[];
+  spoken_languages?: { english_name: string; iso_639_1: string }[];
   videos?: { results: TMDBVideo[] };
-  credits?: { crew: TMDBCrewMember[] };
+  credits?: { cast: TMDBCastMember[]; crew: TMDBCrewMember[] };
+  recommendations?: {
+    results: {
+      id: number;
+      title?: string;
+      name?: string;
+      poster_path: string | null;
+      vote_average: number;
+      media_type?: string;
+    }[];
+  };
 }
 
 export async function getMediaDetails(
@@ -143,7 +306,7 @@ export async function getMediaDetails(
 ): Promise<MediaDetailsResponse> {
   const endpoint = type === "movie" ? `/movie/${id}` : `/tv/${id}`;
   const data = await tmdbFetch<TMDBDetailsWithAppend>(endpoint, {
-    append_to_response: "videos,credits",
+    append_to_response: "videos,credits,recommendations",
   });
 
   const title = data.title ?? data.name ?? "";
@@ -157,7 +320,48 @@ export async function getMediaDetails(
     data.credits?.crew
       ?.filter((c) => c.job === "Director")
       .map((c) => c.name) ?? [];
+  const writers =
+    data.credits?.crew
+      ?.filter(
+        (c) =>
+          c.job === "Screenplay" || c.job === "Writer" || c.job === "Story",
+      )
+      .map((c) => c.name) ?? [];
   const genres = data.genres?.map((g) => g.name) ?? [];
+
+  const langCode = data.original_language ?? null;
+  const originalLanguage = langCode
+    ? (data.spoken_languages?.find((l) => l.iso_639_1 === langCode)
+        ?.english_name ?? langCode)
+    : null;
+
+  const originCountry = (data.production_countries ?? []).map((c) => c.name);
+
+  const cast: CastMember[] = (data.credits?.cast ?? [])
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 10)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      character: c.character,
+      profileUrl: c.profile_path
+        ? `${TMDB_IMAGE_BASE}/w185${c.profile_path}`
+        : null,
+    }));
+
+  const recommendations: RecommendedTitle[] = (
+    data.recommendations?.results ?? []
+  )
+    .slice(0, 10)
+    .map((r) => ({
+      id: r.id,
+      title: r.title ?? r.name ?? "",
+      posterUrl: r.poster_path
+        ? `${TMDB_IMAGE_BASE}/w300${r.poster_path}`
+        : null,
+      voteAverage: r.vote_average ?? 0,
+      type,
+    }));
 
   let runtime: string | null = null;
   if (type === "movie" && data.runtime) {
@@ -183,6 +387,12 @@ export async function getMediaDetails(
     directors,
     trailerKey: trailer?.key ?? null,
     type,
+    cast,
+    recommendations,
+    releaseStatus: data.status ?? null,
+    originalLanguage,
+    originCountry,
+    writers: [...new Set(writers)],
   };
 }
 

@@ -7,7 +7,7 @@ import {
   Activity,
   Journey,
 } from "@/components/account/queries";
-import { Collection } from "@/lib/supabase/types";
+import { Collection, CollectionItem } from "@/lib/supabase/types";
 
 export default async function AccountPage() {
   const supabase = await createClient();
@@ -35,6 +35,7 @@ export default async function AccountPage() {
     { count: followingCount },
     { data: followingRefs },
     { data: collections },
+    { data: inProgressItems },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).single(),
     supabase.from("user_stats").select("*").eq("user_id", userId).single(),
@@ -88,6 +89,13 @@ export default async function AccountPage() {
       .eq("user_id", userId)
       .eq("is_explicitly_saved", true)
       .limit(10),
+    supabase
+      .from("collection_items")
+      .select("*, collections!inner(user_id, name)")
+      .eq("collections.user_id", userId)
+      .eq("status", "watching")
+      .order("created_at", { ascending: false })
+      .limit(8),
   ]);
 
   let friendsActivity: Activity[] = [];
@@ -132,6 +140,7 @@ export default async function AccountPage() {
       email={user.email}
       initialCollections={formattedCollections}
       initialDashboardData={dashboardData}
+      inProgressItems={(inProgressItems as unknown as CollectionItem[]) || []}
     />
   );
 }

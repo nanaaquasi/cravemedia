@@ -75,31 +75,46 @@ export type Database = {
         Row: {
           collection_id: string;
           created_at: string | null;
+          finished_at: string | null;
           id: string;
           image_url: string | null;
+          item_rating: number | null;
           media_id: string;
           media_type: string;
           metadata: Json | null;
+          review_text: string | null;
+          runtime_minutes: number | null;
+          status: string | null;
           title: string | null;
         };
         Insert: {
           collection_id: string;
           created_at?: string | null;
+          finished_at?: string | null;
           id?: string;
           image_url?: string | null;
+          item_rating?: number | null;
           media_id: string;
           media_type: string;
           metadata?: Json | null;
+          review_text?: string | null;
+          runtime_minutes?: number | null;
+          status?: string | null;
           title?: string | null;
         };
         Update: {
           collection_id?: string;
           created_at?: string | null;
+          finished_at?: string | null;
           id?: string;
           image_url?: string | null;
+          item_rating?: number | null;
           media_id?: string;
           media_type?: string;
           metadata?: Json | null;
+          review_text?: string | null;
+          runtime_minutes?: number | null;
+          status?: string | null;
           title?: string | null;
         };
         Relationships: [
