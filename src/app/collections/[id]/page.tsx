@@ -108,6 +108,7 @@ export default async function CollectionDetailPage({
       items={items || []}
       isOwner={isOwner}
       isPublic={isPublic}
+      user={user}
     />
   );
 }

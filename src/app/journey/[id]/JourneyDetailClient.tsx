@@ -2,18 +2,20 @@
 
 import { JourneyResponse } from "@/lib/types";
 import JourneyPath from "@/components/JourneyPath";
-import { ArrowLeft, Globe, Lock, Share2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import ShareModal from "@/components/ShareModal";
 import { toggleJourneyVisibility } from "@/app/actions/journey";
 import Toast from "@/components/Toast";
+import { User } from "@supabase/supabase-js";
 
 interface JourneyDetailClientProps {
   journey: JourneyResponse;
   journeyId: string;
   isOwner: boolean;
   isPublic: boolean;
+  user: User | null;
 }
 
 export default function JourneyDetailClient({
@@ -21,6 +23,7 @@ export default function JourneyDetailClient({
   journeyId,
   isOwner,
   isPublic: initialIsPublic,
+  user,
 }: JourneyDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -47,7 +50,7 @@ export default function JourneyDetailClient({
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8">
         <Link
           href={isOwner ? "/account" : "/"}
           className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
@@ -59,39 +62,6 @@ export default function JourneyDetailClient({
             {isOwner ? "Back to Profile" : "Back to Home"}
           </span>
         </Link>
-
-        <div className="flex items-center gap-3">
-          {isOwner && (
-            <button
-              onClick={handleToggleVisibility}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                isPublic
-                  ? "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
-                  : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
-              }`}
-            >
-              {isPublic ? (
-                <>
-                  <Globe className="w-3.5 h-3.5" />
-                  Public
-                </>
-              ) : (
-                <>
-                  <Lock className="w-3.5 h-3.5" />
-                  Private
-                </>
-              )}
-            </button>
-          )}
-
-          <button
-            onClick={() => setIsShareModalOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            Share
-          </button>
-        </div>
       </div>
 
       {!isOwner && (
@@ -113,7 +83,14 @@ export default function JourneyDetailClient({
         </div>
       )}
 
-      <JourneyPath journey={journey} journeyId={journeyId} isOwner={isOwner} />
+      <JourneyPath
+        journey={journey}
+        journeyId={journeyId}
+        isOwner={isOwner}
+        onToggleVisibility={handleToggleVisibility}
+        onShare={user ? () => setIsShareModalOpen(true) : undefined}
+        isPublic={isPublic}
+      />
 
       <ShareModal
         isOpen={isShareModalOpen}

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Share2, Copy, Trash2, Check } from "lucide-react";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ShareModal from "./ShareModal";
+import { User } from "@supabase/supabase-js";
 
 interface SavedListsPanelProps {
   lists: SavedList[];
@@ -15,6 +16,7 @@ interface SavedListsPanelProps {
   onRemoveItem: (listId: string, itemTitle: string) => void;
   onExport: (list: SavedList) => string;
   onMoreLikeThis?: (item: EnrichedRecommendation) => void;
+  user?: User | null;
 }
 
 export default function SavedListsPanel({
@@ -25,6 +27,7 @@ export default function SavedListsPanel({
   onRemoveItem,
   onExport,
   onMoreLikeThis,
+  user,
 }: SavedListsPanelProps) {
   const [expandedList, setExpandedList] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -240,13 +243,15 @@ export default function SavedListsPanel({
 
                       {/* List actions */}
                       <div className="px-4 py-3 border-t border-white/5 flex gap-2 w-full">
-                        <button
-                          onClick={() => handleShareList(list)}
-                          className="flex-4 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
-                        >
-                          <Share2 size={14} />
-                          Share
-                        </button>
+                        {user && (
+                          <button
+                            onClick={() => handleShareList(list)}
+                            className="flex-4 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                          >
+                            <Share2 size={14} />
+                            Share
+                          </button>
+                        )}
                         <button
                           onClick={() => handleExport(list)}
                           className={`flex-[5] flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-black/20 hover:bg-black/40 transition-colors cursor-pointer ${

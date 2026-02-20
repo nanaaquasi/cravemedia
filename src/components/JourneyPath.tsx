@@ -3,6 +3,7 @@
 import { JourneyItem, JourneyResponse } from "@/lib/types";
 import { useJourneyProgress } from "@/hooks/useJourneyProgress";
 import { useState } from "react";
+import { Globe, Lock, Share2 } from "lucide-react";
 import RefineBar from "@/components/RefineBar";
 import JourneyItemCard from "@/components/JourneyItemCard";
 
@@ -16,6 +17,10 @@ interface JourneyPathProps {
   onRefine?: (feedback: string) => void;
   isLoading?: boolean;
   isOwner?: boolean;
+  /** Visibility toggle + share for journey detail page */
+  onToggleVisibility?: () => void;
+  onShare?: () => void;
+  isPublic?: boolean;
 }
 
 function formatRuntime(totalMinutes: number): string {
@@ -35,6 +40,9 @@ export default function JourneyPath({
   onRefine,
   isLoading = false,
   isOwner = true,
+  onToggleVisibility,
+  onShare,
+  isPublic,
 }: JourneyPathProps) {
   const { getProgressForJourney, markWatched } = useJourneyProgress(journeyId);
   const progress = getProgressForJourney(journeyId);
@@ -77,6 +85,42 @@ export default function JourneyPath({
               {completedCount}/{journey.itemCount} completed
             </span>
           </div>
+          {(onToggleVisibility || onShare) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {isOwner && onToggleVisibility && (
+                <button
+                  onClick={onToggleVisibility}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                    isPublic
+                      ? "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
+                      : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {isPublic ? (
+                    <>
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Public</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Private</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {onShare && (
+                <button
+                  onClick={onShare}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Share journey"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share</span>
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex gap-2 mb-6 lg:mb-0">
             {isOwner && onSaveJourney && (
               <button

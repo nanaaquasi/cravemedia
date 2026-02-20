@@ -417,28 +417,30 @@ function SearchContent() {
                   >
                     Save list
                   </button>
-                  <button
-                    onClick={handleShareCollection}
-                    className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all cursor-pointer"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                  {user && (
+                    <button
+                      onClick={handleShareCollection}
+                      className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all cursor-pointer"
                     >
-                      <circle cx="18" cy="5" r="3"></circle>
-                      <circle cx="6" cy="12" r="3"></circle>
-                      <circle cx="18" cy="19" r="3"></circle>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    Share
-                  </button>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="18" cy="5" r="3"></circle>
+                        <circle cx="6" cy="12" r="3"></circle>
+                        <circle cx="18" cy="19" r="3"></circle>
+                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                      </svg>
+                      Share
+                    </button>
+                  )}
                 </div>
                 <div className="mt-4">
                   <RefineBar onRefine={handleRefine} isLoading={isLoading} />
@@ -478,7 +480,7 @@ function SearchContent() {
                   contentType,
                 )}
                 onSaveJourney={handleSaveJourney}
-                onShareJourney={handleShareJourney}
+                onShareJourney={user ? handleShareJourney : undefined}
                 onAddToList={handleAddToList}
                 onMoreLikeThis={handleMoreLikeThis}
                 onRefine={handleRefine}

@@ -105,6 +105,7 @@ export default async function JourneyDetailPage({
       journeyId={id}
       isOwner={isOwner}
       isPublic={isPublic}
+      user={user}
     />
   );
 }

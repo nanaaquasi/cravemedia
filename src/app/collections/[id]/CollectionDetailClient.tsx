@@ -1,6 +1,7 @@
 "use client";
 
 import { Collection, CollectionItem } from "@/lib/supabase/types";
+import { User } from "@supabase/supabase-js";
 import { EnrichedRecommendation } from "@/lib/types";
 import RecommendationItem from "@/components/RecommendationItem";
 import {
@@ -51,6 +52,7 @@ interface CollectionDetailClientProps {
   items: CollectionItem[];
   isOwner: boolean;
   isPublic: boolean;
+  user: User | null;
 }
 
 export default function CollectionDetailClient({
@@ -58,6 +60,7 @@ export default function CollectionDetailClient({
   items,
   isOwner,
   isPublic: initialIsPublic,
+  user,
 }: CollectionDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -180,44 +183,36 @@ export default function CollectionDetailClient({
       {/* Collection Info */}
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold tracking-wider uppercase border border-purple-500/20">
               Collection
             </span>
             <span className="text-zinc-500 text-xs font-medium">
               {items.length} titles
             </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-              {collection.name}
-            </h1>
-
-            {/* Title-aligned actions */}
-            <div className="flex flex-wrap items-center gap-2">
-              {isOwner && (
-                <button
-                  onClick={handleToggleVisibility}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                    isPublic
-                      ? "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
-                      : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
-                  }`}
-                >
-                  {isPublic ? (
-                    <>
-                      <Globe className="w-3.5 h-3.5" />
-                      <span>Public</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Private</span>
-                    </>
-                  )}
-                </button>
-              )}
+            {isOwner && (
+              <button
+                onClick={handleToggleVisibility}
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                  isPublic
+                    ? "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
+                    : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
+                }`}
+              >
+                {isPublic ? (
+                  <>
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Public</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Private</span>
+                  </>
+                )}
+              </button>
+            )}
+            {user && (
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
@@ -226,7 +221,13 @@ export default function CollectionDetailClient({
                 <Share2 className="w-3.5 h-3.5" />
                 <span>Share</span>
               </button>
-            </div>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              {collection.name}
+            </h1>
           </div>
 
           {collection.description && (

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function login(formData: FormData) {
@@ -50,6 +51,30 @@ export async function signup(formData: FormData) {
 
   revalidatePath("/", "layout");
   redirect(next || "/account");
+}
+
+export async function signInWithGoogle(next?: string) {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin") || "http://localhost:3000";
+
+  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next || "/account")}`;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+
+  return { error: "Failed to initiate Google sign-in" };
 }
 
 export async function signout() {

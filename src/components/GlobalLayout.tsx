@@ -40,6 +40,7 @@ export default function GlobalLayout({
         onRemoveItem={removeItemFromList}
         onExport={exportListAsText}
         onMoreLikeThis={handleMoreLikeThis}
+        user={user}
       />
     </>
   );
