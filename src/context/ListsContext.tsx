@@ -21,6 +21,8 @@ export interface CreateListOptions {
     transitionToNext: string | null;
     difficultyLevel: string;
   }>;
+  isPublic?: boolean;
+  isExplicitlySaved?: boolean;
 }
 
 export interface ListsContextType {
@@ -208,7 +210,9 @@ export function ListsProvider({
         .insert({
           user_id: user.id,
           name: name,
-          is_public: false,
+          description: description, // Assuming we want to store it if the schema allows, though technically it might not be a column yet
+          is_public: options?.isPublic ?? false,
+          is_explicitly_saved: options?.isExplicitlySaved ?? true,
         })
         .select()
         .single();

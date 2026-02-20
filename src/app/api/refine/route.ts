@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       previousAnswers = [],
     } = body as {
       query: string;
-      type: ContentType;
+      type: ContentType | ContentType[];
       previousAnswers: RefineAnswer[];
     };
 
@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!VALID_CONTENT_TYPES.includes(type)) {
+    const types = Array.isArray(type) ? type : [type];
+    const allValid = types.every((t) => VALID_CONTENT_TYPES.includes(t));
+
+    if (!allValid) {
       return NextResponse.json(
         { error: "Invalid content type" },
         { status: 400 },

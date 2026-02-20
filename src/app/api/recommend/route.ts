@@ -22,11 +22,11 @@ import { VALID_CONTENT_TYPES } from "@/config/media-types";
 /** Parse runtime string to minutes for total (e.g. "130 min" -> 130) */
 function parseRuntimeMinutes(runtime: string | null): number {
   if (!runtime) return 0;
-  const match = runtime.match(/(\d+)\s*min/);
-  if (match) return parseInt(match[1], 10);
+  const match = /(\d+)\s*min/.exec(runtime);
+  if (match) return Number.parseInt(match[1], 10);
   // "X pages" -> ~2 min/page estimate
-  const pageMatch = runtime.match(/(\d+)\s*pages?/i);
-  if (pageMatch) return parseInt(pageMatch[1], 10) * 2;
+  const pageMatch = /(\d+)\s*pages?/i.exec(runtime);
+  if (pageMatch) return Number.parseInt(pageMatch[1], 10) * 2;
   return 0;
 }
 
@@ -37,10 +37,16 @@ export async function POST(request: NextRequest) {
       query,
       type,
       mode = "list",
+      maxOutputTokens = 3000, // Default value
+      temperature = 0.4, // Default value
+      responseMimeType = "application/json", // Default value
     } = body as {
       query: string;
-      type: ContentType;
+      type: ContentType | ContentType[];
       mode?: "list" | "journey";
+      maxOutputTokens?: number;
+      temperature?: number;
+      responseMimeType?: string;
     };
 
     // Validate input
@@ -55,7 +61,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!VALID_CONTENT_TYPES.includes(type)) {
+    const types = Array.isArray(type) ? type : [type];
+    const allValid = types.every((t) => VALID_CONTENT_TYPES.includes(t));
+
+    if (!allValid) {
       return NextResponse.json(
         { error: "Invalid content type" },
         { status: 400 },
@@ -71,7 +80,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(cached);
       }
 
-      const aiResponse = await generateJourney(trimmedQuery, type);
+      const aiResponse = await generateJourney(trimmedQuery, type, {
+        maxOutputTokens,
+        temperature,
+        responseMimeType,
+      });
       const journeyTitle =
         aiResponse.journey_title ?? aiResponse.journeyTitle ?? "Your Journey";
       const difficultyProgression =
@@ -81,7 +94,23 @@ export async function POST(request: NextRequest) {
 
       const enrichmentPromises = aiResponse.items.map(
         async (raw: JourneyItemRaw): Promise<JourneyItem> => {
-          const effectiveType = type !== "all" ? type : raw.type;
+          const typeArray = Array.isArray(type) ? type : [type];
+          const isAll = typeArray.includes("all");
+
+          // Determine the most appropriate single type for enrichment.
+          // JourneyItemRaw.type is already one of: "movie" | "tv" | "book" | "anime"
+          let effectiveType: "movie" | "tv" | "book" | "anime";
+          if (isAll) {
+            effectiveType = raw.type;
+          } else {
+            const types = typeArray.filter((t) => t !== "all") as (
+              | "movie"
+              | "tv"
+              | "book"
+              | "anime"
+            )[];
+            effectiveType = types.includes(raw.type) ? raw.type : types[0];
+          }
 
           try {
             let enriched: {
@@ -90,6 +119,7 @@ export async function POST(request: NextRequest) {
               runtime: string | null;
               externalId: string | null;
             };
+
             if (effectiveType === "book") {
               enriched = await enrichBook(raw.title, raw.creator);
             } else if (effectiveType === "anime") {
@@ -98,37 +128,47 @@ export async function POST(request: NextRequest) {
               enriched = await enrichMovieOrTV(
                 raw.title,
                 raw.year,
-                effectiveType as "movie" | "tv",
+                effectiveType,
               );
             }
+
+            let ratingSource: string | null = null;
+            if (effectiveType === "book") {
+              ratingSource = "Google Books";
+            } else if (effectiveType === "anime") {
+              ratingSource = "Anilist";
+            } else {
+              ratingSource = "TMDB";
+            }
+
             return {
               ...raw,
               type: effectiveType,
               description: raw.description ?? raw.whyThisPosition,
               genres: raw.genres ?? raw.keyThemes,
               posterUrl: enriched.posterUrl,
-              rating: enriched.rating,
-              ratingSource:
-                effectiveType === "book"
-                  ? "Google Books"
-                  : effectiveType === "anime"
-                    ? "Anilist"
-                    : "TMDB",
+              rating: enriched.rating ?? raw.ratingScore ?? null,
+              ratingSource,
               runtime: enriched.runtime,
               externalId: enriched.externalId,
               difficultyLevel: raw.difficultyLevel,
+              aiRating: raw.ratingScore,
+              aiPopularity: raw.popularityScore,
             };
           } catch {
             return {
               ...raw,
+              type: effectiveType, // Use effectiveType instead of potentially invalid raw.type
               description: raw.description ?? raw.whyThisPosition,
               genres: raw.genres ?? raw.keyThemes,
               posterUrl: null,
-              rating: null,
+              rating: raw.ratingScore ?? null,
               ratingSource: null,
               runtime: null,
               externalId: null,
               difficultyLevel: raw.difficultyLevel,
+              aiRating: raw.ratingScore,
+              aiPopularity: raw.popularityScore,
             };
           }
         },
@@ -162,13 +202,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached);
     }
 
-    const aiResponse = await generateRecommendations(trimmedQuery, type);
+    const aiResponse = await generateRecommendations(trimmedQuery, type, {
+      maxOutputTokens,
+      temperature,
+      responseMimeType,
+    });
 
     const enrichmentPromises = aiResponse.items.map(
       async (item): Promise<EnrichedRecommendation> => {
-        // If the user requested a specific type (e.g. "anime"), force the item to be treated as such
-        // even if the AI labeled it "tv" or "movie".
-        const effectiveType = type !== "all" ? type : item.type;
+        const typeArray = Array.isArray(type) ? type : [type];
+        const isAll = typeArray.includes("all");
+
+        // Determine the most appropriate single type for enrichment.
+        let effectiveType: "movie" | "tv" | "book" | "anime";
+        if (isAll) {
+          effectiveType = item.type;
+        } else {
+          const types = typeArray.filter((t) => t !== "all") as (
+            | "movie"
+            | "tv"
+            | "book"
+            | "anime"
+          )[];
+          effectiveType = types.includes(item.type) ? item.type : types[0];
+        }
 
         try {
           if (effectiveType === "book") {
@@ -178,6 +235,9 @@ export async function POST(request: NextRequest) {
               type: effectiveType,
               ratingSource: "Google Books",
               ...enriched,
+              rating: enriched.rating ?? item.ratingScore ?? null,
+              aiRating: item.ratingScore,
+              aiPopularity: item.popularityScore,
             };
           } else if (effectiveType === "anime") {
             const enriched = await enrichAnime(item.title, item.year);
@@ -186,28 +246,37 @@ export async function POST(request: NextRequest) {
               type: effectiveType,
               ratingSource: "Anilist",
               ...enriched,
+              rating: enriched.rating ?? item.ratingScore ?? null,
+              aiRating: item.ratingScore,
+              aiPopularity: item.popularityScore,
             };
           } else {
             const enriched = await enrichMovieOrTV(
               item.title,
               item.year,
-              effectiveType as "movie" | "tv",
+              effectiveType,
             );
             return {
               ...item,
-              type: effectiveType as "movie" | "tv",
+              type: effectiveType,
               ratingSource: "TMDB",
               ...enriched,
+              rating: enriched.rating ?? item.ratingScore ?? null,
+              aiRating: item.ratingScore,
+              aiPopularity: item.popularityScore,
             };
           }
         } catch {
           return {
             ...item,
+            type: effectiveType,
             posterUrl: null,
-            rating: null,
             ratingSource: null,
             runtime: null,
             externalId: null,
+            rating: item.ratingScore ?? null, // Fallback to AI rating if enrichment fails
+            aiRating: item.ratingScore,
+            aiPopularity: item.popularityScore,
           };
         }
       },

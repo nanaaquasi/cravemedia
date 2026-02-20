@@ -51,6 +51,7 @@ export default async function AccountPage() {
       .select("*")
       .eq("user_id", userId)
       .eq("status", "completed")
+      .eq("is_explicitly_saved", true)
       .order("completed_at", { ascending: false })
       .limit(12),
     supabase
@@ -58,6 +59,7 @@ export default async function AccountPage() {
       .select("*")
       .eq("user_id", userId)
       .eq("status", "wishlist")
+      .eq("is_explicitly_saved", true)
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
@@ -84,6 +86,7 @@ export default async function AccountPage() {
       .from("collections")
       .select("*, collection_items(image_url)")
       .eq("user_id", userId)
+      .eq("is_explicitly_saved", true)
       .limit(10),
   ]);
 

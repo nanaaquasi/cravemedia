@@ -6,6 +6,7 @@ import { User } from "@supabase/supabase-js";
 
 import { useState, useCallback, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { AnimatePresence } from "framer-motion";
 import { ContentType, EnrichedRecommendation, JourneyItem } from "@/lib/types";
 import { useRecommendations, RecommendMode } from "@/hooks/useRecommendations";
 import { useLists } from "@/hooks/useLists";
@@ -19,6 +20,8 @@ import RefineBar from "@/components/RefineBar";
 import Toast from "@/components/Toast";
 import SaveJourneyModal from "@/components/SaveJourneyModal";
 import SaveCollectionModal from "@/components/SaveCollectionModal";
+import ShareModal from "@/components/ShareModal";
+import AddToCollectionModal from "@/components/AddToCollectionModal";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
 // ...
@@ -31,6 +34,15 @@ function SearchContent() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isSaveCollectionModalOpen, setIsSaveCollectionModalOpen] =
     useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareConfig, setShareConfig] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+  const [itemToAdd, setItemToAdd] = useState<EnrichedRecommendation | null>(
+    null,
+  );
+  const [showImmersiveLoader, setShowImmersiveLoader] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
 
@@ -44,33 +56,70 @@ function SearchContent() {
 
   const { results, journeyResults, isLoading, error, fetchRecommendations } =
     useRecommendations();
-  const { lists, createList, refreshLists } = useLists();
+  const { createList, refreshLists } = useLists();
 
   const q = searchParams.get("q");
   const typeParam = searchParams.get("type");
-  const contentType = (
-    VALID_CONTENT_TYPES.includes(typeParam as ContentType) ? typeParam : "all"
-  ) as ContentType;
-
   const modeParam = searchParams.get("mode");
+
+  const contentType = useMemo(() => {
+    if (!typeParam) return "all" as ContentType;
+    if (typeParam.includes(",")) {
+      const parts = typeParam
+        .split(",")
+        .filter((t) =>
+          VALID_CONTENT_TYPES.includes(t as ContentType),
+        ) as ContentType[];
+      return parts.length > 0 ? parts : ("all" as ContentType);
+    }
+    return (
+      VALID_CONTENT_TYPES.includes(typeParam as ContentType) ? typeParam : "all"
+    ) as ContentType | ContentType[];
+  }, [typeParam]);
+
   const viewMode: RecommendMode = modeParam === "journey" ? "journey" : "list";
+
+  const isAnyLoading = isLoading;
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isAnyLoading) {
+      timer = setTimeout(() => setShowImmersiveLoader(true), 500);
+    } else {
+      setShowImmersiveLoader((prev) => (prev ? false : prev));
+    }
+    return () => clearTimeout(timer);
+  }, [isAnyLoading]);
 
   useEffect(() => {
     if (q && typeParam) {
       fetchRecommendations(q, contentType, viewMode);
-    } else if (!q || !typeParam) {
+    } else {
       router.replace("/");
     }
   }, [q, typeParam, contentType, viewMode, fetchRecommendations, router]);
 
-  const handleContentTypeChange = useCallback(
-    (newType: ContentType) => {
-      if (!q) return;
+  const updateSearchParams = useCallback(
+    (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set("type", newType);
-      router.replace(`/search?${params.toString()}`);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+      router.replace(`${pathname}?${params.toString()}`);
     },
-    [q, searchParams, router],
+    [searchParams, router, pathname],
+  );
+
+  const handleContentTypeChange = useCallback(
+    (newType: ContentType | ContentType[]) => {
+      const typeStr = Array.isArray(newType) ? newType.join(",") : newType;
+      updateSearchParams({ type: typeStr });
+    },
+    [updateSearchParams],
   );
 
   const handleAuthGuard = useCallback(() => {
@@ -85,32 +134,9 @@ function SearchContent() {
   const handleAddToList = useCallback(
     (item: EnrichedRecommendation | JourneyItem) => {
       if (!handleAuthGuard()) return;
-
-      const source = results ?? journeyResults;
-      if (source) {
-        // ... (existing logic)
-        const name =
-          "journeyTitle" in source
-            ? source.journeyTitle
-            : source.collectionTitle;
-        const description =
-          "description" in source
-            ? source.description
-            : source.collectionDescription;
-        const existingList = lists.find((l) => l.name === name);
-        if (!existingList) {
-          createList(name, description, [item as EnrichedRecommendation]);
-        } else {
-          createList(name, description, [
-            ...existingList.items.filter((i) => i.title !== item.title),
-            item as EnrichedRecommendation,
-          ]);
-        }
-        setSaveToast(`Added "${item.title}" to list`);
-        setTimeout(() => setSaveToast(null), 2000);
-      }
+      setItemToAdd(item as EnrichedRecommendation);
     },
-    [results, journeyResults, lists, createList, handleAuthGuard],
+    [handleAuthGuard],
   );
 
   const handleSaveAll = useCallback(() => {
@@ -155,13 +181,19 @@ function SearchContent() {
         setSaveToast("Saving journey...");
 
         try {
-          const result = await saveJourneyData({
+          const rawResult = await saveJourneyData({
             title,
             query: q,
             goal_amount: goalAmount,
             goal_unit: goalUnit,
             results: journeyResults,
           });
+
+          const result = rawResult as {
+            success: boolean;
+            journeyId?: string;
+            error?: any;
+          };
 
           if (result.success) {
             setSaveToast(`Saved "${title}" to your profile`);
@@ -180,49 +212,117 @@ function SearchContent() {
     [journeyResults, q, refreshLists],
   );
 
+  const handleShareJourney = useCallback(async () => {
+    if (!journeyResults || !q) return;
+
+    setSaveToast("Preparing link...");
+
+    try {
+      // 1. Save it implicitly (if it fails, it fails, but we try)
+      const rawResult = await saveJourneyData({
+        title: journeyResults.journeyTitle,
+        query: q,
+        results: journeyResults,
+        is_public: true, // Auto-make it public so guests can view
+      });
+
+      const result = rawResult as {
+        success: boolean;
+        journeyId?: string;
+        error?: any;
+      };
+
+      if (result.success && result.journeyId) {
+        // We have a persisted journey ID
+        const url = `${window.location.origin}/journey/${result.journeyId}`;
+        setShareConfig({ url, title: journeyResults.journeyTitle });
+        setIsShareModalOpen(true);
+        setSaveToast(null);
+      } else {
+        throw new Error(String(result.error) || "Failed to generate link");
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      setSaveToast("Failed to prepare sharing link.");
+      setTimeout(() => setSaveToast(null), 2500);
+    }
+  }, [journeyResults, q]);
+
+  const handleShareCollection = useCallback(async () => {
+    if (!results) return;
+
+    setSaveToast("Preparing link...");
+
+    try {
+      // 1. Save it implicitly
+      const result = await createList(
+        results.collectionTitle || "My List",
+        results.collectionDescription || "",
+        results.items,
+        {
+          isPublic: true,
+          isExplicitlySaved: false,
+        },
+      );
+
+      if (result && result.id) {
+        // We have a persisted collection ID
+        const url = `${window.location.origin}/collections/${result.id}`;
+        setShareConfig({ url, title: result.name });
+        setIsShareModalOpen(true);
+        setSaveToast(null);
+      } else {
+        throw new Error("Failed to generate link");
+      }
+    } catch (e: unknown) {
+      console.error(e);
+      setSaveToast("Failed to prepare sharing link.");
+      setTimeout(() => setSaveToast(null), 2500);
+    }
+  }, [results, createList]);
+
   const handleViewModeChange = useCallback(
     (mode: RecommendMode) => {
       if (mode === viewMode) return;
-      if (q && contentType) {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("mode", mode);
-        router.replace(`/search?${params.toString()}`);
-      }
+      updateSearchParams({ mode });
     },
-    [viewMode, q, contentType, searchParams, router],
+    [viewMode, updateSearchParams],
   );
 
   const handleRefine = useCallback(
     (feedback: string) => {
-      if (!q || !contentType) return;
+      if (!q) return;
       const refinedQuery = `${q} (refine: ${feedback})`;
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("q", refinedQuery);
-      router.replace(`/search?${params.toString()}`);
+      updateSearchParams({ q: refinedQuery });
     },
-    [q, contentType, searchParams, router],
+    [q, updateSearchParams],
   );
 
   const handleMoreLikeThis = useCallback(
     (item: EnrichedRecommendation | JourneyItem) => {
-      const query = `More ${item.type === "book" ? "books" : item.type === "tv" ? "TV shows" : "movies"} like "${item.title}" by ${item.creator}`;
+      const typeLabel =
+        {
+          book: "books",
+          tv: "TV shows",
+          movie: "movies",
+        }[item.type as string] || "media";
+      const query = `More ${typeLabel} like "${item.title}" by ${item.creator}`;
       const itemType = item.type;
       const params = new URLSearchParams({ q: query, type: itemType });
-      router.replace(`/search?${params.toString()}`);
+      router.replace(`${pathname}?${params.toString()}`);
     },
-    [router],
+    [router, pathname],
   );
 
-  const filteredItems = useMemo(
-    () =>
-      results && contentType !== "all"
-        ? results.items.filter((item) => item.type === contentType)
-        : (results?.items ?? []),
-    [results, contentType],
-  );
+  const filteredItems = useMemo(() => {
+    if (!results) return [];
+    if (contentType === "all") return results.items;
+    const types = Array.isArray(contentType) ? contentType : [contentType];
+    return results.items.filter((item) => types.includes(item.type));
+  }, [results, contentType]);
 
   return (
-    <main className="min-h-screen flex flex-col relative pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
+    <main className="min-h-screen flex flex-col relative">
       {/* Content area - always show results view on /search */}
       <div className="flex-1 flex flex-col min-h-0 pb-24 sm:pb-28">
         <div className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 md:px-6 lg:px-0 max-w-6xl lg:max-w-7xl xl:max-w-[90rem] mx-auto w-full">
@@ -272,10 +372,9 @@ function SearchContent() {
             </div>
           )}
 
-          {isLoading &&
-            (viewMode === "journey" ? !journeyResults : !results) && (
-              <CuratingLoader mode={viewMode} />
-            )}
+          <AnimatePresence>
+            {showImmersiveLoader && <CuratingLoader mode={viewMode} />}
+          </AnimatePresence>
 
           {error && (
             <div className="text-center py-16 sm:py-20 px-4 sm:px-6 animate-fade-in-up">
@@ -284,7 +383,7 @@ function SearchContent() {
                 {error}
               </p>
               <button
-                onClick={() => router.push("/")}
+                onClick={() => globalThis.location.reload()}
                 className="text-base text-purple-400 hover:text-purple-300 mt-3 cursor-pointer"
               >
                 Try again
@@ -292,82 +391,101 @@ function SearchContent() {
             </div>
           )}
 
-          {results &&
-            (viewMode === "list" || (viewMode === "journey" && isLoading)) && (
-              <div className="animate-fade-in-up flex flex-col lg:flex-row lg:gap-8 lg:min-h-0 lg:flex-1 mt-6 sm:mt-8">
-                {/* Left: List info - sticky on desktop, 5/12 of width */}
-                <aside className="lg:flex-[5] lg:min-w-0 lg:sticky lg:top-1/2 lg:-translate-y-1/2 lg:self-start mb-6 lg:mb-0">
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
-                    {results.collectionTitle}
-                  </h2>
-                  <p className="text-sm text-purple-300/80 mb-2 flex items-center gap-1.5">
-                    {results.collectionDescription}
+          {viewMode === "list" && results && (
+            <div className="flex flex-col lg:flex-row lg:gap-8 lg:min-h-0 lg:flex-1 mt-6 sm:mt-8 animate-fade-in-up">
+              {/* Left: List info - sticky on desktop, 5/12 of width */}
+              <aside className="lg:flex-[5] lg:min-w-0 lg:sticky lg:top-1/2 lg:-translate-y-1/2 lg:self-start mb-6 lg:mb-0">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
+                  {results.collectionTitle}
+                </h2>
+                <p className="text-sm text-purple-300/80 mb-2 flex items-center gap-1.5">
+                  {results.collectionDescription}
+                </p>
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <ContentTypeSelector
+                    selected={contentType}
+                    onChange={handleContentTypeChange}
+                  />
+                  <p className="text-base text-[var(--text-muted)]">
+                    {filteredItems.length} recommendations
                   </p>
-                  <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <ContentTypeSelector
-                      selected={contentType}
-                      onChange={handleContentTypeChange}
-                    />
-                    <p className="text-base text-[var(--text-muted)]">
-                      {filteredItems.length} recommendations
-                    </p>
-                  </div>
+                </div>
+                <div className="flex gap-2">
                   <button
                     onClick={handleSaveAll}
                     className="inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
                   >
                     Save list
                   </button>
+                  <button
+                    onClick={handleShareCollection}
+                    className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all cursor-pointer"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    Share
+                  </button>
+                </div>
+                <div className="mt-4">
                   <RefineBar onRefine={handleRefine} isLoading={isLoading} />
-                </aside>
+                </div>
+              </aside>
 
-                {/* Right: Cards grid - 3 per row on desktop, 7/12 of width */}
-                <div className="flex-1 lg:flex-[7] lg:min-w-0 lg:overflow-y-auto lg:min-h-0">
-                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-                    {filteredItems.length > 0 ? (
-                      filteredItems.map((item, i) => (
-                        <RecommendationItem
-                          key={`${item.title}-${i}`}
-                          item={item}
-                          index={i}
-                          onAddToList={handleAddToList}
-                          onMoreLikeThis={handleMoreLikeThis}
-                        />
-                      ))
-                    ) : (
-                      <p className="col-span-full text-center py-12 text-[var(--text-muted)]">
-                        No{" "}
-                        {contentType === "movie"
-                          ? "movies"
-                          : contentType === "tv"
-                            ? "TV shows"
-                            : "books"}{" "}
-                        in this list
-                      </p>
-                    )}
-                  </div>
+              {/* Right: Cards grid - 3 per row on desktop, 7/12 of width */}
+              <div className="flex-1 lg:flex-[7] lg:min-w-0 lg:overflow-y-auto lg:min-h-0">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+                  {filteredItems.length > 0 ? (
+                    filteredItems.map((item, i) => (
+                      <RecommendationItem
+                        key={`${item.title}-${i}`}
+                        item={item}
+                        index={i}
+                        onAddToList={handleAddToList}
+                        onMoreLikeThis={handleMoreLikeThis}
+                      />
+                    ))
+                  ) : (
+                    <p className="col-span-full text-center py-12 text-[var(--text-muted)]">
+                      No items matching your selection in this list
+                    </p>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-          {journeyResults &&
-            (viewMode === "journey" || (viewMode === "list" && isLoading)) && (
-              <div className="flex-1 flex flex-col min-h-0 mt-6">
-                <JourneyPath
-                  journey={journeyResults}
-                  journeyId={getJourneyIdFromResults(
-                    journeyResults.journeyTitle,
-                    q ?? "",
-                    contentType,
-                  )}
-                  onSaveJourney={handleSaveJourney}
-                  onAddToList={handleAddToList}
-                  onMoreLikeThis={handleMoreLikeThis}
-                  onRefine={handleRefine}
-                  isLoading={isLoading}
-                />
-              </div>
-            )}
+          {viewMode === "journey" && journeyResults && (
+            <div className="flex-1 flex flex-col min-h-0 mt-6 animate-fade-in-up">
+              <JourneyPath
+                journey={journeyResults}
+                journeyId={getJourneyIdFromResults(
+                  journeyResults.journeyTitle,
+                  q ?? "",
+                  contentType,
+                )}
+                onSaveJourney={handleSaveJourney}
+                onShareJourney={handleShareJourney}
+                onAddToList={handleAddToList}
+                onMoreLikeThis={handleMoreLikeThis}
+                onRefine={handleRefine}
+                isLoading={isLoading}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -396,6 +514,21 @@ function SearchContent() {
           onConfirm={handleConfirmSaveCollection}
         />
       )}
+
+      {shareConfig && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          url={shareConfig.url}
+          title={shareConfig.title}
+        />
+      )}
+
+      <AddToCollectionModal
+        isOpen={!!itemToAdd}
+        onClose={() => setItemToAdd(null)}
+        item={itemToAdd}
+      />
     </main>
   );
 }

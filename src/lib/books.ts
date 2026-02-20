@@ -176,3 +176,38 @@ export async function enrichBook(
 
   return { posterUrl: null, rating: null, runtime: null, externalId: null };
 }
+
+export async function searchBooksForList(query: string) {
+  try {
+    const res = await fetch(
+      `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10`,
+    );
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    if (!data.docs) return [];
+
+    return data.docs.map((doc: any) => ({
+      title: doc.title,
+      creator: doc.author_name ? doc.author_name[0] : "Unknown Author",
+      description: doc.first_sentence
+        ? doc.first_sentence[0]
+        : "A book found on OpenLibrary.",
+      type: "book",
+      year: doc.first_publish_year?.toString() || "",
+      whyThis: "",
+      rating: doc.ratings_average
+        ? Math.round(doc.ratings_average * 10) / 10
+        : null,
+      posterUrl: doc.cover_i
+        ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+        : null,
+      runtime: doc.number_of_pages_median
+        ? `${doc.number_of_pages_median} pages`
+        : null,
+      externalId: doc.key,
+    }));
+  } catch {
+    return [];
+  }
+}

@@ -12,8 +12,9 @@ export type RecommendMode = "list" | "journey";
 
 export function useRecommendations() {
   const [results, setResults] = useState<RecommendationResponse | null>(null);
-  const [journeyResults, setJourneyResults] =
-    useState<JourneyResponse | null>(null);
+  const [journeyResults, setJourneyResults] = useState<JourneyResponse | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [queryHistory, setQueryHistory] = useLocalStorage<string[]>(
@@ -22,29 +23,28 @@ export function useRecommendations() {
   );
 
   const fetchRecommendations = useCallback(
-    async (query: string, type: ContentType, mode: RecommendMode = "list") => {
+    async (
+      query: string,
+      type: ContentType | ContentType[],
+      mode: RecommendMode = "list",
+    ) => {
+      if (!query.trim()) return;
       setIsLoading(true);
       setError(null);
-      // Only clear the mode we're fetching for—keep the other for instant switch
-      if (mode === "journey") {
-        setJourneyResults(null);
-      } else {
-        setResults(null);
-      }
 
       try {
-        const res = await fetch("/api/recommend", {
+        const response = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query, type, mode }),
         });
 
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
           throw new Error(errorData?.error || "Failed to get recommendations");
         }
 
-        const data = await res.json();
+        const data = await response.json();
 
         if (mode === "journey") {
           setJourneyResults(data as JourneyResponse);

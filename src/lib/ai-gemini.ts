@@ -9,10 +9,16 @@ import {
 import { getSystemPrompt } from "./ai-prompts";
 import { getJourneySystemPrompt } from "./ai-journey-prompts";
 import { getRefineSystemPrompt } from "./ai-refine-prompts";
+import { cleanAndParseJSON } from "./ai-utils";
 
 export async function generateWithGemini(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
+  options: {
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  } = {},
 ): Promise<AIResponse> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -27,23 +33,28 @@ export async function generateWithGemini(
     contents: query,
     config: {
       systemInstruction: getSystemPrompt(type),
-      maxOutputTokens: 3000,
-      temperature: 0.7,
-      responseMimeType: "application/json",
+      maxOutputTokens: options.maxOutputTokens || 3000,
+      temperature: options.temperature ?? 0.4,
+      responseMimeType: options.responseMimeType || "application/json",
     },
   });
 
-  const text = response.text;
+  const text = response.text ?? "";
   if (!text) {
     throw new Error("No text response from Gemini");
   }
 
-  return JSON.parse(text) as AIResponse;
+  return cleanAndParseJSON<AIResponse>(text);
 }
 
 export async function generateJourneyWithGemini(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
+  options: {
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  } = {},
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -58,23 +69,23 @@ export async function generateJourneyWithGemini(
     contents: query,
     config: {
       systemInstruction: getJourneySystemPrompt(type),
-      maxOutputTokens: 4000,
-      temperature: 0.7,
-      responseMimeType: "application/json",
+      maxOutputTokens: options.maxOutputTokens || 4000,
+      temperature: options.temperature ?? 0.4,
+      responseMimeType: options.responseMimeType || "application/json",
     },
   });
 
-  const text = response.text;
+  const text = response.text ?? "";
   if (!text) {
     throw new Error("No text response from Gemini");
   }
 
-  return JSON.parse(text) as JourneyAIResponse;
+  return cleanAndParseJSON<JourneyAIResponse>(text);
 }
 
 export async function generateRefineWithGemini(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
 ): Promise<RefineResponse> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -96,10 +107,10 @@ export async function generateRefineWithGemini(
     },
   });
 
-  const text = response.text;
+  const text = response.text ?? "";
   if (!text) {
     throw new Error("No text response from Gemini");
   }
 
-  return JSON.parse(text) as RefineResponse;
+  return cleanAndParseJSON<RefineResponse>(text);
 }

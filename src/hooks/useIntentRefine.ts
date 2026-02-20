@@ -21,7 +21,7 @@ export function useIntentRefine() {
   const callRefineAPI = useCallback(
     async (
       query: string,
-      type: ContentType,
+      type: ContentType | ContentType[],
       previousAnswers: RefineAnswer[],
     ): Promise<RefineResponse | null> => {
       try {
@@ -52,7 +52,7 @@ export function useIntentRefine() {
   );
 
   const startRefine = useCallback(
-    async (query: string, type: ContentType) => {
+    async (query: string, type: ContentType | ContentType[]) => {
       setStep("loading");
       setError(null);
       setAnswers([]);
@@ -74,7 +74,11 @@ export function useIntentRefine() {
   );
 
   const submitAnswers = useCallback(
-    async (query: string, type: ContentType, newAnswers: RefineAnswer[]) => {
+    async (
+      query: string,
+      type: ContentType | ContentType[],
+      newAnswers: RefineAnswer[],
+    ) => {
       const allAnswers = [...answers, ...newAnswers];
       setAnswers(allAnswers);
       setStep("loading");

@@ -3,7 +3,9 @@
 import { SavedList, EnrichedRecommendation } from "@/lib/types";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { Share2, Copy, Trash2, Check } from "lucide-react";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import ShareModal from "./ShareModal";
 
 interface SavedListsPanelProps {
   lists: SavedList[];
@@ -29,6 +31,12 @@ export default function SavedListsPanel({
 
   const [listToDelete, setListToDelete] = useState<string | null>(null);
 
+  const [shareConfig, setShareConfig] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -50,6 +58,16 @@ export default function SavedListsPanel({
   const getListName = (id: string | null) =>
     lists.find((l) => l.id === id)?.name || "this list";
 
+  const handleShareList = (list: SavedList) => {
+    const baseUrl = window.location.origin;
+    const url = list.isJourney
+      ? `${baseUrl}/journey/${list.id}`
+      : `${baseUrl}/collections/${list.id}`;
+
+    setShareConfig({ url, title: list.name });
+    setIsShareModalOpen(true);
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
@@ -67,7 +85,7 @@ export default function SavedListsPanel({
               <h2 className="text-lg font-semibold">My Cravings</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-2 rounded-full hover:bg-black/40 transition-colors cursor-pointer"
                 aria-label="Close my cravings"
               >
                 <svg
@@ -107,7 +125,7 @@ export default function SavedListsPanel({
                     onClick={() =>
                       setExpandedList(expandedList === list.id ? null : list.id)
                     }
-                    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer"
+                    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-black/20 transition-colors cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -143,7 +161,7 @@ export default function SavedListsPanel({
                       {list.items.map((item, idx) => (
                         <div
                           key={`${item.title}-${idx}`}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.03] group"
+                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/10 group"
                         >
                           {list.isJourney && list.journeyMetadata && (
                             <span className="w-5 text-xs text-[var(--text-muted)] flex-shrink-0">
@@ -221,18 +239,35 @@ export default function SavedListsPanel({
                       ))}
 
                       {/* List actions */}
-                      <div className="px-4 py-3 border-t border-white/5 flex gap-2">
+                      <div className="px-4 py-3 border-t border-white/5 flex gap-2 w-full">
+                        <button
+                          onClick={() => handleShareList(list)}
+                          className="flex-4 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                        >
+                          <Share2 size={14} />
+                          Share
+                        </button>
                         <button
                           onClick={() => handleExport(list)}
-                          className="flex-1 text-xs py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-secondary)] transition-colors cursor-pointer"
+                          className={`flex-[5] flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-black/20 hover:bg-black/40 transition-colors cursor-pointer ${
+                            copiedId === list.id
+                              ? "text-green-400"
+                              : "text-[var(--text-secondary)]"
+                          }`}
                         >
-                          {copiedId === list.id ? "✓ Copied" : "Copy as text"}
+                          {copiedId === list.id ? (
+                            <Check size={14} />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                          {copiedId === list.id ? "Copied" : "Copy text"}
                         </button>
                         <button
                           onClick={() => setListToDelete(list.id)}
-                          className="text-xs py-1.5 px-3 rounded-lg hover:bg-red-500/20 text-red-400/60 hover:text-red-400 transition-colors cursor-pointer"
+                          title="Delete list"
+                          className="flex items-center justify-center text-xs py-1.5 px-3 rounded-lg hover:bg-red-500/20 text-red-400/60 hover:text-red-400 transition-colors cursor-pointer flex-2"
                         >
-                          Delete
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
@@ -251,6 +286,15 @@ export default function SavedListsPanel({
         title="Delete List?"
         description={`Are you sure you want to delete "${getListName(listToDelete)}"? This cannot be undone.`}
       />
+
+      {shareConfig && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          url={shareConfig.url}
+          title={shareConfig.title}
+        />
+      )}
     </>
   );
 }

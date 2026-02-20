@@ -53,7 +53,7 @@ function AnimatedBackground() {
         />
       </div>
       <div
-        className="absolute inset-0 backdrop-blur-[60px] bg-white/5"
+        className="absolute inset-0 backdrop-blur-[60px] bg-black/20"
         aria-hidden
       />
     </>
@@ -135,7 +135,7 @@ export default function IntentRefineStep({
         className="fixed inset-0 z-50 flex flex-col px-6"
         style={{
           background:
-            "linear-gradient(135deg, #050508 0%, #0a0a10 50%, #0f0f16 100%)",
+            "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
         }}
       >
         <AnimatedBackground />
@@ -280,7 +280,7 @@ export default function IntentRefineStep({
         className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
         style={{
           background:
-            "linear-gradient(135deg, #050508 0%, #0a0a10 50%, #0f0f16 100%)",
+            "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
         }}
       >
         <AnimatedBackground />
@@ -315,7 +315,7 @@ export default function IntentRefineStep({
       className="fixed inset-0 z-50 flex flex-col px-6"
       style={{
         background:
-          "linear-gradient(135deg, #050508 0%, #0a0a10 50%, #0f0f16 100%)",
+          "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
       }}
     >
       <AnimatedBackground />

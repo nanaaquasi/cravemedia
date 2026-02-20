@@ -7,10 +7,14 @@ import ContentTypeSelector from "./ContentTypeSelector";
 export type SearchMode = "list" | "journey";
 
 interface SearchFormProps {
-  onSubmit: (query: string, type: ContentType, mode?: SearchMode) => void;
+  onSubmit: (
+    query: string,
+    type: ContentType | ContentType[],
+    mode?: SearchMode,
+  ) => void;
   isLoading: boolean;
-  selectedType: ContentType;
-  onTypeChange: (type: ContentType) => void;
+  selectedType: ContentType | ContentType[];
+  onTypeChange: (type: ContentType | ContentType[]) => void;
   quickSuggestions: string[];
 }
 

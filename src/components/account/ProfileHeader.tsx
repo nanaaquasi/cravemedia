@@ -68,7 +68,7 @@ export function ProfileHeader({ profile, email, stats }: ProfileHeaderProps) {
 
         {/* Settings & Logout Actions (pushed to right) */}
         <div className="ml-auto flex items-center gap-2">
-          <button className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white transition-colors backdrop-blur-sm">
+          <button className="p-2 rounded-full bg-black/20 hover:bg-black/40 border border-white/5 text-zinc-400 hover:text-white transition-all">
             <Settings className="w-5 h-5" />
           </button>
         </div>

@@ -16,6 +16,12 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000"),
+  ),
   title: "Cravemedia — Discover Movies, TV Shows & Books",
   description:
     "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.",

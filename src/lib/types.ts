@@ -7,6 +7,8 @@ export interface AIRecommendation {
   type: "movie" | "tv" | "book" | "anime";
   description: string;
   genres: string[];
+  ratingScore?: number;
+  popularityScore?: number;
 }
 
 export interface AIResponse {
@@ -21,6 +23,8 @@ export interface EnrichedRecommendation extends AIRecommendation {
   ratingSource: string | null;
   runtime: string | null;
   externalId: string | null;
+  aiRating?: number;
+  aiPopularity?: number;
 }
 
 export interface RecommendationResponse {
@@ -60,6 +64,8 @@ export interface JourneyItemRaw {
   whatYoullLearn: string;
   keyThemes: string[];
   difficultyLevel: "beginner" | "intermediate" | "advanced";
+  ratingScore?: number;
+  popularityScore?: number;
   transitionToNext: string | null;
 }
 

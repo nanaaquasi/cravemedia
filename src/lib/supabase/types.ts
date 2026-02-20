@@ -30,5 +30,6 @@ export interface CollectionItem {
   title: string | null;
   image_url: string | null;
   metadata: any;
+  position?: number;
   created_at: string;
 }

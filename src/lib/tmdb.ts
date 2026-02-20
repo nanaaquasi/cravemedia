@@ -11,6 +11,7 @@ interface TMDBSearchResult {
   first_air_date?: string;
   runtime?: number;
   media_type?: string;
+  overview?: string;
 }
 
 interface TMDBDetails {
@@ -146,13 +147,11 @@ export async function getMediaDetails(
   });
 
   const title = data.title ?? data.name ?? "";
-  const releaseDate =
-    data.release_date ?? data.first_air_date ?? null;
+  const releaseDate = data.release_date ?? data.first_air_date ?? null;
   const trailer =
     data.videos?.results?.find(
       (v) =>
-        v.site === "YouTube" &&
-        (v.type === "Trailer" || v.type === "Teaser"),
+        v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser"),
     ) ?? data.videos?.results?.find((v) => v.site === "YouTube");
   const directors =
     data.credits?.crew

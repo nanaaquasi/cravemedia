@@ -1,8 +1,4 @@
-import {
-  ContentType,
-  JourneyResponse,
-  RecommendationResponse,
-} from "./types";
+import { ContentType, JourneyResponse, RecommendationResponse } from "./types";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const MAX_ENTRIES = 200;
@@ -19,15 +15,23 @@ const listCache = new Map<string, CacheEntry<RecommendationResponse>>();
 const journeyCache = new Map<string, CacheEntry<JourneyResponse>>();
 const accessOrder: string[] = [];
 
-function getCacheKey(query: string, type: ContentType, mode: CacheMode): string {
+function getCacheKey(
+  query: string,
+  type: ContentType | ContentType[],
+  mode: CacheMode,
+): string {
   const normalized = query.trim().toLowerCase().replace(/\s+/g, " ");
-  return `${mode}:${type}:${normalized}`;
+  const typeStr = Array.isArray(type) ? type.sort().join(",") : type;
+  return `${mode}:${typeStr}:${normalized}`;
 }
 
 function evictIfNeeded(): void {
   const totalSize = listCache.size + journeyCache.size;
   if (totalSize < MAX_ENTRIES) return;
-  while (accessOrder.length > 0 && listCache.size + journeyCache.size >= MAX_ENTRIES) {
+  while (
+    accessOrder.length > 0 &&
+    listCache.size + journeyCache.size >= MAX_ENTRIES
+  ) {
     const key = accessOrder.shift();
     if (key) {
       listCache.delete(key);
@@ -38,7 +42,7 @@ function evictIfNeeded(): void {
 
 export function getCachedRecommendation(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): RecommendationResponse | null {
   const key = getCacheKey(query, type, "list");
   const entry = listCache.get(key);
@@ -57,7 +61,7 @@ export function getCachedRecommendation(
 
 export function setCachedRecommendation(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   data: RecommendationResponse,
 ): void {
   const key = getCacheKey(query, type, "list");
@@ -73,7 +77,7 @@ export function setCachedRecommendation(
 
 export function getCachedJourney(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): JourneyResponse | null {
   const key = getCacheKey(query, type, "journey");
   const entry = journeyCache.get(key);
@@ -92,7 +96,7 @@ export function getCachedJourney(
 
 export function setCachedJourney(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   data: JourneyResponse,
 ): void {
   const key = getCacheKey(query, type, "journey");

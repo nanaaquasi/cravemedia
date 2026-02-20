@@ -33,19 +33,24 @@ function getProvider(): AIProvider {
 
 export async function generateRecommendations(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
+  options: {
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  } = {},
 ): Promise<AIResponse> {
   const provider = getProvider();
 
   switch (provider) {
     case "gemini":
-      return generateWithGemini(query, type);
+      return generateWithGemini(query, type, options);
     case "openai":
       return generateWithOpenAI(query, type);
     case "anthropic":
       return generateWithAnthropic(query, type);
     default:
-      return generateWithGemini(query, type);
+      return generateWithGemini(query, type, options);
   }
 }
 
@@ -62,23 +67,26 @@ function normalizeJourneyResponse(raw: JourneyAIResponse): JourneyAIResponse {
 
 export async function generateJourney(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
+  options: {
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  } = {},
 ): Promise<JourneyAIResponse> {
-  const provider = getProvider();
+  const provider = process.env.AI_PROVIDER || "gemini";
   let raw: JourneyAIResponse;
 
   switch (provider) {
-    case "gemini":
-      raw = await generateJourneyWithGemini(query, type);
-      break;
     case "openai":
       raw = await generateJourneyWithOpenAI(query, type);
       break;
     case "anthropic":
       raw = await generateJourneyWithAnthropic(query, type);
       break;
+    case "gemini":
     default:
-      raw = await generateJourneyWithGemini(query, type);
+      raw = await generateJourneyWithGemini(query, type, options);
   }
 
   return normalizeJourneyResponse(raw);
@@ -86,18 +94,17 @@ export async function generateJourney(
 
 export async function generateRefineQuestions(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
 ): Promise<RefineResponse> {
-  const provider = getProvider();
+  const provider = process.env.AI_PROVIDER || "gemini";
 
   switch (provider) {
-    case "gemini":
-      return generateRefineWithGemini(query, type, previousAnswers);
     case "openai":
       return generateRefineWithOpenAI(query, type, previousAnswers);
     case "anthropic":
       return generateRefineWithAnthropic(query, type, previousAnswers);
+    case "gemini":
     default:
       return generateRefineWithGemini(query, type, previousAnswers);
   }

@@ -53,7 +53,7 @@ function LoginForm() {
             Check your email
           </h2>
           <p className="text-zinc-400 mb-8">
-            We've sent you a confirmation link. Please check your inbox to
+            We&apos;ve sent you a confirmation link. Please check your inbox to
             verify your account.
           </p>
           <button
@@ -222,7 +222,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="w-full flex-1 bg-black flex items-center justify-center p-4">
+    <div className="w-full flex-1 flex items-center justify-center p-4">
       <Suspense fallback={<div className="text-white">Loading...</div>}>
         <LoginForm />
       </Suspense>

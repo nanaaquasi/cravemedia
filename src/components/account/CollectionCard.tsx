@@ -18,8 +18,9 @@ export function CollectionCard({ collection }: CollectionCardProps) {
       .slice(0, 3) || [];
   const itemCount = collection.item_count || collection.items?.length || 0;
 
-  // Mock "days ago" logic for now, or use real created_at if available
-  const timeAgo = "20 days";
+  const createdAt = collection.created_at
+    ? new Date(collection.created_at).toLocaleDateString()
+    : "Recently";
 
   return (
     <Link href={`/collections/${collection.id}`} className="block">
@@ -75,8 +76,11 @@ export function CollectionCard({ collection }: CollectionCardProps) {
           <span className="px-3 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5">
             {itemCount} titles
           </span>
-          <span className="px-3 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5">
-            {timeAgo}
+          <span
+            suppressHydrationWarning
+            className="px-3 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5"
+          >
+            {createdAt}
           </span>
         </div>
       </div>

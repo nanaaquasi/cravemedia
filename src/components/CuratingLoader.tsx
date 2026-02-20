@@ -40,8 +40,26 @@ export default function CuratingLoader({ mode = "list" }: CuratingLoaderProps) {
     return () => clearInterval(id);
   }, [messages.length]);
 
+  // Lock body scroll when loader is active
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-4 overflow-hidden animate-fade-in bg-[#050508]">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-4 overflow-hidden overscroll-none touch-none"
+      style={{
+        background:
+          "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
+      }}
+    >
       {/* Animated gradient blobs - Framer Motion mesh, centered */}
       <div className="absolute inset-0" aria-hidden>
         <div className="absolute inset-0">
@@ -121,7 +139,7 @@ export default function CuratingLoader({ mode = "list" }: CuratingLoaderProps) {
 
       {/* Glass overlay */}
       <div
-        className="absolute inset-0 backdrop-blur-[60px] bg-white/5"
+        className="absolute inset-0 backdrop-blur-[60px] bg-black/20"
         aria-hidden
       />
 
@@ -134,6 +152,6 @@ export default function CuratingLoader({ mode = "list" }: CuratingLoaderProps) {
           {messages[index]}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 }

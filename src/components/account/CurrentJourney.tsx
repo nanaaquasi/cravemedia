@@ -30,9 +30,12 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
                 <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-bold uppercase tracking-wider border border-green-500/20">
                   {journey.content_type}
                 </span>
-                <span className="text-zinc-500 text-sm">
+                <p
+                  suppressHydrationWarning
+                  className="text-zinc-500 text-sm flex items-center gap-1"
+                >
                   Started {new Date(journey.started_at!).toLocaleDateString()}
-                </span>
+                </p>
               </div>
               <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
                 {journey.title}

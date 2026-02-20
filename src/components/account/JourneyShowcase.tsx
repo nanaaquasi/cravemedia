@@ -74,7 +74,10 @@ export function JourneyShowcase({
                     {journey.content_type}
                   </span>
                   <span className="text-zinc-600 text-xs">•</span>
-                  <div className="flex items-center gap-1 text-zinc-500 text-xs">
+                  <div
+                    suppressHydrationWarning
+                    className="flex items-center gap-1 text-zinc-500 text-xs"
+                  >
                     <Calendar className="w-3 h-3" />
                     {journey.completed_at
                       ? new Date(journey.completed_at).toLocaleDateString()

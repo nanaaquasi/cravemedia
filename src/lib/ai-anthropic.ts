@@ -9,10 +9,11 @@ import {
 import { getSystemPrompt } from "./ai-prompts";
 import { getJourneySystemPrompt } from "./ai-journey-prompts";
 import { getRefineSystemPrompt } from "./ai-refine-prompts";
+import { cleanAndParseJSON } from "./ai-utils";
 
 export async function generateWithAnthropic(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): Promise<AIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -31,16 +32,16 @@ export async function generateWithAnthropic(
   });
 
   const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  if (textBlock?.type !== "text") {
     throw new Error("No text response from Claude");
   }
 
-  return JSON.parse(textBlock.text) as AIResponse;
+  return cleanAndParseJSON<AIResponse>(textBlock.text);
 }
 
 export async function generateJourneyWithAnthropic(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -59,16 +60,16 @@ export async function generateJourneyWithAnthropic(
   });
 
   const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  if (textBlock?.type !== "text") {
     throw new Error("No text response from Claude");
   }
 
-  return JSON.parse(textBlock.text) as JourneyAIResponse;
+  return cleanAndParseJSON<JourneyAIResponse>(textBlock.text);
 }
 
 export async function generateRefineWithAnthropic(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
 ): Promise<RefineResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -88,9 +89,9 @@ export async function generateRefineWithAnthropic(
   });
 
   const textBlock = message.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
+  if (textBlock?.type !== "text") {
     throw new Error("No text response from Claude");
   }
 
-  return JSON.parse(textBlock.text) as RefineResponse;
+  return cleanAndParseJSON<RefineResponse>(textBlock.text);
 }

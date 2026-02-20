@@ -87,8 +87,8 @@ export default function Header({
           onClick={onOpenSavedLists}
           className={`relative flex items-center gap-2 p-2 sm:pr-4 sm:pl-3 rounded-full transition-colors cursor-pointer group ${
             isScrolled
-              ? "bg-white/10 hover:bg-white/15"
-              : "bg-white/[0.04] hover:bg-white/[0.08]"
+              ? "bg-black/40 hover:bg-black/60 shadow-lg shadow-black/20"
+              : "bg-black/20 hover:bg-black/40"
           }`}
           aria-label="My Cravings"
         >
@@ -120,9 +120,9 @@ export default function Header({
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className={`flex items-center gap-2 p-1 pr-2 rounded-full border transition-all active:scale-95 ${
                 isScrolled
-                  ? "bg-white/10 border-white/10 hover:border-white/30"
-                  : "bg-white/4 border-white/10 hover:border-white/20"
-              } ${isDropdownOpen ? "border-purple-500/50 bg-white/15" : ""}`}
+                  ? "bg-black/40 border-white/10 hover:border-white/30"
+                  : "bg-black/20 border-white/10 hover:border-white/30"
+              } ${isDropdownOpen ? "border-purple-500/50 bg-black/60" : ""}`}
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden">
                 <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white">

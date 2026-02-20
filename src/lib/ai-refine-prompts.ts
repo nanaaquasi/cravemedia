@@ -2,10 +2,14 @@ import { ContentType, RefineAnswer } from "./types";
 import { getTypeLabel } from "@/config/media-types";
 
 export function getRefineSystemPrompt(
-  type: ContentType,
+  type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
 ): string {
-  const typeLabel = getTypeLabel(type);
+  const isMultiple = Array.isArray(type);
+  const typeLabel = isMultiple
+    ? type.map((t) => getTypeLabel(t)).join(", ")
+    : getTypeLabel(type);
+
   const hasAnswers = previousAnswers.length > 0;
 
   const answersContext = hasAnswers

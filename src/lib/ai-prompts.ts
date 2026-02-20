@@ -6,13 +6,19 @@ function getTypeFieldRule(): string {
   return `- For the "type" field, use exactly: ${types}`;
 }
 
-export function getSystemPrompt(type: ContentType): string {
-  const typeLabel = getTypeLabel(type);
+export function getSystemPrompt(type: ContentType | ContentType[]): string {
+  const isMultiple = Array.isArray(type);
+  const typeLabel = Array.isArray(type)
+    ? type.map((t) => getTypeLabel(t)).join(", ")
+    : getTypeLabel(type);
+
   const typeFieldRule = getTypeFieldRule();
-  const onlyRecommendRule =
-    type !== "all"
-      ? `- Only recommend ${typeLabel}`
-      : `- Include a mix of ${typeLabel}`;
+  let onlyRecommendRule = `- Include a mix of ${typeLabel}`;
+  if (type !== "all") {
+    onlyRecommendRule = `- ONLY recommend items where the "type" field is exactly one of the requested types: ${typeLabel}`;
+  }
+
+  const exampleType = isMultiple ? type[0] : type === "all" ? "movie" : type;
 
   return `You are an expert media curator with encyclopedic knowledge of ${typeLabel}. 
 Given a user's natural language query describing themes, moods, styles, or preferences, 
@@ -22,7 +28,8 @@ IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences, no explanation
 - Include a mix of well-known and lesser-known titles
 - Each recommendation must have a contextual description explaining WHY it fits the query
-- Be creative with the collection title - make it evocative and fitting
+- BE CREATIVE: Make the collection title evocative and fitting.
+- QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
 ${typeFieldRule}
 ${onlyRecommendRule}
 
@@ -35,9 +42,11 @@ Response format:
       "title": "Title of the work",
       "creator": "Director/Showrunner/Author name",
       "year": 2020,
-      "type": "${type === "all" ? "movie" : type}",
+      "type": "${exampleType}",
       "description": "Why this fits the query - contextual explanation",
-      "genres": ["Genre1", "Genre2"]
+      "genres": ["Genre1", "Genre2"],
+      "ratingScore": 8.5,
+      "popularityScore": 90
     }
   ]
 }`;

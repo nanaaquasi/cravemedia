@@ -2,38 +2,127 @@
 
 import { JourneyResponse } from "@/lib/types";
 import JourneyPath from "@/components/JourneyPath";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Globe, Lock, Share2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import ShareModal from "@/components/ShareModal";
+import { toggleJourneyVisibility } from "@/app/actions/journey";
+import Toast from "@/components/Toast";
 
 interface JourneyDetailClientProps {
   journey: JourneyResponse;
   journeyId: string;
+  isOwner: boolean;
+  isPublic: boolean;
 }
 
 export default function JourneyDetailClient({
   journey,
   journeyId,
+  isOwner,
+  isPublic: initialIsPublic,
 }: JourneyDetailClientProps) {
+  const [isPublic, setIsPublic] = useState(initialIsPublic);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleToggleVisibility = async () => {
+    const newIsPublic = !isPublic;
+    // Optimistic update
+    setIsPublic(newIsPublic);
+    const result = await toggleJourneyVisibility(journeyId, newIsPublic);
+    if (!result.success) {
+      // Revert on error
+      setIsPublic(!newIsPublic);
+      setToastMessage("Failed to update visibility");
+    } else {
+      setToastMessage(`Journey is now ${newIsPublic ? "public" : "private"}`);
+    }
+  };
+
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/journey/${journeyId}`
+      : "";
+
   return (
     <div className="flex flex-col min-h-screen">
-      <div className="mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <Link
-          href="/account"
+          href={isOwner ? "/account" : "/"}
           className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
         >
-          <div className="p-2 rounded-full bg-white/5 group-hover:bg-white/10 transition-colors">
+          <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </div>
-          <span className="text-sm font-medium">Back to Profile</span>
+          <span className="text-sm font-medium">
+            {isOwner ? "Back to Profile" : "Back to Home"}
+          </span>
         </Link>
+
+        <div className="flex items-center gap-3">
+          {isOwner && (
+            <button
+              onClick={handleToggleVisibility}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                isPublic
+                  ? "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
+                  : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              {isPublic ? (
+                <>
+                  <Globe className="w-3.5 h-3.5" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  Private
+                </>
+              )}
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            Share
+          </button>
+        </div>
       </div>
 
-      <JourneyPath
-        journey={journey}
-        journeyId={journeyId}
-        // No onSaveJourney since it's already saved
-        // We could add an onDeleteJourney or onShareJourney here later
+      {!isOwner && (
+        <div className="animate-fade-in-up mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <h3 className="text-white font-medium mb-1">
+              Created by someone else
+            </h3>
+            <p className="text-sm text-white/70">
+              Create your own personalized media journey just like this.
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="whitespace-nowrap px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+          >
+            Create Your Own
+          </Link>
+        </div>
+      )}
+
+      <JourneyPath journey={journey} journeyId={journeyId} isOwner={isOwner} />
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        url={shareUrl}
+        title={journey.journeyTitle}
       />
+
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }

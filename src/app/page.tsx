@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ContentType, EnrichedRecommendation } from "@/lib/types";
+import { ContentType } from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
@@ -33,7 +33,9 @@ const SUGGESTION_QUERIES = [
 
 export default function Home() {
   const router = useRouter();
-  const [contentType, setContentType] = useState<ContentType>("all");
+  const [contentType, setContentType] = useState<ContentType | ContentType[]>(
+    "all",
+  );
   const [pendingQuery, setPendingQuery] = useState("");
   const [pendingMode, setPendingMode] = useState<SearchMode>("list");
   const [showModeSelect, setShowModeSelect] = useState(false);
@@ -58,26 +60,17 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [router]);
 
-  // Navigate to search when refinement completes
   useEffect(() => {
     if (refine.step === "complete" && !isNavigating) {
       setIsNavigating(true);
       const query = refine.refinedQuery || pendingQuery;
-      const params = new URLSearchParams({ q: query, type: contentType });
-      if (pendingMode === "journey") {
-        params.set("mode", "journey");
-      }
 
+      const typeStr = Array.isArray(contentType)
+        ? contentType.join(",")
+        : contentType;
+      const params = new URLSearchParams({ q: query, type: typeStr });
+      if (pendingMode === "journey") params.set("mode", "journey");
       router.push(`/search?${params.toString()}`);
-
-      // Cleanup refine state only after delay/unmount to prevent flash
-      // The component will unmount on navigation, so this timeout acts as a backup
-      setTimeout(() => {
-        if (window.location.pathname === "/") {
-          setIsNavigating(false);
-          refine.reset();
-        }
-      }, 2000);
     }
   }, [
     refine.step,
@@ -86,36 +79,42 @@ export default function Home() {
     contentType,
     pendingMode,
     router,
-    refine,
     isNavigating,
   ]);
 
   // Step 1: User submits a query → show mode selection (static, no AI call)
-  const handleSubmit = useCallback((query: string, type: ContentType) => {
-    setPendingQuery(query);
-    setContentType(type);
-    setShowModeSelect(true);
-  }, []);
+  const handleSubmit = useCallback(
+    (query: string, type: ContentType | ContentType[]) => {
+      setPendingQuery(query);
+      setContentType(type);
+      setShowModeSelect(true);
+    },
+    [],
+  );
 
   // Step 2: User picks List or Journey → start AI refine flow
   const handleModeSelected = useCallback(
     (mode: SearchMode) => {
       setPendingMode(mode);
       setShowModeSelect(false);
+      // For refining, we'll pass the first type if multiple, or "all"
+      // Alternatively, we could update startRefine to handle multiple types.
+      // For now, let's pass it as is and potentially update lib later.
       refine.startRefine(pendingQuery, contentType);
     },
     [refine, pendingQuery, contentType],
   );
 
-  const handleSkipRefine = useCallback(() => {
+  const handleSkipRefine = useCallback(async () => {
     refine.skipRefine();
     setShowModeSelect(false);
     setIsNavigating(true);
-    // Navigate with original query
-    const params = new URLSearchParams({ q: pendingQuery, type: contentType });
-    if (pendingMode === "journey") {
-      params.set("mode", "journey");
-    }
+
+    const typeStr = Array.isArray(contentType)
+      ? contentType.join(",")
+      : contentType;
+    const params = new URLSearchParams({ q: pendingQuery, type: typeStr });
+    if (pendingMode === "journey") params.set("mode", "journey");
     router.push(`/search?${params.toString()}`);
   }, [refine, pendingQuery, contentType, pendingMode, router]);
 

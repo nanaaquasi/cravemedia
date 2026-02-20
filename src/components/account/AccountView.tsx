@@ -13,6 +13,9 @@ import { NoJourneysEmptyState, NoActivityEmptyState } from "./EmptyStates";
 import { ProfileDashboardData, subscribeToUserActivity } from "./queries";
 import { Profile, Collection } from "@/lib/supabase/types";
 import { Clock, Plus, LayoutGrid, Loader2 } from "lucide-react";
+import CreateCollectionModal from "@/components/CreateCollectionModal";
+import { useLists } from "@/hooks/useLists";
+import Toast from "@/components/Toast";
 
 interface AccountViewProps {
   profile: Profile | null;
@@ -30,6 +33,9 @@ export function AccountView({
   const [activeTab, setActiveTab] = useState("Overview");
   const [dashboardData, setDashboardData] =
     useState<ProfileDashboardData>(initialDashboardData);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { createList, refreshLists } = useLists();
 
   useEffect(() => {
     // We already have initial data from server, but we can refresh if needed
@@ -67,6 +73,32 @@ export function AccountView({
   const finalStats = {
     followers: dashboardData.followersCount,
     following: dashboardData.followingCount,
+  };
+
+  const handleCreateCollection = async ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => {
+    try {
+      const result = await createList(name, description, [], {
+        isPublic: false,
+        isExplicitlySaved: true,
+      });
+      if (result) {
+        setToastMessage(`Created collection "${name}"`);
+        await refreshLists(); // Keep context in sync
+        // Refresh local view by appending to initialCollections state or rely on full router refresh?
+        // Since initialCollections comes from props, we can trigger a hard reload or just show toast.
+        // For now, let's just trigger a hard reload to get the fresh data from server
+        window.location.reload();
+      }
+    } catch (e) {
+      console.error(e);
+      setToastMessage("Failed to create collection.");
+    }
   };
 
   return (
@@ -189,7 +221,10 @@ export function AccountView({
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white">My Collections</h2>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors cursor-pointer"
+                >
                   <Plus className="w-4 h-4" />
                   New Collection
                 </button>
@@ -224,6 +259,13 @@ export function AccountView({
           )}
         </div>
       </div>
+
+      <CreateCollectionModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onConfirm={handleCreateCollection}
+      />
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }

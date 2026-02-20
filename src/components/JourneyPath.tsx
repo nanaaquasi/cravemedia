@@ -10,10 +10,12 @@ interface JourneyPathProps {
   journey: JourneyResponse;
   journeyId: string;
   onSaveJourney?: () => void;
+  onShareJourney?: () => Promise<void>;
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
   onRefine?: (feedback: string) => void;
   isLoading?: boolean;
+  isOwner?: boolean;
 }
 
 function formatRuntime(totalMinutes: number): string {
@@ -27,10 +29,12 @@ export default function JourneyPath({
   journey,
   journeyId,
   onSaveJourney,
+  onShareJourney,
   onAddToList,
   onMoreLikeThis,
   onRefine,
   isLoading = false,
+  isOwner = true,
 }: JourneyPathProps) {
   const { getProgressForJourney, markWatched } = useJourneyProgress(journeyId);
   const progress = getProgressForJourney(journeyId);
@@ -73,15 +77,46 @@ export default function JourneyPath({
               {completedCount}/{journey.itemCount} completed
             </span>
           </div>
-          {onSaveJourney && (
-            <button
-              onClick={onSaveJourney}
-              className="hidden lg:inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-            >
-              Save journey
-            </button>
+          <div className="flex gap-2 mb-6 lg:mb-0">
+            {isOwner && onSaveJourney && (
+              <button
+                onClick={onSaveJourney}
+                className="hidden lg:inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+              >
+                Save
+              </button>
+            )}
+            {onShareJourney && (
+              <button
+                onClick={onShareJourney}
+                className="hidden lg:inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all cursor-pointer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                Share
+              </button>
+            )}
+          </div>
+
+          {isOwner && onRefine && (
+            <div className="mt-4">
+              <RefineBar onRefine={onRefine} isLoading={isLoading} />
+            </div>
           )}
-          {onRefine && <RefineBar onRefine={onRefine} isLoading={isLoading} />}
         </div>
       </aside>
 
@@ -111,6 +146,7 @@ export default function JourneyPath({
                 onMarkWatched={markWatched}
                 onAddToList={onAddToList}
                 onMoreLikeThis={onMoreLikeThis}
+                isOwner={isOwner}
               />
 
               {/* Transition to next */}
@@ -140,12 +176,36 @@ export default function JourneyPath({
         <div className="text-xs font-medium text-[var(--text-muted)] mt-2">
           FINISH
         </div>
-        {onSaveJourney && (
+        {isOwner && onSaveJourney && (
           <button
             onClick={onSaveJourney}
             className="lg:hidden w-full mt-4 py-2.5 px-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
           >
             Save journey
+          </button>
+        )}
+        {onShareJourney && (
+          <button
+            onClick={onShareJourney}
+            className="lg:hidden w-full mt-3 py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 text-white font-medium text-sm hover:bg-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            Share journey
           </button>
         )}
       </div>

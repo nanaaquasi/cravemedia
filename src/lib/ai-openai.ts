@@ -9,10 +9,11 @@ import {
 import { getSystemPrompt } from "./ai-prompts";
 import { getJourneySystemPrompt } from "./ai-journey-prompts";
 import { getRefineSystemPrompt } from "./ai-refine-prompts";
+import { cleanAndParseJSON } from "./ai-utils";
 
 export async function generateWithOpenAI(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): Promise<AIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -38,12 +39,12 @@ export async function generateWithOpenAI(
     throw new Error("No content in OpenAI response");
   }
 
-  return JSON.parse(content) as AIResponse;
+  return cleanAndParseJSON<AIResponse>(content);
 }
 
 export async function generateJourneyWithOpenAI(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -69,12 +70,12 @@ export async function generateJourneyWithOpenAI(
     throw new Error("No content in OpenAI response");
   }
 
-  return JSON.parse(content) as JourneyAIResponse;
+  return cleanAndParseJSON<JourneyAIResponse>(content);
 }
 
 export async function generateRefineWithOpenAI(
   query: string,
-  type: ContentType,
+  type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
 ): Promise<RefineResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -101,5 +102,5 @@ export async function generateRefineWithOpenAI(
     throw new Error("No content in OpenAI response");
   }
 
-  return JSON.parse(content) as RefineResponse;
+  return cleanAndParseJSON<RefineResponse>(content);
 }

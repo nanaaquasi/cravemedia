@@ -18,6 +18,7 @@ export async function GET() {
       .from("collections")
       .select("*, collection_items(*)")
       .eq("user_id", user.id)
+      .eq("is_explicitly_saved", true)
       .order("created_at", { ascending: false });
 
     // 2. Fetch Journeys (New Table)
@@ -27,6 +28,7 @@ export async function GET() {
       .from("journeys")
       .select("*")
       .eq("user_id", user.id)
+      .eq("is_explicitly_saved", true)
       .order("created_at", { ascending: false });
 
     // 3. Map Collections to SavedList

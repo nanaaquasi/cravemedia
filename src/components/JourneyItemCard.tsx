@@ -15,6 +15,7 @@ interface JourneyItemCardProps {
   onMarkWatched: (journeyId: string, position: number) => void;
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
+  isOwner?: boolean;
 }
 
 export default function JourneyItemCard({
@@ -27,6 +28,7 @@ export default function JourneyItemCard({
   onMarkWatched,
   onAddToList,
   onMoreLikeThis,
+  isOwner = true,
 }: JourneyItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const position = item.position;
@@ -142,7 +144,7 @@ export default function JourneyItemCard({
           )}
 
           <div className="flex flex-wrap gap-2">
-            {!isLocked && (
+            {!isLocked && isOwner && (
               <button
                 onClick={() => onMarkWatched(journeyId, position)}
                 className="text-xs px-3 py-1.5 rounded-full bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors cursor-pointer"
@@ -159,7 +161,7 @@ export default function JourneyItemCard({
                   Details
                 </Link>
               )}
-            {onAddToList && showActionsFor === position && (
+            {isOwner && onAddToList && showActionsFor === position && (
               <button
                 onClick={() => onAddToList(item)}
                 className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors cursor-pointer"
@@ -167,7 +169,7 @@ export default function JourneyItemCard({
                 Add to list
               </button>
             )}
-            {onMoreLikeThis && showActionsFor === position && (
+            {isOwner && onMoreLikeThis && showActionsFor === position && (
               <button
                 onClick={() => onMoreLikeThis(item)}
                 className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors cursor-pointer"

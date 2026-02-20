@@ -12,9 +12,10 @@ export interface JourneyProgress {
 export function getJourneyIdFromResults(
   journeyTitle: string,
   query: string,
-  type: string,
+  type: string | string[],
 ): string {
-  const slug = `${journeyTitle}:${query}:${type}`
+  const typeStr = Array.isArray(type) ? type.join(",") : type;
+  const slug = `${journeyTitle}:${query}:${typeStr}`
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-:]/g, "")
@@ -23,10 +24,9 @@ export function getJourneyIdFromResults(
 }
 
 export function useJourneyProgress(journeyId: string | null) {
-  const [allProgress, setAllProgress] = useLocalStorage<Record<string, JourneyProgress>>(
-    "journey-progress-map",
-    {},
-  );
+  const [allProgress, setAllProgress] = useLocalStorage<
+    Record<string, JourneyProgress>
+  >("journey-progress-map", {});
 
   const progress: JourneyProgress | undefined = journeyId
     ? allProgress[journeyId]
@@ -49,10 +49,7 @@ export function useJourneyProgress(journeyId: string | null) {
         const completed = current.completed.includes(position)
           ? current.completed
           : [...current.completed, position].sort((a, b) => a - b);
-        const nextPosition = Math.max(
-          current.currentPosition,
-          position + 1,
-        );
+        const nextPosition = Math.max(current.currentPosition, position + 1);
         return {
           ...prev,
           [jid]: {
