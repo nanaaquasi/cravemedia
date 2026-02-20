@@ -104,7 +104,7 @@ export default async function CollectionDetailPage({
       .select("*")
       .eq("collection_id", id)
       .order("position", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: true }),
     !isOwner
       ? supabase
           .from("profiles")

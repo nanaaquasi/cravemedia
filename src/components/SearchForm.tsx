@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { ContentType } from "@/lib/types";
 import ContentTypeSelector from "./ContentTypeSelector";
 
+const QUERY_MAX_LENGTH = 200;
+
 export type SearchMode = "list" | "journey";
 
 interface SearchFormProps {
@@ -100,55 +102,64 @@ export default function SearchForm({
                 }
               }}
               placeholder=""
-              maxLength={500}
+              maxLength={QUERY_MAX_LENGTH}
               disabled={isLoading}
               className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[140px] disabled:opacity-50 caret-white relative"
               aria-label="Tell us what you're craving"
             />
-            <div className="flex items-center justify-end gap-2 mt-4">
-              {!isEmpty && (
-                <button
-                  onClick={() => setQuery("")}
-                  className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
-                  aria-label="Clear"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
+            <div className="flex items-center justify-between gap-2 mt-4">
+              <span
+                className={`shrink-0 text-xs font-medium tabular-nums transition-colors ${
+                  query.length > 0 ? "text-white/60" : "text-white/40"
+                }`}
+              >
+                {query.length}/{QUERY_MAX_LENGTH}
+              </span>
+              <div className="flex items-center gap-2">
+                {!isEmpty && (
+                  <button
+                    onClick={() => setQuery("")}
+                    className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                    aria-label="Clear"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              )}
-              {isLoading ? (
-                <div className="w-10 h-10 border-2 border-white/20 border-t-purple-400 rounded-full animate-spin" />
-              ) : (
-                <button
-                  onClick={handleSubmit}
-                  disabled={!query.trim()}
-                  className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/30"
-                  aria-label="Search"
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+                {isLoading ? (
+                  <div className="w-10 h-10 border-2 border-white/20 border-t-purple-400 rounded-full animate-spin" />
+                ) : (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!query.trim()}
+                    className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/30"
+                    aria-label="Search"
                   >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </button>
-              )}
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -32,6 +32,44 @@ export async function toggleCollectionVisibility(
   return { success: true };
 }
 
+export async function updateCollection(
+  collectionId: string,
+  data: { name: string; description: string | null },
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in to edit." };
+  }
+
+  const name = data.name.trim();
+  if (!name) {
+    return { error: "Name is required." };
+  }
+
+  const { error } = await supabase
+    .from("collections")
+    .update({
+      name,
+      description: data.description?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", collectionId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/collections/${collectionId}`);
+  revalidatePath("/account");
+  return { success: true };
+}
+
 export async function cloneCollection(collectionId: string) {
   const supabase = await createClient();
 

@@ -70,7 +70,7 @@ export default function QueryInputBar({
   }, []);
 
   const handleSubmit = () => {
-    if (query.trim() && !isLoading) {
+    if (query.trim() && !isLoading && !isOverLimit) {
       onSubmit(query.trim(), selectedType);
       setShowSuggestions(false);
     }
@@ -88,6 +88,10 @@ export default function QueryInputBar({
     onSubmit(text, selectedType);
     inputRef.current?.focus();
   };
+
+  const MAX_WORDS = 50;
+  const wordCount = query.trim() ? query.trim().split(/\s+/).length : 0;
+  const isOverLimit = wordCount > MAX_WORDS;
 
   const typeIcon =
     selectedType === "all"
@@ -200,6 +204,17 @@ export default function QueryInputBar({
             className="flex-1 bg-transparent text-base md:text-lg text-white placeholder:text-white/50 outline-none disabled:opacity-50 min-w-0"
             aria-label="Tell us what you're craving"
           />
+          <span
+            className={`relative z-20 shrink-0 text-xs font-medium tabular-nums transition-colors ${
+              isOverLimit
+                ? "text-red-400"
+                : query.length > 0
+                  ? "text-white/60"
+                  : "text-white/40"
+            }`}
+          >
+            {query.length}/500
+          </span>
           <div className="flex items-center gap-1 shrink-0">
             {query.length > 0 && (
               <button
@@ -227,7 +242,7 @@ export default function QueryInputBar({
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!query.trim()}
+                disabled={!query.trim() || isOverLimit}
                 className="p-2.5 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 hover:scale-105 transition-all cursor-pointer shadow-lg shadow-purple-500/20"
                 aria-label="Search"
               >
@@ -249,14 +264,16 @@ export default function QueryInputBar({
           </div>
         </div>
 
-        {/* BETA / AI disclaimer - Apple Music style */}
-        <div className="flex items-center gap-2 mt-3 px-1">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
-            AI
-          </span>
-          <span className="text-sm text-white/50">
-            cravemedia may create unexpected results.
-          </span>
+        {/* AI disclaimer + word counter */}
+        <div className="flex items-center justify-between mt-3 px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              AI
+            </span>
+            <span className="text-sm text-white/50">
+              cravemedia may create unexpected results.
+            </span>
+          </div>
         </div>
       </div>
 

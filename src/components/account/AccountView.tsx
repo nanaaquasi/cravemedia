@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfileNav } from "./ProfileNav";
 import { CollectionCard } from "./CollectionCard";
@@ -30,6 +31,7 @@ export function AccountView({
   initialCollections,
   initialDashboardData,
 }: AccountViewProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
   const [dashboardData, setDashboardData] =
     useState<ProfileDashboardData>(initialDashboardData);
@@ -89,11 +91,9 @@ export function AccountView({
       });
       if (result) {
         setToastMessage(`Created collection "${name}"`);
-        await refreshLists(); // Keep context in sync
-        // Refresh local view by appending to initialCollections state or rely on full router refresh?
-        // Since initialCollections comes from props, we can trigger a hard reload or just show toast.
-        // For now, let's just trigger a hard reload to get the fresh data from server
-        window.location.reload();
+        await refreshLists();
+        setIsCreateModalOpen(false);
+        router.push(`/collections/${result.id}`);
       }
     } catch (e) {
       console.error(e);

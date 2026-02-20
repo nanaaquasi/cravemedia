@@ -28,6 +28,7 @@ import {
   toggleCollectionVisibility,
   reorderCollectionItems,
   cloneCollection,
+  updateCollection,
 } from "@/app/actions/collection";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
@@ -78,6 +79,12 @@ export default function CollectionDetailClient({
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCloning, setIsCloning] = useState(false);
+  const [isEditingCollection, setIsEditingCollection] = useState(false);
+  const [editName, setEditName] = useState(collection.name);
+  const [editDescription, setEditDescription] = useState(
+    collection.description ?? "",
+  );
+  const [isSavingCollection, setIsSavingCollection] = useState(false);
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -102,6 +109,32 @@ export default function CollectionDetailClient({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  const handleSaveCollection = async () => {
+    if (!editName.trim()) {
+      setToastMessage("Name is required");
+      return;
+    }
+    setIsSavingCollection(true);
+    const result = await updateCollection(collection.id, {
+      name: editName.trim(),
+      description: editDescription.trim() || null,
+    });
+    setIsSavingCollection(false);
+    if (result.error) {
+      setToastMessage(result.error);
+    } else {
+      setIsEditingCollection(false);
+      setToastMessage("Collection updated");
+      router.refresh();
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditName(collection.name);
+    setEditDescription(collection.description ?? "");
+    setIsEditingCollection(false);
+  };
 
   const handleToggleVisibility = async () => {
     const newIsPublic = !isPublic;
@@ -284,68 +317,143 @@ export default function CollectionDetailClient({
           </div>
 
           <div className="mb-4">
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-              {collection.name}
-            </h1>
+            {isOwner && isEditingCollection ? (
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  disabled={isSavingCollection}
+                  placeholder="Collection name"
+                  className="w-full text-4xl md:text-5xl font-black text-white tracking-tight leading-tight bg-transparent border-b-2 border-white/20 focus:border-purple-500 focus:outline-none pb-2"
+                />
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  disabled={isSavingCollection}
+                  placeholder="Description (optional)"
+                  rows={3}
+                  className="w-full text-lg text-zinc-400 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-purple-500 focus:outline-none resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveCollection}
+                    disabled={isSavingCollection || !editName.trim()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white font-medium text-sm cursor-pointer"
+                  >
+                    {isSavingCollection ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isSavingCollection}
+                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-medium text-sm cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 group">
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                  {collection.name}
+                </h1>
+                {isOwner && (
+                  <button
+                    onClick={() => {
+                      setEditName(collection.name);
+                      setEditDescription(collection.description ?? "");
+                      setIsEditingCollection(true);
+                    }}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                    title="Edit collection"
+                    aria-label="Edit collection"
+                  >
+                    <Edit2 className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          {collection.description && (
-            <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed">
-              {collection.description}
-            </p>
+          {!isEditingCollection && (
+            collection.description ? (
+              <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed">
+                {collection.description}
+              </p>
+            ) : isOwner ? (
+              <button
+                onClick={() => {
+                  setEditName(collection.name);
+                  setEditDescription(collection.description ?? "");
+                  setIsEditingCollection(true);
+                }}
+                className="text-zinc-500 text-lg hover:text-zinc-400 transition-colors cursor-pointer text-left"
+              >
+                Add a description...
+              </button>
+            ) : null
           )}
         </div>
 
         {/* Lower actions positioned to the right */}
         {isOwner && (
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0 mt-4 md:mt-0">
-            {/* View Toggle */}
-            <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  viewMode === "grid"
-                    ? "bg-white/20 text-white"
-                    : "text-white/40 hover:text-white/80"
-                }`}
-                title="Grid view"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  viewMode === "list"
-                    ? "bg-white/20 text-white"
-                    : "text-white/40 hover:text-white/80"
-                }`}
-                title="List view"
-              >
-                <List className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            {orderedItems.length > 0 && (
+              <>
+                {/* View Toggle */}
+                <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                      viewMode === "grid"
+                        ? "bg-white/20 text-white"
+                        : "text-white/40 hover:text-white/80"
+                    }`}
+                    title="Grid view"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                      viewMode === "list"
+                        ? "bg-white/20 text-white"
+                        : "text-white/40 hover:text-white/80"
+                    }`}
+                    title="List view"
+                  >
+                    <List className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
-            {/* Edit / Reorder Toggle */}
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-                isEditMode
-                  ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
-                  : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
-              }`}
-            >
-              {isEditMode ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Done Editing</span>
-                </>
-              ) : (
-                <>
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>Edit Order</span>
-                </>
-              )}
-            </button>
+                {/* Edit / Reorder Toggle */}
+                <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                    isEditMode
+                      ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                      : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {isEditMode ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Done Editing</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit Order</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => setIsSearchModalOpen(true)}
@@ -399,23 +507,23 @@ export default function CollectionDetailClient({
           </SortableContext>
         </DndContext>
       ) : (
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-3xl bg-zinc-900/30 border border-white/5">
-          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-3xl mb-6">
-            📋
+        <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6">
+            <Plus className="w-10 h-10 text-purple-400" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">
+          <h2 className="text-2xl font-bold text-white mb-2">
             This collection is empty
           </h2>
-          <p className="text-zinc-500 text-sm max-w-xs">
-            Start exploring and add your favorite movies, TV shows, and books to
-            this collection.
+          <p className="text-zinc-400 text-base max-w-sm mb-8">
+            Add movies, TV shows, books, and anime to build your curated list.
           </p>
           {isOwner && (
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="mt-8 px-6 py-2.5 rounded-full bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
             >
-              Add Your First Item
+              <Plus className="w-4 h-4" />
+              Add Items
             </button>
           )}
         </div>
