@@ -150,9 +150,11 @@ export function AccountView({
                       View All
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
                     {initialCollections.slice(0, 3).map((col) => (
-                      <CollectionCard key={col.id} collection={col} />
+                      <div key={col.id} className="shrink-0 w-72 md:shrink md:w-auto">
+                        <CollectionCard collection={col} />
+                      </div>
                     ))}
                   </div>
                 </div>

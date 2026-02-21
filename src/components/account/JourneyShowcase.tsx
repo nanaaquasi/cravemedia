@@ -61,7 +61,7 @@ export function JourneyShowcase({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
         {journeys.map((journey) => {
           const items = (journey.items as any[]) || [];
           const currentPos = journey.current_position || 1;
@@ -73,7 +73,7 @@ export function JourneyShowcase({
             <Link
               key={journey.id}
               href={`/journey/${journey.id}`}
-              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10"
+              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10 shrink-0 w-72 md:shrink md:w-auto"
             >
               <div className="aspect-video relative bg-zinc-800">
                 {thumbnailUrl ? (
