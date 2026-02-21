@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
 
@@ -86,6 +87,7 @@ export default async function RootLayout({
           <GlobalLayout user={user}>{children}</GlobalLayout>
         </ListsProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
