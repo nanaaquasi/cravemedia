@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { ContentType } from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
@@ -107,6 +108,7 @@ export default function Home() {
 
   // Step 1: User submits a query → show type selection
   const handleSubmit = useCallback((query: string) => {
+    track("Search", { query: query.trim() });
     setPendingQuery(query);
     const inferred = inferContentTypesFromQuery(query);
     setInitialTypeSelection(inferred);
@@ -127,6 +129,7 @@ export default function Home() {
   // Step 3: User picks List or Journey → start AI refine flow
   const handleModeSelected = useCallback(
     (mode: SearchMode) => {
+      track("Mode Selected", { mode });
       setPendingMode(mode);
       setShowModeSelect(false);
       // For refining, we'll pass the first type if multiple, or "all"
@@ -138,6 +141,7 @@ export default function Home() {
   );
 
   const handleSkipRefine = useCallback(async () => {
+    track("Intent Refine Skipped");
     refine.skipRefine();
     setShowModeSelect(false);
     setIsNavigating(true);
@@ -161,9 +165,12 @@ export default function Home() {
           questions={refine.questions}
           round={refine.round}
           isLoading={refine.step === "loading" || isNavigating}
-          onSubmitAnswers={(answers) =>
-            refine.submitAnswers(pendingQuery, contentType, answers)
-          }
+          onSubmitAnswers={(answers) => {
+            track("Intent Refine Completed", {
+              questionCount: answers.length,
+            });
+            refine.submitAnswers(pendingQuery, contentType, answers);
+          }}
           onSkip={handleSkipRefine}
           onModeSelected={handleModeSelected}
           onTypeSelected={handleTypeSelected}

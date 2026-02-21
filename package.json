@@ -16,6 +16,7 @@
     "@google/genai": "^1.41.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
+    "@vercel/analytics": "^1.6.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.1",
     "lucide-react": "^0.574.0",
