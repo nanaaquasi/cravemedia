@@ -6,6 +6,25 @@ import { ContentType } from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
+import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
+
+function inferContentTypesFromQuery(query: string): ContentType | ContentType[] {
+  const q = query.toLowerCase();
+  const matched: ContentType[] = [];
+
+  if (/\b(movie|movies|film|films)\b/.test(q)) matched.push("movie");
+  if (/\b(tv|television|show|shows|series)\b/.test(q)) matched.push("tv");
+  if (/\b(book|books|read|reading)\b/.test(q)) matched.push("book");
+  if (/\b(anime|manga)\b/.test(q)) matched.push("anime");
+
+  const filtered = matched.filter((t) =>
+    ENABLED_MEDIA_TYPES.includes(t as "movie" | "tv" | "book" | "anime"),
+  );
+
+  if (filtered.length === 0) return "all";
+  if (filtered.length === 1) return filtered[0];
+  return filtered;
+}
 
 const ROTATING_WORDS = [
   "craving?",
@@ -38,7 +57,11 @@ export default function Home() {
   );
   const [pendingQuery, setPendingQuery] = useState("");
   const [pendingMode, setPendingMode] = useState<SearchMode>("list");
+  const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
+  const [initialTypeSelection, setInitialTypeSelection] = useState<
+    ContentType | ContentType[]
+  >("all");
   const refine = useIntentRefine();
 
   // Cycling headline word
@@ -82,17 +105,26 @@ export default function Home() {
     isNavigating,
   ]);
 
-  // Step 1: User submits a query → show mode selection (static, no AI call)
-  const handleSubmit = useCallback(
-    (query: string, type: ContentType | ContentType[]) => {
-      setPendingQuery(query);
+  // Step 1: User submits a query → show type selection
+  const handleSubmit = useCallback((query: string) => {
+    setPendingQuery(query);
+    const inferred = inferContentTypesFromQuery(query);
+    setInitialTypeSelection(inferred);
+    setContentType(inferred);
+    setShowTypeSelect(true);
+  }, []);
+
+  // Step 2: User picks types → show mode selection
+  const handleTypeSelected = useCallback(
+    (type: ContentType | ContentType[]) => {
       setContentType(type);
+      setShowTypeSelect(false);
       setShowModeSelect(true);
     },
     [],
   );
 
-  // Step 2: User picks List or Journey → start AI refine flow
+  // Step 3: User picks List or Journey → start AI refine flow
   const handleModeSelected = useCallback(
     (mode: SearchMode) => {
       setPendingMode(mode);
@@ -118,7 +150,8 @@ export default function Home() {
     router.push(`/search?${params.toString()}`);
   }, [refine, pendingQuery, contentType, pendingMode, router]);
 
-  const isRefining = showModeSelect || refine.step !== "idle" || isNavigating;
+  const isRefining =
+    showTypeSelect || showModeSelect || refine.step !== "idle" || isNavigating;
 
   return (
     <main className="flex-1 flex flex-col relative pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
@@ -133,7 +166,10 @@ export default function Home() {
           }
           onSkip={handleSkipRefine}
           onModeSelected={handleModeSelected}
+          onTypeSelected={handleTypeSelected}
+          showTypeSelect={showTypeSelect}
           showModeSelect={showModeSelect}
+          initialTypeSelection={initialTypeSelection}
         />
       )}
 
@@ -160,8 +196,6 @@ export default function Home() {
         <SearchForm
           onSubmit={handleSubmit}
           isLoading={false}
-          selectedType={contentType}
-          onTypeChange={setContentType}
           quickSuggestions={SUGGESTION_QUERIES}
         />
       </div>

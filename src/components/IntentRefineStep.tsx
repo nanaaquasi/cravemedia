@@ -1,9 +1,25 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefineQuestion, RefineAnswer } from "@/lib/types";
+import { RefineQuestion, RefineAnswer, ContentType } from "@/lib/types";
 import { SearchMode } from "@/components/SearchForm";
+import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
+
+const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
+  { value: "all", label: "All" },
+  ...ENABLED_MEDIA_TYPES.map((v) => ({
+    value: v as ContentType,
+    label:
+      v === "movie"
+        ? "Movies"
+        : v === "tv"
+          ? "TV Shows"
+          : v === "book"
+            ? "Books"
+            : "Anime",
+  })),
+];
 
 interface IntentRefineStepProps {
   questions: RefineQuestion[];
@@ -12,7 +28,10 @@ interface IntentRefineStepProps {
   onSubmitAnswers: (answers: RefineAnswer[]) => void;
   onSkip: () => void;
   onModeSelected: (mode: SearchMode) => void;
+  onTypeSelected: (type: ContentType | ContentType[]) => void;
+  showTypeSelect: boolean;
   showModeSelect: boolean;
+  initialTypeSelection: ContentType | ContentType[];
 }
 
 /* ─── shared background ────────────────────────────────────────────────── */
@@ -65,10 +84,27 @@ export default function IntentRefineStep({
   onSubmitAnswers,
   onSkip,
   onModeSelected,
+  onTypeSelected,
+  showTypeSelect,
   showModeSelect,
+  initialTypeSelection,
 }: IntentRefineStepProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
+
+  const [typeSelections, setTypeSelections] = useState<ContentType[]>(() => {
+    const arr = Array.isArray(initialTypeSelection)
+      ? initialTypeSelection
+      : [initialTypeSelection];
+    return arr.includes("all") ? ["all"] : arr;
+  });
+
+  useEffect(() => {
+    const arr = Array.isArray(initialTypeSelection)
+      ? initialTypeSelection
+      : [initialTypeSelection];
+    setTypeSelections(arr.includes("all") ? ["all"] : arr);
+  }, [initialTypeSelection, showTypeSelect]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -121,7 +157,125 @@ export default function IntentRefineStep({
     : [];
   const hasSelection = currentSelections.length > 0;
 
-  /* ─── Step 0: Mode selection (static, no AI call) ──────────────────── */
+  const toggleType = useCallback((value: ContentType) => {
+    setTypeSelections((prev) => {
+      if (value === "all") {
+        return ["all"];
+      }
+      const withoutAll = prev.filter((t) => t !== "all");
+      const hasValue = withoutAll.includes(value);
+      if (hasValue) {
+        const next = withoutAll.filter((t) => t !== value);
+        return next.length === 0 ? ["all"] : next;
+      }
+      const next = [...withoutAll, value];
+      return ENABLED_MEDIA_TYPES.every((t) => next.includes(t))
+        ? ["all"]
+        : next;
+    });
+  }, []);
+
+  const handleTypeContinue = useCallback(() => {
+    const type =
+      typeSelections.length === 1 && typeSelections[0] === "all"
+        ? "all"
+        : typeSelections;
+    onTypeSelected(type);
+  }, [typeSelections, onTypeSelected]);
+
+  const isTypeSelected = (value: ContentType) =>
+    value === "all"
+      ? typeSelections.includes("all")
+      : typeSelections.includes(value);
+
+  /* ─── Step 0a: Type selection (after query) ─────────────────────────── */
+  if (showTypeSelect) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex flex-col px-6"
+        style={{
+          background:
+            "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
+        }}
+      >
+        <AnimatedBackground />
+
+        <div className="relative z-10 flex items-center justify-end py-5 px-2">
+          <button
+            onClick={() => {
+              onTypeSelected("all");
+            }}
+            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+          >
+            Skip
+          </button>
+        </div>
+
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="w-full text-center"
+          >
+            <p className="text-sm text-purple-300/70 font-medium mb-3 uppercase tracking-wider">
+              Narrow it down
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
+              What are you looking for?
+            </h2>
+            <p className="text-sm text-white/40 mb-8">Select all that apply</p>
+
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {TYPE_OPTIONS.map((opt) => {
+                const selected = isTypeSelected(opt.value);
+                return (
+                  <motion.button
+                    key={opt.value}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => toggleType(opt.value)}
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-base font-medium transition-all duration-200 cursor-pointer border ${
+                      selected
+                        ? "bg-purple-500/30 text-purple-200 border-purple-500/50 shadow-lg shadow-purple-500/20"
+                        : "bg-white/6 text-white/80 border-white/8 hover:bg-white/10 hover:border-white/15"
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded border border-current flex items-center justify-center shrink-0">
+                      {selected && (
+                        <svg
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                          className="w-3 h-3"
+                        >
+                          <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
+                        </svg>
+                      )}
+                    </span>
+                    {opt.label}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleTypeContinue}
+              className="px-8 py-3.5 rounded-full font-semibold text-base bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110 transition-all cursor-pointer"
+            >
+              Continue
+            </motion.button>
+          </motion.div>
+        </div>
+
+        <div className="relative z-10 pb-8 sm:pb-12" />
+      </motion.div>
+    );
+  }
+
+  /* ─── Step 0b: Mode selection (static, no AI call) ──────────────────── */
   if (showModeSelect) {
     return (
       <motion.div

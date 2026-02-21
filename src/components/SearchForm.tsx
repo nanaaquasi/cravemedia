@@ -1,30 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ContentType } from "@/lib/types";
-import ContentTypeSelector from "./ContentTypeSelector";
 
 const QUERY_MAX_LENGTH = 200;
 
 export type SearchMode = "list" | "journey";
 
 interface SearchFormProps {
-  onSubmit: (
-    query: string,
-    type: ContentType | ContentType[],
-    mode?: SearchMode,
-  ) => void;
+  onSubmit: (query: string) => void;
   isLoading: boolean;
-  selectedType: ContentType | ContentType[];
-  onTypeChange: (type: ContentType | ContentType[]) => void;
   quickSuggestions: string[];
 }
 
 export default function SearchForm({
   onSubmit,
   isLoading,
-  selectedType,
-  onTypeChange,
   quickSuggestions,
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,21 +47,13 @@ export default function SearchForm({
   const handleSubmit = () => {
     const text = query.trim();
     if (text && !isLoading) {
-      onSubmit(query.trim(), selectedType);
+      onSubmit(query.trim());
     }
   };
 
   return (
     <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-12">
       <div className="w-full max-w-4xl mx-auto px-0 sm:px-6">
-        {/* Content type selector */}
-        <div className="mb-4 sm:mb-6 flex flex-col items-center gap-3">
-          <ContentTypeSelector
-            selected={selectedType}
-            onChange={onTypeChange}
-          />
-        </div>
-
         <div
           className={`relative rounded-3xl liquid-glass-strong transition-all duration-200 min-h-[140px] sm:min-h-[200px] ${
             isEmpty ? "" : "ring-1 ring-purple-500/40"
