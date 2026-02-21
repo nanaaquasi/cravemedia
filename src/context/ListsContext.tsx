@@ -253,8 +253,7 @@ export function ListsProvider({
       setLists((prev) => prev.filter((l) => l.id !== id));
 
       await supabase.from("collections").delete().eq("id", id);
-      await supabase.from("saved_journeys").delete().eq("id", id); // Legacy
-      await supabase.from("journeys").delete().eq("id", id); // New
+      await supabase.from("journeys").delete().eq("id", id);
     },
     [user, setLocalLists],
   );

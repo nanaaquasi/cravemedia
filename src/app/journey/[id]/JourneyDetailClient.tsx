@@ -16,6 +16,20 @@ interface JourneyDetailClientProps {
   isOwner: boolean;
   isPublic: boolean;
   user: User | null;
+  initialProgress?: {
+    completed: number[];
+    currentPosition: number;
+    itemReviews?: Record<
+      number,
+      { item_rating: number | null; review_text: string | null }
+    >;
+  } | null;
+  journeyStatus?: string | null;
+  journeyReviewData?: {
+    overallRating: number | null;
+    sequenceRating: number | null;
+    reviewText: string | null;
+  } | null;
 }
 
 export default function JourneyDetailClient({
@@ -24,6 +38,9 @@ export default function JourneyDetailClient({
   isOwner,
   isPublic: initialIsPublic,
   user,
+  initialProgress,
+  journeyStatus,
+  journeyReviewData,
 }: JourneyDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -90,6 +107,9 @@ export default function JourneyDetailClient({
         onToggleVisibility={handleToggleVisibility}
         onShare={user ? () => setIsShareModalOpen(true) : undefined}
         isPublic={isPublic}
+        initialProgress={initialProgress}
+        journeyStatus={journeyStatus}
+        journeyReviewData={journeyReviewData}
       />
 
       <ShareModal

@@ -10,9 +10,12 @@ interface JourneyItemCardProps {
   journeyId: string;
   isCurrent: boolean;
   isLocked: boolean;
+  isCompleted?: boolean;
+  itemReview?: { item_rating: number | null; review_text: string | null };
   setShowActionsFor: (id: number | null) => void;
   showActionsFor: number | null;
   onMarkWatched: (journeyId: string, position: number) => void;
+  onOpenItemReview?: (position: number) => void;
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
   isOwner?: boolean;
@@ -23,9 +26,12 @@ export default function JourneyItemCard({
   journeyId,
   isCurrent,
   isLocked,
+  isCompleted = false,
+  itemReview,
   setShowActionsFor,
   showActionsFor,
   onMarkWatched,
+  onOpenItemReview,
   onAddToList,
   onMoreLikeThis,
   isOwner = true,
@@ -38,9 +44,11 @@ export default function JourneyItemCard({
       className={`relative rounded-2xl overflow-hidden border transition-all duration-300 ${
         isCurrent
           ? "border-purple-500/60 bg-purple-500/10 ring-2 ring-purple-500/30"
-          : isLocked
-            ? "border-white/[0.04] bg-white/[0.02] opacity-60"
-            : "liquid-glass"
+          : isCompleted
+            ? "border-green-500/30 bg-green-500/5"
+            : isLocked
+              ? "border-white/[0.04] bg-white/[0.02] opacity-60"
+              : "liquid-glass"
       }`}
       onMouseEnter={() => setShowActionsFor(position)}
       onMouseLeave={() => setShowActionsFor(null)}
@@ -48,6 +56,11 @@ export default function JourneyItemCard({
       {isCurrent && (
         <div className="absolute top-3 left-3 z-30 px-2 py-1 rounded-full bg-purple-500/90 text-xs font-bold text-white">
           YOU ARE HERE
+        </div>
+      )}
+      {isCompleted && !isCurrent && (
+        <div className="absolute top-3 left-3 z-30 px-2 py-1 rounded-full bg-green-500/90 text-xs font-bold text-white">
+          ✓ Watched
         </div>
       )}
       <div className="flex flex-col sm:flex-row gap-4 p-4">
@@ -144,13 +157,32 @@ export default function JourneyItemCard({
           )}
 
           <div className="flex flex-wrap gap-2">
-            {!isLocked && isOwner && (
-              <button
-                onClick={() => onMarkWatched(journeyId, position)}
-                className="text-xs px-3 py-1.5 rounded-full bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors cursor-pointer"
-              >
-                Mark watched
-              </button>
+            {isCompleted ? (
+              <>
+                <span className="text-xs px-3 py-1.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                  ✓ Watched
+                </span>
+                {isOwner && onOpenItemReview && (
+                  <button
+                    onClick={() => onOpenItemReview(position)}
+                    className="text-xs px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors cursor-pointer border border-amber-500/30"
+                  >
+                    {itemReview?.review_text || itemReview?.item_rating
+                      ? "Edit review"
+                      : "Add review"}
+                  </button>
+                )}
+              </>
+            ) : (
+              !isLocked &&
+              isOwner && (
+                <button
+                  onClick={() => onMarkWatched(journeyId, position)}
+                  className="text-xs px-3 py-1.5 rounded-full bg-green-500/20 text-green-300 hover:bg-green-500/30 transition-colors cursor-pointer"
+                >
+                  Mark watched
+                </button>
+              )
             )}
             {(item.type === "movie" || item.type === "tv") &&
               item.externalId && (

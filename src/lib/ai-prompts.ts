@@ -28,14 +28,14 @@ IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences, no explanation
 - Include a mix of well-known and lesser-known titles
 - Each recommendation must have a contextual description explaining WHY it fits the query
-- BE CREATIVE: Make the collection title evocative and fitting.
+- BE CREATIVE: Make the collection title evocative and fitting. Keep it SHORT: 3-6 words max (e.g. "Cozy Rainy Day Picks", "Mind-Bending Sci-Fi").
 - QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
 ${typeFieldRule}
 ${onlyRecommendRule}
 
 Response format:
 {
-  "collectionTitle": "An evocative title for this collection",
+  "collectionTitle": "Short, punchy title (3-6 words)",
   "collectionDescription": "A brief 1-2 sentence description of the collection theme",
   "items": [
     {

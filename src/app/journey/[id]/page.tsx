@@ -86,6 +86,46 @@ export default async function JourneyDetailPage({
   const isOwner = user ? journey.user_id === user.id : false;
   const isPublic = journey.is_public === true;
 
+  // Fetch journey_progress for owner (to show completed/current state + reviews)
+  let initialProgress: {
+    completed: number[];
+    currentPosition: number;
+    itemReviews: Record<
+      number,
+      { item_rating: number | null; review_text: string | null }
+    >;
+  } | null = null;
+  if (isOwner && user) {
+    const { data: progressRows } = await supabase
+      .from("journey_progress")
+      .select("item_position, status, item_rating, review_text")
+      .eq("journey_id", id)
+      .eq("user_id", user.id);
+    if (progressRows && progressRows.length > 0) {
+      const completed = progressRows
+        .filter((r) => r.status === "completed")
+        .map((r) => r.item_position);
+      const currentRow = progressRows.find((r) => r.status === "current");
+      const currentPosition =
+        currentRow?.item_position ??
+        journey.current_position ??
+        (completed.length > 0 ? Math.max(...completed) + 1 : 1);
+      const itemReviews: Record<
+        number,
+        { item_rating: number | null; review_text: string | null }
+      > = {};
+      for (const r of progressRows) {
+        if (r.status === "completed") {
+          itemReviews[r.item_position] = {
+            item_rating: r.item_rating ?? null,
+            review_text: r.review_text ?? null,
+          };
+        }
+      }
+      initialProgress = { completed, currentPosition, itemReviews };
+    }
+  }
+
   // Ensure user owns the journey or it is public
   if (!isOwner && !isPublic) {
     if (!user) {
@@ -106,6 +146,16 @@ export default async function JourneyDetailPage({
     itemCount: journey.total_items || 0,
   };
 
+  const journeyReviewData =
+    journey.status === "completed"
+      ? {
+          overallRating: journey.overall_rating ?? null,
+          sequenceRating: journey.sequence_rating ?? null,
+          reviewText:
+            (journey as { review_text?: string | null }).review_text ?? null,
+        }
+      : null;
+
   return (
     <JourneyDetailClient
       journey={journeyResponse}
@@ -113,6 +163,9 @@ export default async function JourneyDetailPage({
       isOwner={isOwner}
       isPublic={isPublic}
       user={user}
+      initialProgress={initialProgress}
+      journeyStatus={journey.status}
+      journeyReviewData={journeyReviewData}
     />
   );
 }

@@ -192,7 +192,7 @@ export default function IntentRefineStep({
                   <h3 className="text-lg font-bold text-white">List</h3>
                 </div>
                 <p className="text-sm text-white/50 leading-relaxed">
-                  A curated collection of recommendations. Great when you want
+                  A curated cravelist of recommendations. Great when you want
                   variety and options to choose from.
                 </p>
                 <div className="absolute bottom-4 right-5 text-white/20 group-hover:text-purple-400/60 transition-colors">

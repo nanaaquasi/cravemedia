@@ -4,6 +4,8 @@ import {
   getPosterUrl,
   getTVSeasonDetails,
 } from "@/lib/tmdb";
+import { createClient } from "@/lib/supabase/server";
+import { getEpisodeProgress } from "@/app/actions/episode-progress";
 import SeasonDetailClient from "./SeasonDetailClient";
 
 interface PageProps {
@@ -29,9 +31,17 @@ export default async function SeasonPage({
   }
 
   try {
-    const [showDetails, seasonDetails] = await Promise.all([
+    const supabase = await createClient();
+    const [
+      { data: { user } },
+      showDetails,
+      seasonDetails,
+      episodeProgress,
+    ] = await Promise.all([
+      supabase.auth.getUser(),
       getMediaDetails("tv", idNum),
       getTVSeasonDetails(idNum, seasonNum),
+      getEpisodeProgress(id, seasonNum),
     ]);
 
     const posterUrl = getPosterUrl(showDetails.posterPath, "w500");
@@ -51,6 +61,9 @@ export default async function SeasonPage({
         backdropUrl={backdropUrl}
         mediaId={id}
         seasonDetails={seasonDetails}
+        episodeProgress={episodeProgress}
+        episodeRuntimeMinutes={showDetails.episodeRuntimeMinutes ?? null}
+        canTrackProgress={!!user}
         highlightEpisodeNumber={
           highlightEpisodeNum && !Number.isNaN(highlightEpisodeNum)
             ? highlightEpisodeNum

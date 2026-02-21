@@ -147,13 +147,13 @@ function SearchContent() {
   const handleConfirmSaveCollection = useCallback(
     async ({ title, description }: { title: string; description?: string }) => {
       if (results) {
-        setSaveToast("Saving collection...");
+        setSaveToast("Saving cravelist...");
         try {
           await createList(title, description || "", results.items);
           setSaveToast(`Saved "${title}" with ${results.items.length} items`);
           await refreshLists();
         } catch {
-          setSaveToast("Failed to save collection");
+          setSaveToast("Failed to save cravelist");
         }
         setTimeout(() => setSaveToast(null), 2500);
       }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
+import { CRAVELIST_LABEL } from "@/config/labels";
 
 interface CreateCollectionModalProps {
   isOpen: boolean;
@@ -48,7 +49,7 @@ export default function CreateCollectionModal({
       {/* Modal */}
       <div className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">New Collection</h2>
+          <h2 className="text-xl font-semibold text-white">New {CRAVELIST_LABEL}</h2>
           <button
             onClick={onClose}
             disabled={isSubmitting}
@@ -89,7 +90,7 @@ export default function CreateCollectionModal({
               </label>
               <textarea
                 id="description"
-                placeholder="What's this collection about?"
+                placeholder={`What's this ${CRAVELIST_LABEL.toLowerCase()} about?`}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isSubmitting}

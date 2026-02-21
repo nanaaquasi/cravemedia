@@ -302,7 +302,7 @@ export default function SavedListsPanel({
           url={shareConfig.url}
           title={shareConfig.title}
           isPublic={shareConfig.list.isPublic ?? false}
-          contentType={shareConfig.list.isJourney ? "journey" : "collection"}
+          contentType={shareConfig.list.isJourney ? "journey" : "cravelist"}
           onMakePublic={async () => {
             const list = shareConfig.list;
             const result = list.isJourney

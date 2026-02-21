@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Plus, Check } from "lucide-react";
 import { EnrichedRecommendation } from "@/lib/types";
 import { useLists } from "@/hooks/useLists";
+import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 import CreateCollectionModal from "./CreateCollectionModal";
 
 interface AddToCollectionModalProps {
@@ -73,7 +74,7 @@ export default function AddToCollectionModal({
         <div className="relative w-full max-w-sm bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">
-              Save to Collection
+              Save to {CRAVELIST_LABEL}
             </h2>
             <button
               onClick={onClose}
@@ -91,14 +92,14 @@ export default function AddToCollectionModal({
               <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all">
                 <Plus size={18} />
               </div>
-              <span className="font-medium text-sm">New Collection</span>
+              <span className="font-medium text-sm">New {CRAVELIST_LABEL}</span>
             </button>
 
             <div className="my-2 border-t border-white/5 mx-3" />
 
             {collections.length === 0 ? (
               <div className="p-4 text-center text-zinc-500 text-sm">
-                You don't have any collections yet.
+                You don't have any {CRAVELIST_LABEL_PLURAL.toLowerCase()} yet.
               </div>
             ) : (
               <div className="space-y-1">

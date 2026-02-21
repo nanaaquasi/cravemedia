@@ -21,7 +21,7 @@ export default function ShareModal({
   title,
   isPublic = true,
   onMakePublic,
-  contentType = "collection",
+  contentType = "cravelist",
 }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [isMakingPublic, setIsMakingPublic] = useState(false);

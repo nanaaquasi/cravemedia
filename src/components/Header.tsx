@@ -7,6 +7,7 @@ import { User } from "@supabase/supabase-js";
 import { useLists } from "@/hooks/useLists";
 import { LogOut, User as UserIcon, ChevronDown } from "lucide-react";
 import { signout } from "@/app/auth/actions";
+import { CRAVELIST_LABEL } from "@/config/labels";
 
 interface HeaderProps {
   onOpenSavedLists: () => void;
@@ -90,7 +91,7 @@ export default function Header({
               ? "bg-black/40 hover:bg-black/60 shadow-lg shadow-black/20"
               : "bg-black/20 hover:bg-black/40"
           }`}
-          aria-label="My Cravings"
+          aria-label={`My ${CRAVELIST_LABEL}`}
         >
           <svg
             width="20"
@@ -105,7 +106,7 @@ export default function Header({
             <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
           </svg>
           <span className="text-sm font-medium hidden sm:inline">
-            Cravings List
+            My {CRAVELIST_LABEL}
           </span>
           {lists.length > 0 && (
             <span className="absolute -top-1 -right-1 sm:top-0 sm:right-0 sm:relative sm:ml-0.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-purple-500 text-[10px] sm:text-xs font-bold flex items-center justify-center shadow-sm">

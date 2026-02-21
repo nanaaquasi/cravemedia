@@ -37,12 +37,13 @@ CRITICAL REQUIREMENTS:
 6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or popularity, YOU MUST STRICTLY ADHERE TO IT. Do not recommend items that violate these explicit constraints.
 7. QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
 8. Return ONLY valid JSON, no markdown, no code fences, no explanation
+9. Keep journey_title SHORT: 3-6 words max (e.g. "Intro to Noir", "Sci-Fi Masterclass")
 ${typeFieldRule}
 ${onlyRecommendRule}
 
 Response format (use exact field names):
 {
-  "journey_title": "Creative, evocative title for this journey",
+  "journey_title": "Short, punchy title (3-6 words)",
   "description": "2-3 sentences about the journey arc and what the user will experience",
   "total_runtime_minutes": 0,
   "difficulty_progression": "e.g. accessible → challenging",

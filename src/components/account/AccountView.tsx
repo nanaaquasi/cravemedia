@@ -16,6 +16,10 @@ import { Profile, Collection, CollectionItem } from "@/lib/supabase/types";
 import { InProgressMedia } from "./InProgressMedia";
 import { Clock, Plus, LayoutGrid, Loader2 } from "lucide-react";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
+import {
+  CRAVELIST_LABEL,
+  CRAVELIST_LABEL_PLURAL,
+} from "@/config/labels";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
 
@@ -93,14 +97,14 @@ export function AccountView({
         isExplicitlySaved: true,
       });
       if (result) {
-        setToastMessage(`Created collection "${name}"`);
+        setToastMessage(`Created ${CRAVELIST_LABEL.toLowerCase()} "${name}"`);
         await refreshLists();
         setIsCreateModalOpen(false);
         router.push(`/collections/${result.id}`);
       }
     } catch (e) {
       console.error(e);
-      setToastMessage("Failed to create collection.");
+      setToastMessage(`Failed to create ${CRAVELIST_LABEL.toLowerCase()}.`);
     }
   };
 
@@ -122,21 +126,22 @@ export function AccountView({
                 <CurrentJourney journey={dashboardData.currentJourney} />
               ) : null}
 
-              {/* Saved Journeys (Wishlist) */}
+              {/* Your Journeys (Wishlist) */}
               {dashboardData.wishlistJourneys.length > 0 && (
                 <JourneyShowcase
                   journeys={dashboardData.wishlistJourneys}
-                  title="Saved Journeys"
+                  title="Your Journeys"
+                  onViewAll={() => setActiveTab("Journeys")}
                 />
               )}
 
-              {/* Saved Collections Preview */}
+              {/* Your Cravelists Preview */}
               {initialCollections.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
                       <LayoutGrid className="w-5 h-5 text-purple-400" />
-                      Saved Collections
+                      Your {CRAVELIST_LABEL_PLURAL}
                     </h2>
                     <button
                       onClick={() => setActiveTab("Collections")}
@@ -161,7 +166,10 @@ export function AccountView({
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
-                  <JourneyShowcase journeys={dashboardData.completedJourneys} />
+                  <JourneyShowcase
+                    journeys={dashboardData.completedJourneys}
+                    onViewAll={() => setActiveTab("Journeys")}
+                  />
                 </div>
                 <div className="hidden">
                   <ActivityFeed activities={dashboardData.recentActivity} />
@@ -180,12 +188,16 @@ export function AccountView({
               {dashboardData.wishlistJourneys.length > 0 && (
                 <JourneyShowcase
                   journeys={dashboardData.wishlistJourneys}
-                  title="Saved Journeys"
+                  title="Your Journeys"
+                  onViewAll={() => setActiveTab("Journeys")}
                 />
               )}
 
               {dashboardData.completedJourneys.length > 0 && (
-                <JourneyShowcase journeys={dashboardData.completedJourneys} />
+                <JourneyShowcase
+                  journeys={dashboardData.completedJourneys}
+                  onViewAll={() => setActiveTab("Journeys")}
+                />
               )}
 
               {!dashboardData.currentJourney &&
@@ -221,21 +233,21 @@ export function AccountView({
             </div>
           )}
 
-          {/* Collections Tab */}
+          {/* Cravelists Tab */}
           {activeTab === "Collections" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">My Collections</h2>
+                <h2 className="text-xl font-bold text-white">My {CRAVELIST_LABEL_PLURAL}</h2>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  New Collection
+                  New {CRAVELIST_LABEL}
                 </button>
               </div>
               <p className="text-zinc-500 text-sm -mt-4 mb-8">
-                Organise and manage your custom collections here.
+                Organise and manage your custom {CRAVELIST_LABEL_PLURAL.toLowerCase()} here.
               </p>
 
               {initialCollections.length > 0 ? (
@@ -247,8 +259,8 @@ export function AccountView({
               ) : (
                 <EmptyState
                   icon={LayoutGrid}
-                  title="No collections yet"
-                  description="Create your first collection to start organizing your favorite media."
+                  title={`No ${CRAVELIST_LABEL_PLURAL.toLowerCase()} yet`}
+                  description={`Create your first ${CRAVELIST_LABEL.toLowerCase()} to start organizing your favorite media.`}
                 />
               )}
             </div>

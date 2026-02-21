@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
 
@@ -74,6 +75,12 @@ export default async function RootLayout({
   return (
     <html lang="en" className={dmSans.variable}>
       <body className="bg-gradient-mesh min-h-screen">
+        <NextTopLoader
+          color="#a855f7"
+          height={3}
+          showSpinner={false}
+          crawlSpeed={200}
+        />
         <ListsProvider user={user}>
           <GlobalLayout user={user}>{children}</GlobalLayout>
         </ListsProvider>

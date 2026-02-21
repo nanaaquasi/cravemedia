@@ -21,9 +21,24 @@ import {
   type WatchStatus,
 } from "@/app/actions/collection";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
+import { getCravelistLabel } from "@/config/labels";
 import EpisodeQualityGrid from "@/components/EpisodeQualityGrid";
 import type { EnrichedRecommendation } from "@/lib/types";
-import type { EpisodeQualityData } from "@/lib/tmdb";
+import {
+  getPosterUrl,
+  type EpisodeQualityData,
+  type TVSeasonSummary,
+  type WatchProvider,
+} from "@/lib/tmdb";
+
+function getJustWatchUrl(title: string, type: "movie" | "tv"): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+  const path = type === "movie" ? "movie" : "tv-show";
+  return `https://www.justwatch.com/us/${path}/${slug}`;
+}
 
 export interface CastMember {
   id: number;
@@ -91,11 +106,11 @@ function formatDate(dateStr: string): string {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-xs font-semibold text-[var(--text-muted)] mb-0.5">
         {label}
       </p>
-      <p className="text-sm text-white">{value}</p>
+      <p className="text-sm text-white break-words">{value}</p>
     </div>
   );
 }
@@ -141,6 +156,16 @@ interface MediaDetailClientProps {
   reviews?: MediaReview[];
   canReview?: boolean;
   episodeQuality?: EpisodeQualityData;
+  collectionNames?: string[];
+  tvSeasons?: TVSeasonSummary[];
+  watchProviders?: WatchProvider[];
+  otherCravelists?: {
+    id: string;
+    name: string;
+    itemCount: number;
+    curator: { username: string | null; avatarUrl: string | null };
+    images: string[];
+  }[];
 }
 
 export default function MediaDetailClient({
@@ -151,11 +176,16 @@ export default function MediaDetailClient({
   reviews = [],
   canReview = false,
   episodeQuality = [],
+  collectionNames = [],
+  tvSeasons = [],
+  watchProviders = [],
+  otherCravelists = [],
 }: MediaDetailClientProps) {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [status, setStatus] = useState<WatchStatus | null>(initialStatus);
   const [statusOpen, setStatusOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
+  const statusRefMobile = useRef<HTMLDivElement>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -184,9 +214,11 @@ export default function MediaDetailClient({
   useEffect(() => {
     if (!statusOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
-        setStatusOpen(false);
-      }
+      const target = e.target as Node;
+      const inside =
+        statusRef.current?.contains(target) ||
+        statusRefMobile.current?.contains(target);
+      if (!inside) setStatusOpen(false);
     };
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") setStatusOpen(false);
@@ -305,26 +337,147 @@ export default function MediaDetailClient({
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start">
         {/* Left column: Poster + Infos */}
         <div className="flex flex-col gap-5">
-          {/* Poster */}
-          <div className="shrink-0 w-36 sm:w-52 lg:w-full">
-            {details.posterUrl ? (
-              <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/[0.08]">
-                <Image
-                  src={details.posterUrl}
-                  alt={details.title}
-                  fill
-                  className="object-cover"
-                  sizes="220px"
-                  unoptimized
-                />
+          {/* Poster + Rating row on mobile */}
+          <div className="flex flex-row gap-4 items-start lg:flex-col lg:gap-5">
+            <div className="shrink-0 w-36 sm:w-52 lg:w-full">
+              {details.posterUrl ? (
+                <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/[0.08]">
+                  <Image
+                    src={details.posterUrl}
+                    alt={details.title}
+                    fill
+                    className="object-cover"
+                    sizes="220px"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="aspect-[2/3] rounded-xl bg-[var(--bg-card)] border border-white/[0.06] flex items-center justify-center text-4xl">
+                  {details.type === "movie"
+                    ? "🎬"
+                    : details.type === "tv"
+                      ? "📺"
+                      : "🎌"}
+                </div>
+              )}
+            </div>
+            {/* Rating + actions: right of poster on mobile, hidden on desktop */}
+            <div className="flex flex-1 flex-col gap-3 min-w-0 lg:hidden">
+              {details.voteAverage > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
+                    ★ {details.voteAverage.toFixed(1)}
+                  </span>
+                  {details.voteCount > 0 && (
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {details.voteCount.toLocaleString()} votes
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {trailerKey && (
+                  <button
+                    onClick={() => setShowTrailerModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 transition-colors cursor-pointer text-sm"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Play trailer
+                  </button>
+                )}
+                {statusConfig && (
+                  <div ref={statusRefMobile} className="relative">
+                    <button
+                      onClick={() => setStatusOpen((p) => !p)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors cursor-pointer text-sm ${
+                        status !== "not_seen"
+                          ? "bg-green-500/20 hover:bg-green-500/30 text-green-300 border-green-500/30"
+                          : "bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] border-white/10"
+                      }`}
+                      aria-expanded={statusOpen}
+                    >
+                      <statusConfig.icon className="w-3.5 h-3.5" />
+                      {isBook ? statusConfig.bookLabel : statusConfig.label}
+                      <ChevronDown
+                        className={`w-3 h-3 transition-transform ${statusOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {statusOpen && (
+                      <div
+                        role="menu"
+                        className="absolute left-0 top-full mt-1 py-1 min-w-[160px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
+                      >
+                        {STATUS_OPTIONS.map((opt) => {
+                          const Icon = opt.icon;
+                          const label = isBook ? opt.bookLabel : opt.label;
+                          const isSelected = opt.value === status;
+                          return (
+                            <button
+                              key={opt.value}
+                              role="menuitem"
+                              onClick={() => handleStatusChange(opt.value)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                                isSelected
+                                  ? "bg-white/10 text-white"
+                                  : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                              }`}
+                            >
+                              <Icon className="w-3.5 h-3.5 shrink-0" />
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {collectionNames.length === 0 && (
+                  <button
+                    onClick={() => setShowAddToCollection(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] hover:text-white border border-white/10 transition-colors cursor-pointer text-sm"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    Add to {getCravelistLabel(1)}
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className="aspect-[2/3] rounded-xl bg-[var(--bg-card)] border border-white/[0.06] flex items-center justify-center text-4xl">
-                {details.type === "movie"
-                  ? "🎬"
-                  : details.type === "tv"
-                    ? "📺"
-                    : "🎌"}
+            </div>
+          </div>
+
+          {/* Overview + Genres: mobile only (swapped with Infos on mobile) */}
+          <div className="flex flex-col gap-4 lg:hidden">
+            {details.overview && (
+              <div>
+                <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                  Overview
+                </p>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {details.overview}
+                </p>
+              </div>
+            )}
+            {details.genres.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                  Genres
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {details.genres.map((g) => (
+                    <span
+                      key={g}
+                      className="px-2.5 py-1 rounded-lg bg-white/[0.06] text-sm text-[var(--text-secondary)]"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -333,7 +486,8 @@ export default function MediaDetailClient({
           <div className="space-y-3">
             <h3 className="text-lg font-bold text-white">Infos</h3>
 
-            {details.runtime && (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3">
+              {details.runtime && (
               <InfoRow label="Runtime" value={details.runtime} />
             )}
             {details.directors.length > 0 && (
@@ -355,7 +509,7 @@ export default function MediaDetailClient({
               />
             )}
 
-            <div className="border-t border-white/[0.06] pt-3 space-y-3">
+            <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
               {details.releaseStatus && (
                 <InfoRow label="Release Status" value={details.releaseStatus} />
               )}
@@ -380,7 +534,7 @@ export default function MediaDetailClient({
             </div>
 
             {communityStats && Object.keys(communityStats).length > 0 && (
-              <div className="border-t border-white/[0.06] pt-3 space-y-3">
+              <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
                 {(communityStats.watching ?? 0) > 0 && (
                   <InfoRow
                     label="People Watching"
@@ -418,14 +572,82 @@ export default function MediaDetailClient({
                 )}
               </div>
             )}
+            </div>
           </div>
+
+          {/* Other Cravelists (desktop only - under info) */}
+          {otherCravelists.length > 0 && (
+            <div className="hidden lg:block">
+              <h3 className="text-lg font-bold text-white mb-3">
+                Found In
+              </h3>
+              <div className="space-y-3">
+                {otherCravelists.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/collections/${c.id}`}
+                    className="flex gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 transition-colors"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 gap-0.5 rounded-md overflow-hidden bg-zinc-800">
+                      {c.images.length > 0 ? (
+                        c.images.slice(0, 2).map((img) => (
+                          <div
+                            key={`${c.id}-${img}`}
+                            className="relative flex-1 min-w-0 h-full"
+                          >
+                            <Image
+                              src={img}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              sizes="56px"
+                              unoptimized
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-lg">
+                          📋
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{c.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {c.itemCount} titles
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {c.curator.avatarUrl ? (
+                          <Image
+                            src={c.curator.avatarUrl}
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="rounded-full object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
+                            {(c.curator.username ?? "?")[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs text-[var(--text-muted)] truncate">
+                          {c.curator.username ?? "Anonymous"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right column: Actions, Overview, Genres, Cast */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Rating */}
+          {/* Rating: hidden on mobile (shown next to poster), visible on desktop */}
           {details.voteAverage > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
                 ★ {details.voteAverage.toFixed(1)}
               </span>
@@ -437,8 +659,8 @@ export default function MediaDetailClient({
             </div>
           )}
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Action buttons: hidden on mobile (shown next to poster) */}
+          <div className="hidden lg:flex flex-wrap items-center gap-3">
             {trailerKey && (
               <button
                 onClick={() => setShowTrailerModal(true)}
@@ -503,18 +725,20 @@ export default function MediaDetailClient({
               </div>
             )}
 
-            <button
-              onClick={() => setShowAddToCollection(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] hover:text-white border border-white/10 transition-colors cursor-pointer"
-            >
-              <FolderPlus className="w-4 h-4" />
-              Add to Collection
-            </button>
+            {collectionNames.length === 0 && (
+              <button
+                onClick={() => setShowAddToCollection(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] hover:text-white border border-white/10 transition-colors cursor-pointer"
+              >
+                <FolderPlus className="w-4 h-4" />
+                Add to {getCravelistLabel(1)}
+              </button>
+            )}
           </div>
 
-          {/* Overview */}
+          {/* Overview (hidden on mobile - shown in left column) */}
           {details.overview && (
-            <div>
+            <div className="hidden lg:block">
               <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
                 Overview
               </p>
@@ -524,9 +748,9 @@ export default function MediaDetailClient({
             </div>
           )}
 
-          {/* Genres */}
+          {/* Genres (hidden on mobile - shown in left column) */}
           {details.genres.length > 0 && (
-            <div>
+            <div className="hidden lg:block">
               <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
                 Genres
               </p>
@@ -543,6 +767,233 @@ export default function MediaDetailClient({
             </div>
           )}
 
+          {/* Where to watch (movies) */}
+          {details.type === "movie" && watchProviders.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                Where to watch
+              </p>
+              <div className="flex flex-wrap gap-3 items-center">
+                {watchProviders.map((p) => {
+                  const justWatchUrl = getJustWatchUrl(details.title, "movie");
+                  return (
+                    <a
+                      key={p.id}
+                      href={justWatchUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
+                      title={`Watch on ${p.name}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+                        {p.logoPath ? (
+                          <Image
+                            src={`https://image.tmdb.org/t/p/original${p.logoPath}`}
+                            alt={p.name}
+                            width={40}
+                            height={40}
+                            className="object-contain"
+                            unoptimized
+                          />
+                        ) : (
+                          <span className="text-xs text-zinc-500">
+                            {p.name.slice(0, 2)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {p.type === "flatrate" ? "Subs" : p.type === "buy" ? "Buy" : "Rent"}
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  Powered by
+                </span>
+                <a
+                  href={getJustWatchUrl(details.title, "movie")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  <img
+                    src="https://widget.justwatch.com/assets/JW_logo_color_10px.svg"
+                    alt="JustWatch"
+                    className="h-3 w-auto"
+                  />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Seasons (TV only) */}
+          {details.type === "tv" &&
+            (tvSeasons.length > 0 || watchProviders.length > 0) && (
+              <div>
+                {watchProviders.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-3 items-center">
+                      {watchProviders.map((p) => (
+                          <a
+                            key={p.id}
+                            href={getJustWatchUrl(details.title, "tv")}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
+                            title={`Watch on ${p.name}`}
+                          >
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+                              {p.logoPath ? (
+                                <Image
+                                  src={`https://image.tmdb.org/t/p/original${p.logoPath}`}
+                                  alt={p.name}
+                                  width={40}
+                                  height={40}
+                                  className="object-contain"
+                                  unoptimized
+                                />
+                              ) : (
+                                <span className="text-xs text-zinc-500">
+                                  {p.name.slice(0, 2)}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {p.type === "flatrate" ? "Subs" : p.type === "buy" ? "Buy" : "Rent"}
+                            </span>
+                          </a>
+                      ))}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        Powered by
+                      </span>
+                      <a
+                        href={getJustWatchUrl(details.title, "tv")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-80 transition-opacity"
+                      >
+                        <img
+                          src="https://widget.justwatch.com/assets/JW_logo_color_10px.svg"
+                          alt="JustWatch"
+                          className="h-3 w-auto"
+                        />
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {tvSeasons.length > 0 && (
+                  <>
+                    <h2 className="text-lg font-bold text-white mb-3">Seasons</h2>
+                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                    {tvSeasons.map((season) => {
+                      const posterUrl = getPosterUrl(
+                        season.posterPath,
+                        "w500",
+                      );
+                      const seasonYear = season.airDate
+                        ? new Date(season.airDate).getFullYear()
+                        : null;
+                      return (
+                        <Link
+                          key={season.seasonNumber}
+                          href={`/media/tv/${mediaId}/season/${season.seasonNumber}`}
+                          className="group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                        >
+                          <div className="relative aspect-[3/4] w-full overflow-hidden">
+                            {posterUrl ? (
+                              <Image
+                                src={posterUrl}
+                                alt={season.name}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                sizes="176px"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center text-3xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
+                                📺
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <span className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/90 font-medium">
+                              S{season.seasonNumber}
+                            </span>
+                            {season.voteAverage != null &&
+                              season.voteAverage > 0 && (
+                                <span className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
+                                  ★ {season.voteAverage.toFixed(1)}
+                                </span>
+                              )}
+                          </div>
+                          <div className="p-2.5">
+                            <h3 className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
+                              Season {season.seasonNumber}
+                            </h3>
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--text-muted)]">
+                              <span>
+                                {season.episodeCount} episode
+                                {season.episodeCount === 1 ? "" : "s"}
+                              </span>
+                              {seasonYear && (
+                                <>
+                                  <span>·</span>
+                                  <span>{seasonYear}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  </>
+                )}
+              </div>
+            )}
+
+          {/* Cast */}
+          {details.cast && details.cast.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-white mb-3">Cast</h2>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {details.cast.map((member) => (
+                  <Link
+                    key={member.id}
+                    href={`/person/${member.id}`}
+                    className="shrink-0 w-24 sm:w-28 text-center group block"
+                  >
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2 ring-0 group-hover:ring-2 group-hover:ring-purple-500/50 transition-all">
+                      {member.profileUrl ? (
+                        <Image
+                          src={member.profileUrl}
+                          alt={member.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-200"
+                          sizes="112px"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
+                          👤
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-medium text-white leading-tight line-clamp-1 group-hover:text-purple-300 transition-colors">
+                      {member.name}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] leading-tight line-clamp-1">
+                      {member.character}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Episode Quality (TV only) */}
           {details.type === "tv" && episodeQuality.length > 0 && (
             <div>
@@ -554,44 +1005,6 @@ export default function MediaDetailClient({
                 mediaTitle={details.title}
                 mediaId={mediaId}
               />
-            </div>
-          )}
-
-          {/* Cast */}
-          {details.cast && details.cast.length > 0 && (
-            <div>
-              <h2 className="text-lg font-bold text-white mb-3">Cast</h2>
-              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {details.cast.map((member) => (
-                  <div
-                    key={member.id}
-                    className="shrink-0 w-24 sm:w-28 text-center"
-                  >
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2">
-                      {member.profileUrl ? (
-                        <Image
-                          src={member.profileUrl}
-                          alt={member.name}
-                          fill
-                          className="object-cover"
-                          sizes="112px"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
-                          👤
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs font-medium text-white leading-tight line-clamp-1">
-                      {member.name}
-                    </p>
-                    <p className="text-[11px] text-[var(--text-muted)] leading-tight line-clamp-1">
-                      {member.character}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -637,6 +1050,74 @@ export default function MediaDetailClient({
               </div>
             </div>
           )}
+
+          {/* Other Cravelists (mobile only - after recommended titles) */}
+          {otherCravelists.length > 0 && (
+            <div className="lg:hidden">
+              <h2 className="text-lg font-bold text-white mb-3">
+                Found In
+              </h2>
+              <div className="space-y-3">
+                {otherCravelists.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/collections/${c.id}`}
+                    className="flex gap-3 p-3 rounded-lg bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 transition-colors"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 gap-0.5 rounded-md overflow-hidden bg-zinc-800">
+                      {c.images.length > 0 ? (
+                        c.images.slice(0, 2).map((img) => (
+                          <div
+                            key={`${c.id}-${img}`}
+                            className="relative flex-1 min-w-0 h-full"
+                          >
+                            <Image
+                              src={img}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              sizes="56px"
+                              unoptimized
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-lg">
+                          📋
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{c.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {c.itemCount} titles
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {c.curator.avatarUrl ? (
+                          <Image
+                            src={c.curator.avatarUrl}
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="rounded-full object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
+                            {(c.curator.username ?? "?")[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs text-[var(--text-muted)] truncate">
+                          {c.curator.username ?? "Anonymous"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reviews */}
           <div>
             <div className="flex items-center justify-between mb-3">

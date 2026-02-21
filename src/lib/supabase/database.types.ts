@@ -7,8 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1";
   };
@@ -74,6 +72,7 @@ export type Database = {
       collection_items: {
         Row: {
           collection_id: string;
+          contains_spoilers: boolean | null;
           created_at: string | null;
           finished_at: string | null;
           id: string;
@@ -82,6 +81,7 @@ export type Database = {
           media_id: string;
           media_type: string;
           metadata: Json | null;
+          position: number | null;
           review_text: string | null;
           runtime_minutes: number | null;
           status: string | null;
@@ -89,6 +89,7 @@ export type Database = {
         };
         Insert: {
           collection_id: string;
+          contains_spoilers?: boolean | null;
           created_at?: string | null;
           finished_at?: string | null;
           id?: string;
@@ -97,6 +98,7 @@ export type Database = {
           media_id: string;
           media_type: string;
           metadata?: Json | null;
+          position?: number | null;
           review_text?: string | null;
           runtime_minutes?: number | null;
           status?: string | null;
@@ -104,6 +106,7 @@ export type Database = {
         };
         Update: {
           collection_id?: string;
+          contains_spoilers?: boolean | null;
           created_at?: string | null;
           finished_at?: string | null;
           id?: string;
@@ -112,6 +115,7 @@ export type Database = {
           media_id?: string;
           media_type?: string;
           metadata?: Json | null;
+          position?: number | null;
           review_text?: string | null;
           runtime_minutes?: number | null;
           status?: string | null;
@@ -130,28 +134,84 @@ export type Database = {
       collections: {
         Row: {
           created_at: string | null;
+          description: string | null;
           id: string;
+          is_explicitly_saved: boolean | null;
           is_public: boolean | null;
+          is_saved_to_profile: boolean | null;
           name: string;
-          user_id: string;
+          updated_at: string | null;
+          user_id: string | null;
         };
         Insert: {
           created_at?: string | null;
+          description?: string | null;
           id?: string;
+          is_explicitly_saved?: boolean | null;
           is_public?: boolean | null;
+          is_saved_to_profile?: boolean | null;
           name: string;
-          user_id: string;
+          updated_at?: string | null;
+          user_id?: string | null;
         };
         Update: {
           created_at?: string | null;
+          description?: string | null;
           id?: string;
+          is_explicitly_saved?: boolean | null;
           is_public?: boolean | null;
+          is_saved_to_profile?: boolean | null;
           name?: string;
-          user_id?: string;
+          updated_at?: string | null;
+          user_id?: string | null;
         };
         Relationships: [
           {
             foreignKeyName: "collections_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      episode_progress: {
+        Row: {
+          created_at: string | null;
+          episode_number: number;
+          id: string;
+          media_id: string;
+          runtime_minutes: number | null;
+          season_number: number;
+          status: string;
+          updated_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string | null;
+          episode_number: number;
+          id?: string;
+          media_id: string;
+          runtime_minutes?: number | null;
+          season_number: number;
+          status?: string;
+          updated_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string | null;
+          episode_number?: number;
+          id?: string;
+          media_id?: string;
+          runtime_minutes?: number | null;
+          season_number?: number;
+          status?: string;
+          updated_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "episode_progress_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -276,7 +336,7 @@ export type Database = {
           item_runtime_minutes?: number | null;
           item_title?: string;
           item_year?: number | null;
-          journey_id: string;
+          journey_id?: string;
           review_text?: string | null;
           sequence_fit_rating?: number | null;
           skipped_at?: string | null;
@@ -315,10 +375,13 @@ export type Database = {
           id: string;
           intent_answers: Json | null;
           is_created_by_user: boolean | null;
+          is_explicitly_saved: boolean | null;
           is_public: boolean | null;
+          is_saved_to_profile: boolean | null;
           items: Json;
           overall_rating: number | null;
           query: string;
+          review_text: string | null;
           sequence_rating: number | null;
           started_at: string | null;
           status: string | null;
@@ -326,7 +389,7 @@ export type Database = {
           total_items: number | null;
           total_runtime_minutes: number | null;
           updated_at: string | null;
-          user_id: string;
+          user_id: string | null;
         };
         Insert: {
           alternative_paths?: Json | null;
@@ -340,10 +403,13 @@ export type Database = {
           id?: string;
           intent_answers?: Json | null;
           is_created_by_user?: boolean | null;
+          is_explicitly_saved?: boolean | null;
           is_public?: boolean | null;
+          is_saved_to_profile?: boolean | null;
           items: Json;
           overall_rating?: number | null;
           query: string;
+          review_text?: string | null;
           sequence_rating?: number | null;
           started_at?: string | null;
           status?: string | null;
@@ -351,7 +417,7 @@ export type Database = {
           total_items?: number | null;
           total_runtime_minutes?: number | null;
           updated_at?: string | null;
-          user_id: string;
+          user_id?: string | null;
         };
         Update: {
           alternative_paths?: Json | null;
@@ -365,10 +431,13 @@ export type Database = {
           id?: string;
           intent_answers?: Json | null;
           is_created_by_user?: boolean | null;
+          is_explicitly_saved?: boolean | null;
           is_public?: boolean | null;
+          is_saved_to_profile?: boolean | null;
           items?: Json;
           overall_rating?: number | null;
           query?: string;
+          review_text?: string | null;
           sequence_rating?: number | null;
           started_at?: string | null;
           status?: string | null;
@@ -376,7 +445,7 @@ export type Database = {
           total_items?: number | null;
           total_runtime_minutes?: number | null;
           updated_at?: string | null;
-          user_id?: string;
+          user_id?: string | null;
         };
         Relationships: [
           {
@@ -431,49 +500,29 @@ export type Database = {
         };
         Relationships: [];
       };
-      saved_journeys: {
+      search_sessions: {
         Row: {
+          content_types: string[];
           created_at: string | null;
-          goal_amount: number | null;
-          goal_unit: string | null;
           id: string;
+          mode: string;
           query: string;
-          refinement_steps: Json | null;
-          results: Json | null;
-          title: string;
-          user_id: string;
         };
         Insert: {
+          content_types: string[];
           created_at?: string | null;
-          goal_amount?: number | null;
-          goal_unit?: string | null;
-          id?: string;
+          id: string;
+          mode?: string;
           query: string;
-          refinement_steps?: Json | null;
-          results?: Json | null;
-          title: string;
-          user_id: string;
         };
         Update: {
+          content_types?: string[];
           created_at?: string | null;
-          goal_amount?: number | null;
-          goal_unit?: string | null;
           id?: string;
+          mode?: string;
           query?: string;
-          refinement_steps?: Json | null;
-          results?: Json | null;
-          title: string;
-          user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "saved_journeys_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       user_achievements: {
         Row: {
@@ -563,7 +612,7 @@ export type Database = {
           total_journeys_completed?: number | null;
           total_journeys_in_progress?: number | null;
           updated_at?: string | null;
-          user_id: string;
+          user_id?: string;
         };
         Relationships: [
           {

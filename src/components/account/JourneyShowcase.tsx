@@ -3,14 +3,44 @@ import Link from "next/link";
 
 import { Tables } from "@/lib/supabase/database.types";
 
+function getStatusLabel(status: string | null): string {
+  switch (status) {
+    case "in_progress":
+      return "In progress";
+    case "completed":
+      return "Completed";
+    case "wishlist":
+      return "Saved";
+    case "abandoned":
+      return "Abandoned";
+    default:
+      return "Saved";
+  }
+}
+
+function getStatusStyles(status: string | null): string {
+  switch (status) {
+    case "in_progress":
+      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+    case "completed":
+      return "bg-green-500/20 text-green-400 border-green-500/30";
+    case "abandoned":
+      return "bg-zinc-500/20 text-zinc-400 border-zinc-500/30";
+    default:
+      return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+  }
+}
+
 interface JourneyShowcaseProps {
   journeys: Tables<"journeys">[];
   title?: string;
+  onViewAll?: () => void;
 }
 
 export function JourneyShowcase({
   journeys,
   title = "Journey History",
+  onViewAll,
 }: JourneyShowcaseProps) {
   if (journeys.length === 0) return null;
 
@@ -21,12 +51,14 @@ export function JourneyShowcase({
           <Play className="w-5 h-5 text-purple-400 fill-current" />
           {title}
         </h2>
-        <Link
-          href="/journeys"
-          className="text-sm text-zinc-400 hover:text-white transition-colors"
-        >
-          View All
-        </Link>
+        {onViewAll && (
+          <button
+            onClick={onViewAll}
+            className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
+            View All
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -69,7 +101,14 @@ export function JourneyShowcase({
               </div>
 
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-md border ${getStatusStyles(
+                      journey.status,
+                    )}`}
+                  >
+                    {getStatusLabel(journey.status)}
+                  </span>
                   <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
                     {journey.content_type}
                   </span>

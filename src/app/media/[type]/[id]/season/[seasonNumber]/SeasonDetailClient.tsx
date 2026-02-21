@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, HelpCircle } from "lucide-react";
+import { Star, HelpCircle, CheckCircle, Circle } from "lucide-react";
 import type { TVSeasonDetails } from "@/lib/tmdb";
+import {
+  setEpisodeStatus,
+  markSeasonWatched,
+  markSeasonUnwatched,
+  type EpisodeStatus,
+} from "@/app/actions/episode-progress";
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
@@ -23,6 +29,9 @@ interface SeasonDetailClientProps {
   backdropUrl: string | null;
   mediaId: string;
   seasonDetails: TVSeasonDetails;
+  episodeProgress: Record<number, EpisodeStatus>;
+  episodeRuntimeMinutes?: number | null;
+  canTrackProgress?: boolean;
   highlightEpisodeNumber: number | null;
 }
 
@@ -33,9 +42,26 @@ export default function SeasonDetailClient({
   backdropUrl,
   mediaId,
   seasonDetails,
+  episodeProgress: initialProgress,
+  episodeRuntimeMinutes,
+  canTrackProgress = false,
   highlightEpisodeNumber,
 }: SeasonDetailClientProps) {
   const highlightedRef = useRef<HTMLDivElement>(null);
+  const [episodeProgress, setEpisodeProgress] = useState(initialProgress);
+  const [updatingEpisode, setUpdatingEpisode] = useState<number | null>(null);
+  const [updatingSeason, setUpdatingSeason] = useState(false);
+
+  const watchedCount = Object.values(episodeProgress).filter(
+    (s) => s === "watched",
+  ).length;
+  const isSeasonFullyWatched =
+    watchedCount === seasonDetails.episodes.length &&
+    seasonDetails.episodes.length > 0;
+
+  useEffect(() => {
+    setEpisodeProgress(initialProgress);
+  }, [initialProgress]);
 
   useEffect(() => {
     if (highlightEpisodeNumber && highlightedRef.current) {
@@ -45,6 +71,49 @@ export default function SeasonDetailClient({
       });
     }
   }, [highlightEpisodeNumber]);
+
+  const handleEpisodeToggle = async (epNum: number) => {
+    setUpdatingEpisode(epNum);
+    const current = episodeProgress[epNum];
+    const next: EpisodeStatus = current === "watched" ? "not_seen" : "watched";
+    const { error } = await setEpisodeStatus(
+      mediaId,
+      seasonDetails.seasonNumber,
+      epNum,
+      next,
+      episodeRuntimeMinutes ?? undefined,
+    );
+    if (!error) {
+      setEpisodeProgress((p) => ({ ...p, [epNum]: next }));
+    }
+    setUpdatingEpisode(null);
+  };
+
+  const handleSeasonToggle = async () => {
+    setUpdatingSeason(true);
+    if (isSeasonFullyWatched) {
+      const { error } = await markSeasonUnwatched(
+        mediaId,
+        seasonDetails.seasonNumber,
+      );
+      if (!error) setEpisodeProgress({});
+    } else {
+      const { error } = await markSeasonWatched(
+        mediaId,
+        seasonDetails.seasonNumber,
+        seasonDetails.episodes.length,
+        episodeRuntimeMinutes ?? undefined,
+      );
+      if (!error) {
+        const next: Record<number, EpisodeStatus> = {};
+        seasonDetails.episodes.forEach((ep) => {
+          next[ep.episodeNumber] = "watched";
+        });
+        setEpisodeProgress(next);
+      }
+    }
+    setUpdatingSeason(false);
+  };
 
   const { seasonNumber, overview, voteAverage, voteCount, episodes } =
     seasonDetails;
@@ -89,34 +158,48 @@ export default function SeasonDetailClient({
 
       {/* Content: same two-column layout as main details */}
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start">
-        {/* Left column: Poster only (no Infos) */}
+        {/* Left column: Poster + Rating on mobile */}
         <div className="flex flex-col gap-5">
-          <div className="shrink-0 w-36 sm:w-52 lg:w-full">
-            {posterUrl ? (
-              <Link href={`/media/tv/${mediaId}`}>
-                <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/[0.08] hover:border-white/20 transition-colors">
-                  <Image
-                    src={posterUrl}
-                    alt={showTitle}
-                    fill
-                    className="object-cover"
-                    sizes="220px"
-                    unoptimized
-                  />
+          <div className="flex flex-row gap-4 items-start lg:flex-col lg:gap-5">
+            <div className="shrink-0 w-36 sm:w-52 lg:w-full">
+              {posterUrl ? (
+                <Link href={`/media/tv/${mediaId}`}>
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden border border-white/[0.08] hover:border-white/20 transition-colors">
+                    <Image
+                      src={posterUrl}
+                      alt={showTitle}
+                      fill
+                      className="object-cover"
+                      sizes="220px"
+                      unoptimized
+                    />
+                  </div>
+                </Link>
+              ) : (
+                <div className="aspect-[2/3] rounded-xl bg-[var(--bg-card)] border border-white/[0.06] flex items-center justify-center text-4xl">
+                  📺
                 </div>
-              </Link>
-            ) : (
-              <div className="aspect-[2/3] rounded-xl bg-[var(--bg-card)] border border-white/[0.06] flex items-center justify-center text-4xl">
-                📺
-              </div>
-            )}
+              )}
+            </div>
+            {/* Rating: right of poster on mobile */}
+            <div className="flex items-center gap-2 lg:hidden">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
+                <Star className="w-4 h-4 fill-amber-400" />
+                {voteAverage > 0 ? voteAverage.toFixed(2) : "0.00"}
+              </span>
+              {voteCount > 0 && (
+                <span className="text-xs text-[var(--text-muted)]">
+                  {voteCount.toLocaleString()} Votes
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right column: Rating, Synopsis, Episodes */}
+        {/* Right column: Rating (desktop), Synopsis, Episodes */}
         <div className="flex flex-col gap-6 min-w-0">
-          {/* Season rating badge */}
-          <div className="flex items-center gap-2">
+          {/* Season rating badge: hidden on mobile (shown next to poster) */}
+          <div className="hidden lg:flex items-center gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
               <Star className="w-4 h-4 fill-amber-400" />
               {voteAverage > 0 ? voteAverage.toFixed(2) : "0.00"}
@@ -139,14 +222,41 @@ export default function SeasonDetailClient({
 
           {/* Episodes */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-lg font-bold text-white">Episodes</h2>
-              <span
-                className="text-zinc-500 hover:text-zinc-400 cursor-help"
-                title="Episode ratings from TMDB"
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-bold text-white">Episodes</h2>
+                <span
+                  className="text-zinc-500 hover:text-zinc-400 cursor-help"
+                  title="Episode ratings from TMDB"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </span>
+              </div>
+              {canTrackProgress && (
+              <button
+                onClick={handleSeasonToggle}
+                disabled={updatingSeason}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 border ${
+                  isSeasonFullyWatched
+                    ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/[0.3]"
+                    : "bg-white/[0.06] text-[var(--text-secondary)] border-white/10 hover:bg-white/[0.1] hover:text-white"
+                }`}
               >
-                <HelpCircle className="w-4 h-4" />
-              </span>
+                {updatingSeason ? (
+                  "Updating…"
+                ) : isSeasonFullyWatched ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Season watched
+                  </>
+                ) : (
+                  <>
+                    <Circle className="w-4 h-4" />
+                    Mark season watched
+                  </>
+                )}
+              </button>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -154,6 +264,8 @@ export default function SeasonDetailClient({
                 const isHighlighted =
                   highlightEpisodeNumber !== null &&
                   ep.episodeNumber === highlightEpisodeNumber;
+                const isWatched = episodeProgress[ep.episodeNumber] === "watched";
+                const isUpdating = updatingEpisode === ep.episodeNumber;
 
                 return (
                   <div
@@ -166,7 +278,7 @@ export default function SeasonDetailClient({
                     }`}
                   >
                     {/* Thumbnail */}
-                    <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-zinc-800">
+                    <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-zinc-800 relative">
                       {ep.stillUrl ? (
                         <Image
                           src={ep.stillUrl}
@@ -179,6 +291,11 @@ export default function SeasonDetailClient({
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-2xl text-zinc-600">
                           📺
+                        </div>
+                      )}
+                      {isWatched && (
+                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-green-500/90 flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-white" />
                         </div>
                       )}
                     </div>
@@ -199,9 +316,31 @@ export default function SeasonDetailClient({
                             </span>
                           )}
                         </div>
-                        <span className="text-xs text-zinc-500 shrink-0">
-                          {String(ep.episodeNumber).padStart(2, "0")}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {canTrackProgress && (
+                          <button
+                            onClick={() => handleEpisodeToggle(ep.episodeNumber)}
+                            disabled={isUpdating}
+                            className={`p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
+                              isWatched
+                                ? "bg-green-500/20 text-green-400 hover:bg-green-500/[0.3]"
+                                : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-white"
+                            }`}
+                            title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                          >
+                            {isUpdating ? (
+                              <span className="text-xs">…</span>
+                            ) : isWatched ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : (
+                              <Circle className="w-4 h-4" />
+                            )}
+                          </button>
+                          )}
+                          <span className="text-xs text-zinc-500">
+                            {String(ep.episodeNumber).padStart(2, "0")}
+                          </span>
+                        </div>
                       </div>
 
                       {ep.overview && (

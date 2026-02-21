@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ModalProps {
@@ -30,12 +31,12 @@ export default function Modal({
 
   const sizeClasses = {
     sm: "max-w-sm",
-    md: "max-w-md",
-    lg: "max-w-lg",
+    md: "max-w-md md:max-w-lg",
+    lg: "max-w-lg md:max-w-xl",
     xl: "max-w-2xl",
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
@@ -82,4 +83,10 @@ export default function Modal({
       )}
     </AnimatePresence>
   );
+
+  // Portal to document.body so modal isn't clipped by parent overflow/transform
+  if (typeof document !== "undefined") {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Modal from "./Modal";
+import { CRAVELIST_LABEL } from "@/config/labels";
 
 interface SaveCollectionModalProps {
   isOpen: boolean;
@@ -35,10 +36,10 @@ export default function SaveCollectionModal({
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div>
           <h2 className="text-xl font-bold bg-gradient-to-br from-white to-white/70 bg-clip-text text-transparent mb-1">
-            Save Collection
+            Save {CRAVELIST_LABEL}
           </h2>
           <p className="text-sm text-[var(--text-secondary)]">
-            Organize these items into a permanent collection.
+            Organize these items into a permanent {CRAVELIST_LABEL.toLowerCase()}.
           </p>
         </div>
 
@@ -48,7 +49,7 @@ export default function SaveCollectionModal({
             htmlFor="collection-title"
             className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider"
           >
-            Collection Title
+            {CRAVELIST_LABEL} Title
           </label>
           <input
             id="collection-title"
@@ -74,7 +75,7 @@ export default function SaveCollectionModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-colors text-white min-h-[100px] resize-none"
-            placeholder="A short description of this collection..."
+            placeholder={`A short description of this ${CRAVELIST_LABEL.toLowerCase()}...`}
           />
         </div>
 
@@ -91,7 +92,7 @@ export default function SaveCollectionModal({
             type="submit"
             className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:brightness-110 transition-all cursor-pointer"
           >
-            Save Collection
+            Save {CRAVELIST_LABEL}
           </button>
         </div>
       </form>

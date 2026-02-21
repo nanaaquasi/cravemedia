@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { CRAVELIST_LABEL } from "@/config/labels";
 
 export async function toggleCollectionVisibility(
   collectionId: string,
@@ -56,7 +57,6 @@ export async function updateCollection(
     .update({
       name,
       description: data.description?.trim() || null,
-      updated_at: new Date().toISOString(),
     })
     .eq("id", collectionId)
     .eq("user_id", user.id);
@@ -78,7 +78,7 @@ export async function cloneCollection(collectionId: string) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "You must be logged in to clone a collection." };
+    return { error: `You must be logged in to clone a ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   // Fetch the collection to clone
@@ -89,12 +89,12 @@ export async function cloneCollection(collectionId: string) {
     .single();
 
   if (fetchError || !collectionToClone) {
-    return { error: fetchError?.message || "Collection not found" };
+    return { error: fetchError?.message || `${CRAVELIST_LABEL} not found` };
   }
 
   // Ensure it's public or belongs to user
   if (!collectionToClone.is_public && collectionToClone.user_id !== user.id) {
-    return { error: "You do not have permission to clone this collection." };
+    return { error: `You do not have permission to clone this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   const { data: newCollection, error: insertError } = await supabase
@@ -109,7 +109,7 @@ export async function cloneCollection(collectionId: string) {
     .single();
 
   if (insertError || !newCollection) {
-    return { error: insertError?.message || "Failed to clone collection." };
+    return { error: insertError?.message || `Failed to clone ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   // Insert the items
@@ -165,11 +165,11 @@ export async function reorderCollectionItems(
     .single();
 
   if (fetchError || !collection) {
-    return { error: "Collection not found" };
+    return { error: `${CRAVELIST_LABEL} not found` };
   }
 
   if (collection.user_id !== user.id) {
-    return { error: "You do not have permission to reorder this collection." };
+    return { error: `You do not have permission to reorder this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   // Batch update positions
@@ -207,11 +207,11 @@ export async function deleteCollection(collectionId: string) {
     .single();
 
   if (fetchError || !collection) {
-    return { error: "Collection not found" };
+    return { error: `${CRAVELIST_LABEL} not found` };
   }
 
   if (collection.user_id !== user.id) {
-    return { error: "You do not have permission to delete this collection." };
+    return { error: `You do not have permission to delete this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   await supabase.from("collection_items").delete().eq("collection_id", collectionId);
@@ -285,7 +285,7 @@ export async function updateCollectionItemStatus(
   }
 
   if (collection.user_id !== user.id) {
-    return { error: "You do not have permission to update this collection." };
+    return { error: `You do not have permission to update this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   const { data: item, error: itemError } = await supabase
@@ -364,7 +364,7 @@ export async function updateMediaStatusAcrossCollections(
     .eq("user_id", user.id);
 
   if (!userCollections?.length) {
-    return { error: "No collections found." };
+    return { error: `No ${CRAVELIST_LABEL}s found.` };
   }
 
   const collectionIds = userCollections.map((c) => c.id);
@@ -425,7 +425,7 @@ export async function reviewCollectionItem(
   }
 
   if (collection.user_id !== user.id) {
-    return { error: "You do not have permission to update this collection." };
+    return { error: `You do not have permission to update this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
   const updateData: Record<string, unknown> = {};
@@ -480,7 +480,7 @@ export async function reviewMediaAcrossCollections(
     .eq("user_id", user.id);
 
   if (!userCollections?.length) {
-    return { error: "No collections found. Add this media to a collection first." };
+    return { error: `No ${CRAVELIST_LABEL}s found. Add this media to a ${CRAVELIST_LABEL.toLowerCase()} first.` };
   }
 
   const collectionIds = userCollections.map((c) => c.id);
@@ -493,7 +493,7 @@ export async function reviewMediaAcrossCollections(
     .in("collection_id", collectionIds);
 
   if (!items?.length) {
-    return { error: "Media not found in any of your collections." };
+    return { error: `Media not found in any of your ${CRAVELIST_LABEL}s.` };
   }
 
   const updateData: Record<string, unknown> = {};

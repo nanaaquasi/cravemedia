@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import CollectionDetailClient from "./CollectionDetailClient";
+import { CRAVELIST_LABEL } from "@/config/labels";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -29,7 +30,7 @@ export async function generateMetadata({
 
   const ogParams = new URLSearchParams();
   ogParams.set("title", collection.name);
-  ogParams.set("type", "Collection");
+    ogParams.set("type", CRAVELIST_LABEL);
   if (posters.length > 0) {
     ogParams.set("posters", posters.join(","));
   }
@@ -42,20 +43,23 @@ export async function generateMetadata({
   };
 
   return {
-    title: `${collection.name} - Cravemedia Collection`,
+    title: `${collection.name} - Cravemedia ${CRAVELIST_LABEL}`,
     description:
-      collection.description || "A custom media collection on Cravemedia",
+      collection.description ||
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
     openGraph: {
       title: collection.name,
       description:
-        collection.description || "A custom media collection on Cravemedia",
+        collection.description ||
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
       images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: collection.name,
       description:
-        collection.description || "A custom media collection on Cravemedia",
+        collection.description ||
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
       images: [ogImage],
     },
   };

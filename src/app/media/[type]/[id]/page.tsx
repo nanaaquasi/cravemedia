@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
 import {
   getMediaDetails,
+  getMovieWatchProviders,
   getPosterUrl,
   getTVEpisodeRatings,
+  getTVSeasons,
+  getTVWatchProviders,
   type EpisodeQualityData,
+  type TVSeasonSummary,
+  type WatchProvider,
 } from "@/lib/tmdb";
 import { getAnimeDetails } from "@/lib/anilist";
 import { createClient } from "@/lib/supabase/server";
@@ -92,12 +97,29 @@ export default async function MediaDetailPage({ params }: PageProps) {
         ? getTVEpisodeRatings(idNum)
         : Promise.resolve([]);
 
-    const [authResult, communityResult, reviewsResult, episodeQuality] =
-      await Promise.all([
+    const tvSeasonsPromise: Promise<TVSeasonSummary[]> =
+      type === "tv" ? getTVSeasons(idNum) : Promise.resolve([]);
+
+    const watchProvidersPromise: Promise<WatchProvider[]> =
+      type === "tv"
+        ? getTVWatchProviders(idNum)
+        : type === "movie"
+          ? getMovieWatchProviders(idNum)
+          : Promise.resolve([]);
+
+    const [
+      authResult,
+      communityResult,
+      reviewsResult,
+      episodeQuality,
+      tvSeasons,
+      watchProviders,
+      otherCravelistsResult,
+    ] = await Promise.all([
         supabase.auth.getUser(),
         supabase
           .from("collection_items")
-          .select("status, collection_id")
+          .select("status, collection_id, collections(name)")
           .eq("media_id", id)
           .eq("media_type", type),
         supabase
@@ -111,6 +133,16 @@ export default async function MediaDetailPage({ params }: PageProps) {
           .order("created_at", { ascending: false })
           .limit(20),
         episodeQualityPromise,
+        tvSeasonsPromise,
+        watchProvidersPromise,
+        supabase
+          .from("collection_items")
+          .select(
+            "collection_id, collections!inner(id, name, user_id, is_public, profiles:user_id(username, avatar_url))",
+          )
+          .eq("media_id", id)
+          .eq("media_type", type)
+          .eq("collections.is_public", true),
       ]);
 
     const user = authResult.data?.user;
@@ -160,6 +192,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
     }[];
 
     let currentStatus: WatchStatus | null = null;
+    let collectionNames: string[] = [];
     if (user) {
       const { data: userCollections } = await supabase
         .from("collections")
@@ -184,11 +217,112 @@ export default async function MediaDetailPage({ params }: PageProps) {
           currentStatus =
             priority.find((s) => userItems.some((i) => i.status === s)) ??
             "not_seen";
+
+          const { data: userItemRows } = await supabase
+            .from("collection_items")
+            .select("collection_id, collections!inner(name, user_id)")
+            .eq("media_id", id)
+            .eq("media_type", type)
+            .eq("collections.user_id", user.id);
+
+          const byId = new Map<string, string>();
+          for (const row of userItemRows ?? []) {
+            const cid = row.collection_id;
+            if (byId.has(cid)) continue;
+            const col = row.collections as { name?: string } | null;
+            if (col?.name) byId.set(cid, col.name);
+          }
+          collectionNames = Array.from(byId.values());
         }
       }
     }
 
     const hasInCollection = currentStatus !== null;
+
+    // Build other curators' cravelists (public, not owned by current user)
+    const currentUserId = user?.id;
+    const rawOtherCravelists = otherCravelistsResult.data ?? [];
+    const seenCollectionIds = new Set<string>();
+    const otherCravelistIds: string[] = [];
+    for (const row of rawOtherCravelists) {
+      const col = row.collections as {
+        id?: string;
+        user_id?: string;
+        name?: string;
+        profiles?: { username?: string; avatar_url?: string } | null;
+      } | null;
+      if (!col?.id || seenCollectionIds.has(col.id)) continue;
+      if (currentUserId && col.user_id === currentUserId) continue;
+      seenCollectionIds.add(col.id);
+      otherCravelistIds.push(col.id);
+    }
+
+    let otherCravelists: {
+      id: string;
+      name: string;
+      itemCount: number;
+      curator: { username: string | null; avatarUrl: string | null };
+      images: string[];
+    }[] = [];
+
+    if (otherCravelistIds.length > 0) {
+      const [collectionsData, itemsData] = await Promise.all([
+        supabase
+          .from("collections")
+          .select("id, name, user_id, profiles:user_id(username, avatar_url)")
+          .in("id", otherCravelistIds),
+        supabase
+          .from("collection_items")
+          .select("collection_id, image_url")
+          .in("collection_id", otherCravelistIds)
+          .order("created_at", { ascending: true }),
+      ]);
+
+      const itemsByCollection = new Map<
+        string,
+        { images: string[]; count: number }
+      >();
+      for (const item of itemsData.data ?? []) {
+        const cid = item.collection_id;
+        const existing = itemsByCollection.get(cid) ?? {
+          images: [] as string[],
+          count: 0,
+        };
+        existing.count += 1;
+        if (item.image_url && existing.images.length < 2) {
+          existing.images.push(item.image_url);
+        }
+        itemsByCollection.set(cid, existing);
+      }
+
+      const profileByUserId = new Map<string, { username: string | null; avatarUrl: string | null }>();
+      for (const c of collectionsData.data ?? []) {
+        const profile = c.profiles as { username?: string; avatar_url?: string } | null;
+        if (c.user_id) {
+          profileByUserId.set(c.user_id, {
+            username: profile?.username ?? null,
+            avatarUrl: profile?.avatar_url ?? null,
+          });
+        }
+      }
+
+      otherCravelists = (collectionsData.data ?? [])
+        .filter((c) => otherCravelistIds.includes(c.id))
+        .map((c) => {
+          const meta = itemsByCollection.get(c.id) ?? { images: [], count: 0 };
+          const curator = profileByUserId.get(c.user_id) ?? {
+            username: null,
+            avatarUrl: null,
+          };
+          return {
+            id: c.id,
+            name: c.name,
+            itemCount: meta.count,
+            curator,
+            images: meta.images,
+          };
+        });
+    }
 
     return (
       <MediaDetailClient
@@ -199,6 +333,10 @@ export default async function MediaDetailPage({ params }: PageProps) {
         reviews={reviews}
         canReview={hasInCollection}
         episodeQuality={episodeQuality}
+        collectionNames={collectionNames}
+        tvSeasons={tvSeasons}
+        watchProviders={watchProviders}
+        otherCravelists={otherCravelists}
       />
     );
   } catch (e) {

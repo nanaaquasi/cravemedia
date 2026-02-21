@@ -47,6 +47,10 @@ import {
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
 import {
+  CRAVELIST_LABEL,
+  CRAVELIST_LABEL_PLURAL,
+} from "@/config/labels";
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -111,6 +115,13 @@ export default function CollectionDetailClient({
   const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(items);
   const [prevItems, setPrevItems] = useState(items);
 
+  useEffect(() => {
+    if (!isEditingCollection) {
+      setEditName(collection.name);
+      setEditDescription(collection.description ?? "");
+    }
+  }, [collection.name, collection.description, isEditingCollection]);
+
   if (items !== prevItems) {
     setPrevItems(items);
     const prevIds = new Set(orderedItems.map((i) => i.id));
@@ -147,17 +158,24 @@ export default function CollectionDetailClient({
       return;
     }
     setIsSavingCollection(true);
-    const result = await updateCollection(collection.id, {
-      name: editName.trim(),
-      description: editDescription.trim() || null,
-    });
-    setIsSavingCollection(false);
-    if (result.error) {
-      setToastMessage(result.error);
-    } else {
-      setIsEditingCollection(false);
-      setToastMessage("Collection updated");
-      router.refresh();
+    try {
+      const result = await updateCollection(collection.id, {
+        name: editName.trim(),
+        description: editDescription.trim() || null,
+      });
+      if (result?.error) {
+        setToastMessage(result.error);
+      } else {
+        setIsEditingCollection(false);
+        setEditName(editName.trim());
+        setEditDescription(editDescription.trim());
+        setToastMessage(`${CRAVELIST_LABEL} updated`);
+        router.refresh();
+      }
+    } catch {
+      setToastMessage("Something went wrong");
+    } finally {
+      setIsSavingCollection(false);
     }
   };
 
@@ -185,7 +203,7 @@ export default function CollectionDetailClient({
       setToastMessage("Failed to update visibility");
     } else {
       setToastMessage(
-        `Collection is now ${newIsPublic ? "public" : "private"}`,
+        `${CRAVELIST_LABEL} is now ${newIsPublic ? "public" : "private"}`,
       );
     }
   };
@@ -243,7 +261,7 @@ export default function CollectionDetailClient({
   const handleAddItem = async (item: EnrichedRecommendation) => {
     try {
       await addItemToList(collection.id, item);
-      setToastMessage(`Added "${item.title}" to collection`);
+      setToastMessage(`Added "${item.title}" to ${CRAVELIST_LABEL.toLowerCase()}`);
       setIsSearchModalOpen(false);
       router.refresh();
     } catch (e) {
@@ -324,7 +342,7 @@ export default function CollectionDetailClient({
                 </span>
               </h3>
               <p className="text-sm text-white/60">
-                Save this collection to your library to keep it.
+                Save this {CRAVELIST_LABEL.toLowerCase()} to your library to keep it.
               </p>
             </div>
           </div>
@@ -348,7 +366,7 @@ export default function CollectionDetailClient({
               ) : (
                 <Bookmark className="w-4 h-4" />
               )}
-              {isCloning ? "Saving..." : "Save to My Collections"}
+              {isCloning ? "Saving..." : `Save to My ${CRAVELIST_LABEL_PLURAL}`}
             </button>
           ) : (
             <Link
@@ -362,12 +380,12 @@ export default function CollectionDetailClient({
         </div>
       )}
 
-      {/* Collection Info */}
+      {/* Cravelist Info */}
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold tracking-wider uppercase border border-purple-500/20">
-              Collection
+              {CRAVELIST_LABEL}
             </span>
             <span className="text-zinc-500 text-xs font-medium">
               {items.length} titles
@@ -406,7 +424,7 @@ export default function CollectionDetailClient({
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
-                title="Share collection"
+                title={`Share ${CRAVELIST_LABEL.toLowerCase()}`}
               >
                 <Share2 className="w-3.5 h-3.5" />
                 <span>Share</span>
@@ -422,7 +440,7 @@ export default function CollectionDetailClient({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   disabled={isSavingCollection}
-                  placeholder="Collection name"
+                  placeholder={`${CRAVELIST_LABEL} name`}
                   className="w-full text-4xl md:text-5xl font-black text-white tracking-tight leading-tight bg-transparent border-b-2 border-white/20 focus:border-purple-500 focus:outline-none pb-2"
                 />
                 <textarea
@@ -456,45 +474,45 @@ export default function CollectionDetailClient({
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-3 group">
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                  {collection.name}
-                </h1>
-                {isOwner && (
+              <div className="group">
+                <div className="flex items-start gap-3">
+                  <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                    {collection.name}
+                  </h1>
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        setEditName(collection.name);
+                        setEditDescription(collection.description ?? "");
+                        setIsEditingCollection(true);
+                      }}
+                      className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-opacity cursor-pointer shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 focus:outline-none"
+                      title={`Edit ${CRAVELIST_LABEL.toLowerCase()}`}
+                      aria-label={`Edit ${CRAVELIST_LABEL.toLowerCase()}`}
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+                {collection.description ? (
+                  <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed mt-1">
+                    {collection.description}
+                  </p>
+                ) : isOwner ? (
                   <button
                     onClick={() => {
                       setEditName(collection.name);
                       setEditDescription(collection.description ?? "");
                       setIsEditingCollection(true);
                     }}
-                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-                    title="Edit collection"
-                    aria-label="Edit collection"
+                    className="text-zinc-500 text-lg hover:text-zinc-400 transition-colors cursor-pointer text-left mt-1"
                   >
-                    <Edit2 className="w-5 h-5" />
+                    Add a description...
                   </button>
-                )}
+                ) : null}
               </div>
             )}
           </div>
-
-          {!isEditingCollection &&
-            (collection.description ? (
-              <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed">
-                {collection.description}
-              </p>
-            ) : isOwner ? (
-              <button
-                onClick={() => {
-                  setEditName(collection.name);
-                  setEditDescription(collection.description ?? "");
-                  setIsEditingCollection(true);
-                }}
-                className="text-zinc-500 text-lg hover:text-zinc-400 transition-colors cursor-pointer text-left"
-              >
-                Add a description...
-              </button>
-            ) : null)}
         </div>
 
         {/* Lower actions positioned to the right */}
@@ -562,7 +580,7 @@ export default function CollectionDetailClient({
             <button
               onClick={() => setIsDeleteModalOpen(true)}
               className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border bg-white/5 text-red-400/80 border-white/10 hover:bg-red-500/10 hover:text-red-400"
-              title="Delete collection"
+              title={`Delete ${CRAVELIST_LABEL.toLowerCase()}`}
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
@@ -620,7 +638,7 @@ export default function CollectionDetailClient({
             <Plus className="w-10 h-10 text-purple-400" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            This collection is empty
+            This {CRAVELIST_LABEL.toLowerCase()} is empty
           </h2>
           <p className="text-zinc-400 text-base max-w-sm mb-8">
             Add movies, TV shows, books, and anime to build your curated list.
@@ -647,7 +665,7 @@ export default function CollectionDetailClient({
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteCollection}
-        title="Delete collection?"
+        title={`Delete ${CRAVELIST_LABEL.toLowerCase()}?`}
         description={`Are you sure you want to delete "${collection.name}"? This cannot be undone.`}
       />
 
@@ -753,7 +771,7 @@ export default function CollectionDetailClient({
                   setIsPublic(false);
                   setToastMessage("Failed to update visibility");
                 } else {
-                  setToastMessage("Collection is now public");
+                  setToastMessage(`${CRAVELIST_LABEL} is now public`);
                 }
               }
             : undefined
