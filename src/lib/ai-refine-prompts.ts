@@ -57,7 +57,7 @@ This is round ${round} of follow-up questions.${
 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
-- Generate exactly 2-3 questions
+- Generate exactly 3 questions
 - Each question should have 3-5 concise options (1-4 words each)
 - Questions should feel conversational and fun, not clinical
 - Options should be diverse and cover different angles
