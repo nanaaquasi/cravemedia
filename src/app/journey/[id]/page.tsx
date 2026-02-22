@@ -61,10 +61,13 @@ export async function generateMetadata({
 
 export default async function JourneyDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ save?: string; saved?: string }>;
 }) {
   const { id } = await params;
+  const { save, saved } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -126,6 +129,19 @@ export default async function JourneyDetailPage({
     }
   }
 
+  // If user is logged-in non-owner, check if they already forked this journey
+  let existingCloneId: string | null = null;
+  if (user && !isOwner) {
+    const { data: fork } = await supabase
+      .from("journeys")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("forked_from", id)
+      .limit(1)
+      .maybeSingle();
+    existingCloneId = fork?.id ?? null;
+  }
+
   // Ensure user owns the journey or it is public
   if (!isOwner && !isPublic) {
     if (!user) {
@@ -163,6 +179,9 @@ export default async function JourneyDetailPage({
       isOwner={isOwner}
       isPublic={isPublic}
       user={user}
+      saveOnLoad={save === "1"}
+      savedToast={saved === "1"}
+      existingCloneId={existingCloneId}
       initialProgress={initialProgress}
       journeyStatus={journey.status}
       journeyReviewData={journeyReviewData}

@@ -54,24 +54,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* Scrollbar — hidden globally, scroll still works (vertical + horizontal) */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--text-muted);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
+/* Utility for elements that need explicit hide (redundant if global applies) */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -120,6 +113,21 @@ body {
   }
   100% {
     background-position: 0% 50%;
+  }
+}
+
+/* Mood pill hover — soft animated gradient glow */
+.mood-pill-glow {
+  animation: moodGradientBreath 4s ease-in-out infinite;
+}
+
+@keyframes moodGradientBreath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
   }
 }
 
@@ -310,7 +318,7 @@ body {
 }
 
 /* Apple Music–inspired gradient mesh */
-/* Dark linear gradient background */
+/* Dark gradient mesh */
 
 .bg-gradient-mesh {
   background:
@@ -331,6 +339,68 @@ body {
     ),
     linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%);
   background-attachment: fixed;
+}
+
+/* Sections area gradient — elevates content with soft glow, blends seamlessly with hero */
+.bg-sections-gradient {
+  background:
+    radial-gradient(
+      ellipse 120% 60% at 50% 100%,
+      rgba(168, 85, 247, 0.08) 0%,
+      rgba(99, 102, 241, 0.04) 40%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 120% 100% at 50% -30%,
+      rgba(236, 72, 153, 0.03) 0%,
+      transparent 50%
+    );
+}
+
+/* Section heading glow — subtle halo, very gradual fade (no visible line) */
+.section-heading-glow {
+  position: relative;
+}
+
+.section-heading-glow::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 240%;
+  min-width: 600px;
+  height: 500%;
+  min-height: 500px;
+  background: radial-gradient(
+    ellipse 50% 35% at 50% 55%,
+    rgba(168, 85, 247, 0.18) 0%,
+    rgba(139, 92, 246, 0.08) 30%,
+    rgba(99, 102, 241, 0.03) 50%,
+    rgba(168, 85, 247, 0.008) 70%,
+    transparent 85%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Elevated section cards — subtle gradient overlay (use with liquid-glass) */
+.section-elevated {
+  position: relative;
+}
+
+.section-elevated .section-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    rgba(168, 85, 247, 0.06) 0%,
+    rgba(139, 92, 246, 0.03) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
 }
 
 /* ─── Liquid Glass System ─────────────────────────────────────────────── */
@@ -457,4 +527,13 @@ body {
 .stagger-item {
   animation: fadeInUp 0.4s ease-out forwards;
   opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item,
+  .animate-fade-in-up,
+  .animate-in,
+  .mood-pill-glow {
+    animation: none !important;
+  }
 }

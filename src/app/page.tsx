@@ -2,14 +2,24 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { track } from "@vercel/analytics";
 import { ContentType } from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
+import { HomeSections } from "@/components/HomeSections";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
+import {
+  HERO_POSTERS,
+  ROTATING_WORDS,
+  SUGGESTION_QUERIES,
+  PLACEHOLDER_PROMPTS,
+} from "@/config/home-page";
 
-function inferContentTypesFromQuery(query: string): ContentType | ContentType[] {
+function inferContentTypesFromQuery(
+  query: string,
+): ContentType | ContentType[] {
   const q = query.toLowerCase();
   const matched: ContentType[] = [];
 
@@ -27,29 +37,10 @@ function inferContentTypesFromQuery(query: string): ContentType | ContentType[] 
   return filtered;
 }
 
-const ROTATING_WORDS = [
-  "craving?",
-  "in the mood for?",
-  "looking for?",
-  "obsessed with?",
-];
-
-const SUGGESTION_QUERIES = [
-  "Movies to watch after a hard day's work",
-  "Dark psychological thrillers that make you question reality",
-  "Cozy feel-good stories for a rainy day",
-  "Epic sci-fi world building like Dune",
-  "Hidden gems from the 2010s",
-  "Stories about found family and belonging",
-  "Movies that will make you cry",
-  "TV shows that will get you hooked immediately",
-  "Spiciest books to read",
-  "I just finished The Bear and need something similar",
-  "Christopher Nolan movies",
-  "Movies like The Matrix",
-  "TV shows like The Office",
-  "Books like Harry Potter",
-];
+type FeaturedCollection = import("@/lib/supabase/types").Collection & {
+  items?: { image_url: string | null }[];
+  item_count?: number;
+};
 
 export default function Home() {
   const router = useRouter();
@@ -69,6 +60,42 @@ export default function Home() {
   const [wordIndex, setWordIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+
+  // Use deterministic order for SSR, then shuffle on client to avoid hydration mismatch
+  const [quickSuggestions, setQuickSuggestions] = useState(() =>
+    SUGGESTION_QUERIES.slice(0, 18),
+  );
+
+  const [pickOfTheDay, setPickOfTheDay] = useState<{
+    mediaId: string;
+    type: string;
+    title: string;
+    posterUrl: string;
+  } | null>(null);
+  const [featuredCollections, setFeaturedCollections] = useState<
+    FeaturedCollection[]
+  >([]);
+
+  useEffect(() => {
+    const id = setTimeout(
+      () =>
+        setQuickSuggestions(
+          [...SUGGESTION_QUERIES].sort(() => Math.random() - 0.5),
+        ),
+      0,
+    );
+    return () => clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/pick-of-the-day").then((r) => r.json()),
+      fetch("/api/featured-collections").then((r) => r.json()),
+    ]).then(([pick, featured]) => {
+      setPickOfTheDay(pick.mediaId && pick.posterUrl ? pick : null);
+      setFeaturedCollections(featured.collections ?? []);
+    });
+  }, []);
 
   useEffect(() => {
     // Prefetch search page for faster transition
@@ -158,7 +185,7 @@ export default function Home() {
     showTypeSelect || showModeSelect || refine.step !== "idle" || isNavigating;
 
   return (
-    <main className="flex-1 flex flex-col relative pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
+    <main className="flex-1 flex flex-col relative">
       {/* Intent refinement overlay */}
       {isRefining && (
         <IntentRefineStep
@@ -180,30 +207,66 @@ export default function Home() {
         />
       )}
 
-      {/* "What are you craving?" + Search form - centered */}
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 sm:mb-6">
-          <h1 className="text-4xl md:text-7xl font-bold tracking-tight mb-4">
-            <span className="bg-linear-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-size-[200%_auto] animate-[gradientShift_6s_ease_infinite]">
-              What are you
-            </span>
-            <br />
-            <span
-              className={`text-white inline-block transition-all duration-400 ${isFading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}
+      {/* "What are you craving?" + Search form - centered in viewport */}
+      <div className="flex flex-col justify-center relative overflow-hidden min-h-[calc(100dvh-5rem)] shrink-0">
+        {/* Floating poster background */}
+        <div
+          className="absolute inset-0 pointer-events-none motion-reduce:opacity-0"
+          aria-hidden
+        >
+          {HERO_POSTERS.map((src, i) => (
+            <div
+              key={i}
+              className="absolute w-32 h-48 md:w-40 md:h-60 opacity-[0.07] blur-2xl"
+              style={{
+                left: `${12 + i * 18}%`,
+                top: `${20 + (i % 3) * 25}%`,
+              }}
             >
-              {ROTATING_WORDS[wordIndex]}
-            </span>
-          </h1>
-          <p className="text-(--text-secondary) text-base md:text-lg leading-relaxed ">
-            Discover your next favorite show, movie, or book through
-            personalized journeys that actually make sense.
-          </p>
+              <Image
+                src={src}
+                alt=""
+                fill
+                className="object-cover rounded-lg"
+                sizes="160px"
+                priority
+              />
+            </div>
+          ))}
         </div>
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 mt-10">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
+              <span className="bg-linear-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-size-[200%_auto] animate-[gradientShift_6s_ease_infinite]">
+                What are you
+              </span>
+              <br />
+              <span
+                className={`text-white inline-block transition-all duration-400 ${isFading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}
+              >
+                {ROTATING_WORDS[wordIndex]}
+              </span>
+            </h1>
+            <p className="text-(--text-secondary) text-base md:text-lg leading-relaxed  px-6 md:px-0">
+              Discover your next favorite show, movie, or book through
+              personalized journeys that actually make sense.
+            </p>
+          </div>
 
-        <SearchForm
-          onSubmit={handleSubmit}
-          isLoading={false}
-          quickSuggestions={SUGGESTION_QUERIES}
+          <SearchForm
+            onSubmit={handleSubmit}
+            isLoading={false}
+            quickSuggestions={quickSuggestions}
+            placeholderPrompts={PLACEHOLDER_PROMPTS}
+          />
+        </div>
+      </div>
+
+      <div className="relative pt-0 sm:pt-4 pb-16">
+        <HomeSections
+          onSearch={handleSubmit}
+          pickOfTheDay={pickOfTheDay}
+          featuredCollections={featuredCollections}
         />
       </div>
     </main>

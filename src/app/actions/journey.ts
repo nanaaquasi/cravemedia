@@ -189,6 +189,20 @@ export async function cloneJourney(journeyId: string) {
     return { error: "You do not have permission to clone this journey." };
   }
 
+  // If user already forked this journey, return existing fork (no duplicate)
+  const { data: existingFork } = await supabase
+    .from("journeys")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("forked_from", journeyId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingFork) {
+    revalidatePath("/account");
+    return { success: true, newJourneyId: existingFork.id };
+  }
+
   // Insert the clone
   const { data: newJourney, error: insertError } = await supabase
     .from("journeys")

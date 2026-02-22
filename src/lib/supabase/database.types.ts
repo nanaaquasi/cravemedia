@@ -133,6 +133,7 @@ export type Database = {
       };
       collections: {
         Row: {
+          cloned_from: string | null;
           created_at: string | null;
           description: string | null;
           id: string;
@@ -144,6 +145,7 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          cloned_from?: string | null;
           created_at?: string | null;
           description?: string | null;
           id?: string;
@@ -155,6 +157,7 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          cloned_from?: string | null;
           created_at?: string | null;
           description?: string | null;
           id?: string;

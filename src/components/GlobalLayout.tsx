@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SavedListsPanel from "@/components/SavedListsPanel";
 import { useLists } from "@/hooks/useLists";
 import { useRouter } from "next/navigation";
@@ -30,7 +31,10 @@ export default function GlobalLayout({
     <>
       <Header onOpenSavedLists={() => setShowSavedLists(true)} user={user} />
       <div className="pt-20 flex flex-col min-h-screen px-4 md:px-10 lg:px-10 xl:px-20">
-        {children}
+        <div className="flex-1 flex flex-col min-h-0">
+          {children}
+        </div>
+        <Footer />
       </div>
       <SavedListsPanel
         lists={lists}

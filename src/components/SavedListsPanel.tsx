@@ -15,7 +15,7 @@ interface SavedListsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onDeleteList: (id: string) => void;
-  onRemoveItem: (listId: string, itemTitle: string) => void;
+  onRemoveItem: (listId: string, item: EnrichedRecommendation) => void;
   onExport: (list: SavedList) => string;
   onMoreLikeThis?: (item: EnrichedRecommendation) => void;
   user?: User | null;
@@ -225,11 +225,12 @@ export default function SavedListsPanel({
                                 </svg>
                               </button>
                             )}
-                            <button
-                              onClick={() => onRemoveItem(list.id, item.title)}
-                              className="p-1 rounded hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer"
-                              title="Remove"
-                            >
+                            {!list.isJourney && (
+                              <button
+                                onClick={() => onRemoveItem(list.id, item)}
+                                className="p-1 rounded hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer"
+                                title="Remove"
+                              >
                               <svg
                                 width="14"
                                 height="14"
@@ -242,6 +243,7 @@ export default function SavedListsPanel({
                                 <line x1="6" y1="6" x2="18" y2="18" />
                               </svg>
                             </button>
+                            )}
                           </div>
                         </div>
                       ))}

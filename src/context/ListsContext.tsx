@@ -11,6 +11,7 @@ import {
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
+import { deleteCollectionItem } from "@/app/actions/collection";
 
 export interface CreateListOptions {
   isJourney?: boolean;
@@ -38,7 +39,10 @@ export interface ListsContextType {
     listId: string,
     item: EnrichedRecommendation,
   ) => Promise<void>;
-  removeItemFromList: (listId: string, itemTitle: string) => Promise<void>;
+  removeItemFromList: (
+    listId: string,
+    item: EnrichedRecommendation,
+  ) => Promise<void>;
   exportListAsText: (list: SavedList) => string;
   refreshLists: () => Promise<void>;
   isLoading: boolean;
@@ -241,17 +245,25 @@ export function ListsProvider({
 
       if (error || !collection) return null;
 
-      // Add items - use unique media_id when externalId is null to avoid unique constraint violations
-      // (collection_id, media_id, media_type) must be unique; "unknown" would fail for multiple items
-      const itemsToInsert = items.map((item, index) => ({
-        collection_id: collection.id,
-        media_id:
-          item.externalId || `${item.type}-fallback-${collection.id}-${index}`,
-        media_type: item.type,
-        title: item.title,
-        image_url: item.posterUrl,
-        metadata: item,
-      }));
+      // Add items - ensure unique (media_id, media_type) per collection to satisfy unique constraint
+      const seen = new Map<string, number>();
+      const itemsToInsert = items.map((item, index) => {
+        const baseId =
+          item.externalId || `${item.type}-fallback-${collection.id}-${index}`;
+        const key = `${baseId}:${item.type}`;
+        const count = (seen.get(key) ?? 0) + 1;
+        seen.set(key, count);
+        const mediaId = count > 1 ? `${baseId}-${count}` : baseId;
+
+        return {
+          collection_id: collection.id,
+          media_id: mediaId,
+          media_type: item.type,
+          title: item.title,
+          image_url: item.posterUrl,
+          metadata: item,
+        };
+      });
 
       if (itemsToInsert.length > 0) {
         const { error: insertError } = await supabase
@@ -259,7 +271,11 @@ export function ListsProvider({
           .insert(itemsToInsert);
 
         if (insertError) {
-          console.error("Failed to insert collection items:", insertError);
+          console.error("Failed to insert collection items:", {
+            message: insertError.message,
+            code: insertError.code,
+            details: insertError.details,
+          });
           return null;
         }
       }
@@ -332,7 +348,9 @@ export function ListsProvider({
   );
 
   const removeItemFromList = useCallback(
-    async (listId: string, itemTitle: string) => {
+    async (listId: string, item: EnrichedRecommendation) => {
+      const itemTitle = item.title;
+
       if (!user) {
         setLocalLists((prev) =>
           prev.map((list) => {
@@ -346,26 +364,29 @@ export function ListsProvider({
         return;
       }
 
-      // Find item ID first? Or delete by metadata content?
-      // This is tricky without item ID.
-      // Ideally we should pass item ID.
-      // For now, let's assume we can fetch and delete or ignore.
-      // Supabase deletion requires ID usually.
-      // We'll skip implementation detail for exact item deletion sync for now to keep it simple
-      // as user mostly wants "My Cravings" fetch.
+      const list = lists.find((l) => l.id === listId);
+      const isCollection = list && !list.isJourney;
+      const collectionItemId = item.collectionItemId;
 
-      // Optimistic update
+      if (isCollection && collectionItemId) {
+        const result = await deleteCollectionItem(collectionItemId, listId);
+        if (result.error) {
+          console.error("Failed to remove item:", result.error);
+          return;
+        }
+      }
+
       setLists((prev) =>
-        prev.map((list) => {
-          if (list.id !== listId) return list;
+        prev.map((l) => {
+          if (l.id !== listId) return l;
           return {
-            ...list,
-            items: list.items.filter((i) => i.title !== itemTitle),
+            ...l,
+            items: l.items.filter((i) => i.title !== itemTitle),
           };
         }),
       );
     },
-    [user, setLocalLists],
+    [user, lists, setLocalLists],
   );
 
   const exportListAsText = useCallback((list: SavedList): string => {

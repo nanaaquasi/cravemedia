@@ -42,6 +42,7 @@ export async function GET() {
           title: i.title || i.metadata?.title || "Untitled",
           posterUrl: i.image_url || i.metadata?.posterUrl,
           type: i.media_type || i.metadata?.type || "movie",
+          collectionItemId: i.id,
         })) as EnrichedRecommendation[],
         createdAt: c.created_at,
         updatedAt: c.created_at,

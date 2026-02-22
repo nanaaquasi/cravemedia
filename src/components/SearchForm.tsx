@@ -10,39 +10,67 @@ interface SearchFormProps {
   onSubmit: (query: string) => void;
   isLoading: boolean;
   quickSuggestions: string[];
+  /** Placeholder prompts for typewriter effect. Falls back to quickSuggestions if not provided. */
+  placeholderPrompts?: string[];
 }
+
+const TYPING_SPEED_MS = 55;
+const PAUSE_BETWEEN_PHRASES_MS = 2500;
 
 export default function SearchForm({
   onSubmit,
   isLoading,
   quickSuggestions,
+  placeholderPrompts,
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const nextIndexRef = useRef<number>(0);
   const [query, setQuery] = useState("");
 
-  const [suggestionIndex, setSuggestionIndex] = useState(0);
-  const [isPlaceholderFading, setIsPlaceholderFading] = useState(false);
+  const phrases = (placeholderPrompts ?? quickSuggestions).slice(0, 6);
+  const [displayedText, setDisplayedText] = useState("");
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const ideas = quickSuggestions.slice(0, 5);
+  const chips = quickSuggestions.slice(0, 6);
   const isEmpty = !query.trim();
 
-  // Cycle through search ideas as placeholder every 7 seconds when empty
-  useEffect(() => {
-    if (!isEmpty || ideas.length <= 1) return;
-    const interval = setInterval(() => {
-      nextIndexRef.current = (suggestionIndex + 1) % ideas.length;
-      setIsPlaceholderFading(true);
-    }, 7000);
-    return () => clearInterval(interval);
-  }, [isEmpty, ideas.length, suggestionIndex]);
-
-  const handlePlaceholderFadeEnd = () => {
-    if (isPlaceholderFading) {
-      setSuggestionIndex(nextIndexRef.current);
-      setIsPlaceholderFading(false);
+  const handleChipClick = (suggestion: string) => {
+    if (!isLoading) {
+      onSubmit(suggestion.trim());
     }
   };
+
+  // Typewriter effect: type char by char, pause when full, then next phrase
+  useEffect(() => {
+    const list = (placeholderPrompts ?? quickSuggestions)?.slice(0, 6) ?? [];
+    if (!isEmpty || list.length === 0) return;
+
+    const phrase = list[phraseIndex];
+    let charIndex = displayedText.length;
+
+    const tick = () => {
+      if (charIndex < phrase.length) {
+        setDisplayedText(phrase.slice(0, charIndex + 1));
+        charIndex++;
+        timeoutRef.current = setTimeout(tick, TYPING_SPEED_MS);
+      } else {
+        timeoutRef.current = setTimeout(() => {
+          setPhraseIndex((i) => (i + 1) % list.length);
+          setDisplayedText("");
+        }, PAUSE_BETWEEN_PHRASES_MS);
+      }
+    };
+
+    tick();
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+    // displayedText.length used only to init charIndex when resuming; omit to avoid re-running on every keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmpty, phraseIndex, placeholderPrompts, quickSuggestions]);
 
   const handleSubmit = () => {
     const text = query.trim();
@@ -52,24 +80,22 @@ export default function SearchForm({
   };
 
   return (
-    <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-12">
-      <div className="w-full max-w-4xl mx-auto px-0 sm:px-6">
+    <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-6 px-2 sm:px-0">
+      <div className="w-full max-w-3xl mx-auto sm:px-6">
         <div
-          className={`relative rounded-3xl liquid-glass-strong transition-all duration-200 min-h-[140px] sm:min-h-[200px] ${
-            isEmpty ? "" : "ring-1 ring-purple-500/40"
+          className={`relative rounded-3xl border border-white/25 bg-white/3 backdrop-blur-md transition-all duration-200 min-h-[100px] sm:min-h-[200px] ${
+            isEmpty
+              ? ""
+              : "border-white/40 bg-white/15 ring-1 ring-purple-500/40"
           }`}
         >
-          <div className="relative min-h-[140px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
-            {/* Custom placeholder overlay with smooth fade transition */}
-            {isEmpty && ideas.length > 0 && (
-              <div
-                className={`absolute inset-0 flex items-start p-5 sm:p-8 pointer-events-none transition-opacity duration-500 z-10 ${
-                  isPlaceholderFading ? "opacity-0" : "opacity-100"
-                }`}
-                onTransitionEnd={handlePlaceholderFadeEnd}
-              >
+          <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
+            {/* Typewriter placeholder overlay */}
+            {isEmpty && phrases.length > 0 && (
+              <div className="absolute inset-0 flex items-start p-5 sm:p-8 pointer-events-none z-10">
                 <span className="text-lg sm:text-2xl text-white/50 leading-relaxed">
-                  {ideas[suggestionIndex]}
+                  {displayedText}
+                  <span className="animate-pulse">|</span>
                 </span>
               </div>
             )}
@@ -86,7 +112,7 @@ export default function SearchForm({
               placeholder=""
               maxLength={QUERY_MAX_LENGTH}
               disabled={isLoading}
-              className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[140px] disabled:opacity-50 caret-white relative"
+              className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[100px] disabled:opacity-50 caret-white relative"
               aria-label="Tell us what you're craving"
             />
             <div className="flex items-center justify-between gap-2 mt-4">
@@ -146,9 +172,34 @@ export default function SearchForm({
           </div>
         </div>
 
+        {/* Quick suggestion chips */}
+        {chips.length > 0 && (
+          <div className="mt-4 sm:mt-5">
+            <span className="block text-sm text-white/45 mb-2 sm:mb-0 sm:inline sm:mr-2">
+              Try:
+            </span>
+            <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2 sm:mx-0 sm:px-0 sm:pb-0">
+              <div className="flex gap-2 sm:flex-wrap sm:justify-center min-w-max sm:min-w-0">
+                {chips.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => handleChipClick(suggestion)}
+                    disabled={isLoading}
+                    className="shrink-0 px-3 py-1.5 rounded-full text-sm text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed truncate max-w-[200px] sm:max-w-none"
+                  >
+                    {suggestion.length > 45
+                      ? `${suggestion.slice(0, 43)}…`
+                      : suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* AI disclaimer */}
-        <div className="flex items-center justify-center gap-2 mt-4 sm:mt-6">
-          <span className="text-sm font-semibold px-3 py-1.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/30">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-4 sm:mt-6 text-center sm:text-left">
+          <span className="shrink-0 text-sm font-semibold px-3 py-1.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/30">
             AI
           </span>
           <span className="text-sm text-white/45">

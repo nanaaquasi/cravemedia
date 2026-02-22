@@ -18,6 +18,7 @@ import {
   RecommendationResponse,
 } from "@/lib/types";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
+import { createSearchSession } from "@/app/actions/search";
 
 /** Parse runtime string to minutes for total (e.g. "130 min" -> 130) */
 function parseRuntimeMinutes(runtime: string | null): number {
@@ -201,6 +202,11 @@ export async function POST(request: NextRequest) {
       };
 
       setCachedJourney(trimmedQuery, type, response);
+
+      createSearchSession(trimmedQuery, type, mode).catch((err) =>
+        console.error("createSearchSession:", err),
+      );
+
       return NextResponse.json(response);
     }
 
@@ -308,6 +314,10 @@ export async function POST(request: NextRequest) {
     };
 
     setCachedRecommendation(trimmedQuery, type, response);
+
+    createSearchSession(trimmedQuery, type, mode).catch((err) =>
+      console.error("createSearchSession:", err),
+    );
 
     return NextResponse.json(response);
   } catch (error) {

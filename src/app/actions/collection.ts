@@ -97,6 +97,20 @@ export async function cloneCollection(collectionId: string) {
     return { error: `You do not have permission to clone this ${CRAVELIST_LABEL.toLowerCase()}.` };
   }
 
+  // If user already cloned this collection, return existing clone (no duplicate)
+  const { data: existingClone } = await supabase
+    .from("collections")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("cloned_from", collectionId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingClone) {
+    revalidatePath("/account");
+    return { success: true, newCollectionId: existingClone.id };
+  }
+
   const { data: newCollection, error: insertError } = await supabase
     .from("collections")
     .insert({
@@ -104,6 +118,7 @@ export async function cloneCollection(collectionId: string) {
       name: collectionToClone.name,
       description: collectionToClone.description ?? null,
       is_public: false,
+      cloned_from: collectionId,
     })
     .select("id")
     .single();
@@ -225,6 +240,51 @@ export async function deleteCollection(collectionId: string) {
     return { error: error.message };
   }
 
+  revalidatePath("/account");
+  return { success: true };
+}
+
+export async function deleteCollectionItem(
+  itemId: string,
+  collectionId: string,
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: collection, error: fetchError } = await supabase
+    .from("collections")
+    .select("user_id")
+    .eq("id", collectionId)
+    .single();
+
+  if (fetchError || !collection) {
+    return { error: `${CRAVELIST_LABEL} not found` };
+  }
+
+  if (collection.user_id !== user.id) {
+    return {
+      error: `You do not have permission to edit this ${CRAVELIST_LABEL.toLowerCase()}.`,
+    };
+  }
+
+  const { error } = await supabase
+    .from("collection_items")
+    .delete()
+    .eq("id", itemId)
+    .eq("collection_id", collectionId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/collections/${collectionId}`);
   revalidatePath("/account");
   return { success: true };
 }

@@ -67,10 +67,13 @@ export async function generateMetadata({
 
 export default async function CollectionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ save?: string; saved?: string }>;
 }) {
   const { id } = await params;
+  const { save, saved } = await searchParams;
   const supabase = await createClient();
 
   const {
@@ -101,6 +104,19 @@ export default async function CollectionDetailPage({
     notFound();
   }
 
+  // If user is logged-in non-owner, check if they already cloned this collection
+  let existingCloneId: string | null = null;
+  if (user && !isOwner) {
+    const { data: clone } = await supabase
+      .from("collections")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("cloned_from", id)
+      .limit(1)
+      .maybeSingle();
+    existingCloneId = clone?.id ?? null;
+  }
+
   // Fetch items and owner profile in parallel
   const [itemsResult, ownerProfileResult] = await Promise.all([
     supabase
@@ -129,6 +145,9 @@ export default async function CollectionDetailPage({
       isOwner={isOwner}
       isPublic={isPublic}
       user={user}
+      saveOnLoad={save === "1"}
+      savedToast={saved === "1"}
+      existingCloneId={existingCloneId}
       ownerProfile={
         ownerProfileResult.data
           ? {

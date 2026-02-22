@@ -25,6 +25,8 @@ export interface EnrichedRecommendation extends AIRecommendation {
   externalId: string | null;
   aiRating?: number;
   aiPopularity?: number;
+  /** ID of collection_items row when item is from a saved collection */
+  collectionItemId?: string;
 }
 
 export interface RecommendationResponse {

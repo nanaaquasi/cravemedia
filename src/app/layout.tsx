@@ -76,7 +76,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={dmSans.variable}>
-      <body className="bg-gradient-mesh min-h-screen">
+      <body className="bg-gradient-mesh min-h-screen overflow-x-hidden">
         <NextTopLoader
           color="#a855f7"
           height={3}

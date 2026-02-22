@@ -53,11 +53,10 @@ export async function signup(formData: FormData) {
   redirect(next || "/account");
 }
 
-export async function signInWithGoogle(next?: string) {
+export async function signInWithGoogle() {
   const supabase = await createClient();
   const origin = (await headers()).get("origin") || "http://localhost:3000";
-
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next || "/account")}`;
+  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent("/account")}`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",

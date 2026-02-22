@@ -33,6 +33,7 @@ import { useRouter } from "next/navigation";
 import ShareModal from "@/components/ShareModal";
 import MediaSearchModal from "@/components/MediaSearchModal";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import CreateCollectionModal from "@/components/CreateCollectionModal";
 import Modal from "@/components/Modal";
 import {
   toggleCollectionVisibility,
@@ -40,6 +41,7 @@ import {
   cloneCollection,
   updateCollection,
   deleteCollection,
+  deleteCollectionItem,
   updateCollectionItemStatus,
   type WatchStatus,
   reviewCollectionItem,
@@ -82,6 +84,12 @@ interface CollectionDetailClientProps {
   isPublic: boolean;
   user: User | null;
   ownerProfile?: OwnerProfile;
+  /** When true, auto-clone on mount (guest returned from login via Sign in to Save) */
+  saveOnLoad?: boolean;
+  /** When true, show "Saved to your cravelists" toast (redirected after clone) */
+  savedToast?: boolean;
+  /** User's clone of this collection (already saved) - show "View" instead of "Save" */
+  existingCloneId?: string | null;
 }
 
 export default function CollectionDetailClient({
@@ -91,6 +99,9 @@ export default function CollectionDetailClient({
   isPublic: initialIsPublic,
   user,
   ownerProfile,
+  saveOnLoad = false,
+  savedToast = false,
+  existingCloneId = null,
 }: CollectionDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -109,11 +120,42 @@ export default function CollectionDetailClient({
     collection.description ?? "",
   );
   const [isSavingCollection, setIsSavingCollection] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
   const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(items);
   const [prevItems, setPrevItems] = useState(items);
+
+  const router = useRouter();
+
+  // Show toast when redirected after successful save (guest saved list flow)
+  useEffect(() => {
+    if (savedToast) {
+      setToastMessage(`Saved to your ${CRAVELIST_LABEL_PLURAL.toLowerCase()}`);
+      router.replace(`/collections/${collection.id}`, { scroll: false });
+    }
+  }, [savedToast, collection.id, router]);
+
+  // Auto-clone when guest returns from login with save=1 (Sign in to Save flow)
+  useEffect(() => {
+    if (!user || isOwner || !saveOnLoad) return;
+    let cancelled = false;
+    (async () => {
+      setIsCloning(true);
+      const result = await cloneCollection(collection.id);
+      if (cancelled) return;
+      setIsCloning(false);
+      if (result.error) {
+        setToastMessage(result.error);
+      } else if (result.newCollectionId) {
+        router.replace(`/collections/${result.newCollectionId}?saved=1`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isOwner, saveOnLoad, collection.id, router]);
 
   useEffect(() => {
     if (!isEditingCollection) {
@@ -138,8 +180,7 @@ export default function CollectionDetailClient({
     }
   }
 
-  const router = useRouter();
-  const { addItemToList } = useLists();
+  const { addItemToList, createList, refreshLists } = useLists();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -208,6 +249,27 @@ export default function CollectionDetailClient({
     }
   };
 
+  const handleCreateCollection = async ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => {
+    const result = await createList(name, description, [], {
+      isPublic: false,
+      isExplicitlySaved: true,
+    });
+    if (result?.id) {
+      setToastMessage(`Created ${CRAVELIST_LABEL.toLowerCase()} "${name}"`);
+      await refreshLists();
+      setIsCreateModalOpen(false);
+      router.push(`/collections/${result.id}`);
+    } else {
+      setToastMessage(`Failed to create ${CRAVELIST_LABEL.toLowerCase()}.`);
+    }
+  };
+
   const handleStatusChange = async (itemId: string, newStatus: WatchStatus) => {
     setOrderedItems((prev) =>
       prev.map((item) =>
@@ -270,6 +332,17 @@ export default function CollectionDetailClient({
     }
   };
 
+  const handleRemoveItem = async (itemId: string, itemTitle: string) => {
+    const result = await deleteCollectionItem(itemId, collection.id);
+    if (result.error) {
+      setToastMessage(result.error);
+    } else {
+      setOrderedItems((prev) => prev.filter((i) => i.id !== itemId));
+      setToastMessage(`Removed "${itemTitle}" from ${CRAVELIST_LABEL.toLowerCase()}`);
+      router.refresh();
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -314,7 +387,7 @@ export default function CollectionDetailClient({
       </div>
 
       {!isOwner && (
-        <div className="animate-fade-in-up mb-8 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="animate-fade-in-up mb-8 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-3">
             {ownerProfile?.avatarUrl ? (
               <img
@@ -346,37 +419,64 @@ export default function CollectionDetailClient({
               </p>
             </div>
           </div>
-          {user ? (
-            <button
-              onClick={async () => {
-                setIsCloning(true);
-                const result = await cloneCollection(collection.id);
-                setIsCloning(false);
-                if (result.error) {
-                  setToastMessage(result.error);
-                } else if (result.newCollectionId) {
-                  router.push(`/collections/${result.newCollectionId}`);
-                }
-              }}
-              disabled={isCloning}
-              className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors cursor-pointer"
-            >
-              {isCloning ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-start text-center sm:text-left">
+            {user ? (
+              existingCloneId ? (
+                <Link
+                  href={`/collections/${existingCloneId}`}
+                  className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+                >
+                  <Bookmark className="w-4 h-4" />
+                  View in My {CRAVELIST_LABEL_PLURAL}
+                </Link>
               ) : (
+                <button
+                  onClick={async () => {
+                    setIsCloning(true);
+                    const result = await cloneCollection(collection.id);
+                    setIsCloning(false);
+                    if (result.error) {
+                      setToastMessage(result.error);
+                    } else if (result.newCollectionId) {
+                      router.push(`/collections/${result.newCollectionId}?saved=1`);
+                    }
+                  }}
+                  disabled={isCloning}
+                  className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors cursor-pointer"
+                >
+                  {isCloning ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Bookmark className="w-4 h-4" />
+                  )}
+                  {isCloning ? "Saving..." : `Save to My ${CRAVELIST_LABEL_PLURAL}`}
+                </button>
+              )
+            ) : (
+              <Link
+                href={`/login?next=${encodeURIComponent(`/collections/${collection.id}?save=1`)}`}
+                className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
+              >
                 <Bookmark className="w-4 h-4" />
-              )}
-              {isCloning ? "Saving..." : `Save to My ${CRAVELIST_LABEL_PLURAL}`}
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="w-full sm:w-auto justify-center whitespace-nowrap flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium transition-colors"
-            >
-              <Bookmark className="w-4 h-4" />
-              Sign in to Save
-            </Link>
-          )}
+                Sign in to Save
+              </Link>
+            )}
+            {user ? (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="w-full sm:w-auto justify-center whitespace-nowrap px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-colors cursor-pointer"
+              >
+                Create Your Own
+              </button>
+            ) : (
+              <Link
+                href={`/login?next=${encodeURIComponent(`/collections/${collection.id}`)}`}
+                className="w-full sm:w-auto justify-center whitespace-nowrap px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-colors"
+              >
+                Create Your Own
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
@@ -627,6 +727,7 @@ export default function CollectionDetailClient({
                   isOwner={isOwner}
                   onStatusChange={handleStatusChange}
                   onOpenReview={handleOpenReview}
+                  onRemoveItem={handleRemoveItem}
                 />
               ))}
             </div>
@@ -778,6 +879,11 @@ export default function CollectionDetailClient({
         }
       />
 
+      <CreateCollectionModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onConfirm={handleCreateCollection}
+      />
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
@@ -861,6 +967,7 @@ interface SortableItemWrapperProps {
   isOwner: boolean;
   onStatusChange: (itemId: string, status: WatchStatus) => void;
   onOpenReview: (item: CollectionItem) => void;
+  onRemoveItem: (itemId: string, itemTitle: string) => void;
 }
 
 function SortableItemWrapper({
@@ -871,6 +978,7 @@ function SortableItemWrapper({
   isOwner,
   onStatusChange,
   onOpenReview,
+  onRemoveItem,
 }: SortableItemWrapperProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -1024,6 +1132,20 @@ function SortableItemWrapper({
                     </button>
                   );
                 })}
+                <div className="my-1 border-t border-white/10" />
+                <button
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRemoveItem(dbItem.id, dbItem.title ?? item.title);
+                    setDropdownOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 shrink-0" />
+                  Remove from list
+                </button>
               </div>
             )}
           </div>
