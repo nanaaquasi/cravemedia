@@ -11,7 +11,7 @@ interface SearchFormProps {
   isLoading: boolean;
   quickSuggestions: string[];
   /** Placeholder prompts for typewriter effect. Falls back to quickSuggestions if not provided. */
-  placeholderPrompts?: string[];
+  placeholderPrompts?: readonly string[];
 }
 
 const TYPING_SPEED_MS = 55;
