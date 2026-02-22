@@ -42,6 +42,9 @@ function SearchContent() {
   const [itemToAdd, setItemToAdd] = useState<EnrichedRecommendation | null>(
     null,
   );
+  const [savedCollectionId, setSavedCollectionId] = useState<string | null>(
+    null,
+  );
   const [showImmersiveLoader, setShowImmersiveLoader] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const supabase = createClient();
@@ -99,6 +102,11 @@ function SearchContent() {
     }
   }, [q, typeParam, contentType, viewMode, fetchRecommendations, router]);
 
+  // Clear saved collection when search changes (new results)
+  useEffect(() => {
+    setSavedCollectionId(null);
+  }, [q, typeParam]);
+
   const updateSearchParams = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -149,9 +157,14 @@ function SearchContent() {
       if (results) {
         setSaveToast("Saving cravelist...");
         try {
-          await createList(title, description || "", results.items);
-          setSaveToast(`Saved "${title}" with ${results.items.length} items`);
-          await refreshLists();
+          const saved = await createList(title, description || "", results.items);
+          if (saved) {
+            setSavedCollectionId(saved.id);
+            setSaveToast(`Saved "${title}" with ${results.items.length} items`);
+            await refreshLists();
+          } else {
+            setSaveToast("Failed to save cravelist");
+          }
         } catch {
           setSaveToast("Failed to save cravelist");
         }
@@ -305,6 +318,7 @@ function SearchContent() {
           book: "books",
           tv: "TV shows",
           movie: "movies",
+          anime: "anime",
         }[item.type as string] || "media";
       const query = `More ${typeLabel} like "${item.title}" by ${item.creator}`;
       const itemType = item.type;
@@ -402,21 +416,46 @@ function SearchContent() {
                   {results.collectionDescription}
                 </p>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <ContentTypeSelector
-                    selected={contentType}
-                    onChange={handleContentTypeChange}
-                  />
+                  {false && (
+                    <ContentTypeSelector
+                      selected={contentType}
+                      onChange={handleContentTypeChange}
+                    />
+                  )}
                   <p className="text-base text-[var(--text-muted)]">
                     {filteredItems.length} recommendations
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveAll}
-                    className="inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-                  >
-                    Save list
-                  </button>
+                  {savedCollectionId ? (
+                    <button
+                      onClick={() =>
+                        router.push(`/collections/${savedCollectionId}`)
+                      }
+                      className="inline-flex items-center gap-2 py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                      Go to list
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSaveAll}
+                      className="inline-flex py-2.5 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+                    >
+                      Save list
+                    </button>
+                  )}
                   {user && (
                     <button
                       onClick={handleShareCollection}

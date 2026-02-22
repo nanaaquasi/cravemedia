@@ -92,7 +92,15 @@ export async function POST(request: NextRequest) {
         aiResponse.difficultyProgression ??
         "";
 
-      const enrichmentPromises = aiResponse.items.map(
+      const journeyTypeArray = Array.isArray(type) ? type : [type];
+      const isAnimeOnlyJourney =
+        type === "anime" ||
+        (journeyTypeArray.length === 1 && journeyTypeArray[0] === "anime");
+      const journeyItems = isAnimeOnlyJourney
+        ? aiResponse.items.slice(0, 12)
+        : aiResponse.items;
+
+      const enrichmentPromises = journeyItems.map(
         async (raw: JourneyItemRaw): Promise<JourneyItem> => {
           const typeArray = Array.isArray(type) ? type : [type];
           const isAll = typeArray.includes("all");
@@ -208,7 +216,15 @@ export async function POST(request: NextRequest) {
       responseMimeType,
     });
 
-    const enrichmentPromises = aiResponse.items.map(
+    const typeArray = Array.isArray(type) ? type : [type];
+    const isAnimeOnly =
+      type === "anime" ||
+      (typeArray.length === 1 && typeArray[0] === "anime");
+    const itemsToEnrich = isAnimeOnly
+      ? aiResponse.items.slice(0, 12)
+      : aiResponse.items;
+
+    const enrichmentPromises = itemsToEnrich.map(
       async (item): Promise<EnrichedRecommendation> => {
         const typeArray = Array.isArray(type) ? type : [type];
         const isAll = typeArray.includes("all");

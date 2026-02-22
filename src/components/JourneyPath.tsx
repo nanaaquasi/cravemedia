@@ -279,20 +279,9 @@ export default function JourneyPath({
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                {showBeginCTA ? (
-                  <button
-                    onClick={handleBeginJourney}
-                    disabled={isBeginning}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium hover:brightness-110 transition-all cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    {isBeginning ? "Starting…" : "Begin journey"}
-                  </button>
-                ) : (
-                  <p className="text-sm text-green-400/90 font-medium">
-                    {completedCount} of {journey.itemCount} completed
-                  </p>
-                )}
+                <p className="text-sm text-green-400/90 font-medium">
+                  {completedCount} of {journey.itemCount} completed
+                </p>
               </div>
             </div>
           )}
@@ -370,6 +359,16 @@ export default function JourneyPath({
                 </button>
               )}
             </div>
+          )}
+          {showBeginCTA && (
+            <button
+              onClick={handleBeginJourney}
+              disabled={isBeginning}
+              className="mb-4 self-start flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-medium hover:brightness-110 transition-all cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              {isBeginning ? "Starting…" : "Begin journey"}
+            </button>
           )}
           <div className="flex gap-2 mb-6 lg:mb-0">
             {isOwner && onSaveJourney && (

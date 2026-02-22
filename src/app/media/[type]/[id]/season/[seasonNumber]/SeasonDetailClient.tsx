@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, HelpCircle, CheckCircle, Circle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Star, HelpCircle, CheckCircle, Circle } from "lucide-react";
 import type { TVSeasonDetails } from "@/lib/tmdb";
 import {
   setEpisodeStatus,
@@ -52,6 +53,7 @@ export default function SeasonDetailClient({
   const [updatingEpisode, setUpdatingEpisode] = useState<number | null>(null);
   const [updatingSeason, setUpdatingSeason] = useState(false);
 
+  const router = useRouter();
   const watchedCount = Object.values(episodeProgress).filter(
     (s) => s === "watched",
   ).length;
@@ -122,6 +124,15 @@ export default function SeasonDetailClient({
     <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       {/* Hero */}
       <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
+        {/* Back button - inline on banner */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
         {backdropUrl ? (
           <Image
             src={backdropUrl}

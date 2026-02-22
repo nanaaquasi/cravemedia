@@ -97,13 +97,12 @@ function getBestCoverUrl(vol: GoogleBooksVolume): string | null {
 }
 
 async function searchOpenLibrary(
-  title: string,
-  author: string,
+  query: string,
 ): Promise<OpenLibraryResult | null> {
   try {
-    const query = encodeURIComponent(`${title} ${author}`);
+    const encoded = encodeURIComponent(query.trim());
     const res = await fetch(
-      `https://openlibrary.org/search.json?q=${query}&limit=1`,
+      `https://openlibrary.org/search.json?q=${encoded}&limit=5`,
     );
 
     if (!res.ok) return null;
@@ -117,6 +116,25 @@ async function searchOpenLibrary(
   }
 }
 
+/** Try multiple search queries to improve match rate */
+async function findOpenLibraryBook(
+  title: string,
+  author: string,
+): Promise<OpenLibraryResult | null> {
+  const queries = [
+    `${title} ${author}`,
+    title,
+    author ? `${author} ${title}` : title,
+    title.replace(/\s*[:\-–—]\s*.*$/, "").trim(), // strip subtitle
+  ].filter((q) => q.length > 1);
+
+  for (const q of queries) {
+    const result = await searchOpenLibrary(q);
+    if (result) return result;
+  }
+  return null;
+}
+
 export async function enrichBook(
   title: string,
   author: string,
@@ -126,10 +144,7 @@ export async function enrichBook(
   runtime: string | null;
   externalId: string | null;
 }> {
-  // Open Library first (primary source for posters)
-  const olResult = await searchOpenLibrary(title, author);
-
-  console.log(olResult);
+  const olResult = await findOpenLibraryBook(title, author);
 
   if (olResult?.cover_i) {
     const coverUrl = `https://covers.openlibrary.org/b/id/${olResult.cover_i}-L.jpg`;
@@ -145,8 +160,17 @@ export async function enrichBook(
     };
   }
 
-  // Fallback to Google Books for cover and metadata
-  const googleResult = await searchGoogleBooks(title, author);
+  // Fallback to Google Books - try multiple query variants
+  let googleResult = await searchGoogleBooks(title, author);
+  if (!googleResult && !olResult) {
+    googleResult = await searchGoogleBooks(title, "");
+  }
+  if (!googleResult && !olResult) {
+    googleResult = await searchGoogleBooks(
+      title.replace(/\s*[:\-–—]\s*.*$/, "").trim(),
+      author,
+    );
+  }
 
   if (googleResult) {
     const vol = googleResult.volumeInfo;

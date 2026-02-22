@@ -195,7 +195,9 @@ export default function SavedListsPanel({
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm truncate">{item.title}</p>
+                            <p className="text-sm truncate" title={item.title}>
+                              {item.title}
+                            </p>
                             <p className="text-xs text-[var(--text-muted)] truncate">
                               {item.creator}
                             </p>

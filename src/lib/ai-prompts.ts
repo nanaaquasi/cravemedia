@@ -19,10 +19,16 @@ export function getSystemPrompt(type: ContentType | ContentType[]): string {
   }
 
   const exampleType = isMultiple ? type[0] : type === "all" ? "movie" : type;
+  const isAnimeOnly =
+    type === "anime" ||
+    (Array.isArray(type) && type.length === 1 && type[0] === "anime");
+  const itemCount = isAnimeOnly
+    ? "12 recommendations"
+    : "15-20 recommendations";
 
   return `You are an expert media curator with encyclopedic knowledge of ${typeLabel}. 
 Given a user's natural language query describing themes, moods, styles, or preferences, 
-generate a curated collection of 15-20 recommendations.
+generate a curated collection of ${itemCount}.
 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences, no explanation

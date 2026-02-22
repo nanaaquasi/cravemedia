@@ -18,8 +18,11 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
   const items = (journey.items as unknown as JourneyItem[]) || [];
   const currentPosition = journey.current_position ?? 1;
   const currentItem = items.find((i) => i.position === currentPosition);
+  const firstItem = items.find((i) => i.position === 1) || items[0];
+  const isOnFirstStep = completedCount === 0;
+  const stepToShow = isOnFirstStep ? firstItem : currentItem;
   const currentLabel =
-    currentItem?.type === "book"
+    stepToShow?.type === "book"
       ? "Currently reading"
       : "Currently watching";
 
@@ -53,14 +56,28 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
               <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
                 {journey.title}
               </h3>
-              {currentItem && (
-                <p className="text-sm text-green-400/90 font-medium mb-1">
-                  {currentLabel}: {currentItem.title}
+              {stepToShow ? (
+                <div className="space-y-1">
+                  <p className="text-sm text-green-400/90 font-medium">
+                    {currentLabel}: {stepToShow.title}
+                  </p>
+                  {stepToShow.creator && (
+                    <p className="text-xs text-zinc-500">
+                      {stepToShow.creator}
+                      {stepToShow.year ? ` · ${stepToShow.year}` : ""}
+                    </p>
+                  )}
+                  {(stepToShow.whyThisPosition || stepToShow.description) && (
+                    <p className="text-sm text-zinc-400 max-w-xl line-clamp-2">
+                      {stepToShow.whyThisPosition || stepToShow.description}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-zinc-400 max-w-xl line-clamp-2">
+                  {journey.description}
                 </p>
               )}
-              <p className="text-zinc-400 max-w-xl line-clamp-2">
-                {journey.description}
-              </p>
             </div>
 
             <Link

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import TruncatedTitle from "@/components/TruncatedTitle";
+import { useRouter } from "next/navigation";
 import { EnrichedRecommendation } from "@/lib/types";
 import { useState } from "react";
 
@@ -20,8 +22,10 @@ export default function RecommendationItem({
   onMoreLikeThis,
   viewMode = "grid",
 }: RecommendationItemProps) {
+  const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [isLookingUp, setIsLookingUp] = useState(false);
 
   const typeIcon =
     item.type === "movie"
@@ -46,18 +50,63 @@ export default function RecommendationItem({
       ? `/media/${item.type}/${item.externalId}`
       : null;
 
+  const canLookup =
+    (item.type === "movie" || item.type === "tv" || item.type === "anime") &&
+    !item.externalId;
+
+  async function handleLookupClick() {
+    if (!canLookup || isLookingUp) return;
+    setIsLookingUp(true);
+    try {
+      const res = await fetch(
+        `/api/search/media?q=${encodeURIComponent(item.title)}&type=${item.type}`,
+      );
+      const data = await res.json();
+      const match = data.items?.find(
+        (i: EnrichedRecommendation) =>
+          i.externalId && i.type === item.type,
+      );
+      if (match?.externalId) {
+        router.push(`/media/${item.type}/${match.externalId}`);
+      } else {
+        router.push(
+          `/search?q=${encodeURIComponent(item.title)}&type=${item.type}`,
+        );
+      }
+    } catch {
+      router.push(
+        `/search?q=${encodeURIComponent(item.title)}&type=${item.type}`,
+      );
+    } finally {
+      setIsLookingUp(false);
+    }
+  }
+
+  const isClickable = !!detailHref || canLookup;
   const cardProps = {
-    className: `group stagger-item liquid-glass rounded-2xl transition-all duration-300 block ${detailHref ? "cursor-pointer" : "cursor-default"}`,
+    className: `group stagger-item liquid-glass rounded-2xl transition-all duration-300 block ${isClickable ? "cursor-pointer" : "cursor-default"} ${isLookingUp ? "opacity-70 pointer-events-none" : ""}`,
     style: { animationDelay: `${index * 50}ms` } as React.CSSProperties,
     onMouseEnter: () => setShowActions(true),
     onMouseLeave: () => setShowActions(false),
+    ...(canLookup && {
+      onClick: handleLookupClick,
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleLookupClick();
+        }
+      },
+      role: "button" as const,
+      tabIndex: 0,
+      "aria-label": `View details for ${item.title}`,
+    }),
   };
 
   const isList = viewMode === "list";
 
   const content = isList ? (
     <div
-      className={`flex flex-row gap-4 p-3 relative h-full ${detailHref ? "cursor-pointer" : "cursor-default"}`}
+      className={`flex flex-row gap-4 p-3 relative h-full ${isClickable ? "cursor-pointer" : "cursor-default"}`}
     >
       {/* Poster */}
       <div className="relative w-24 sm:w-28 flex-shrink-0 aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
@@ -90,8 +139,8 @@ export default function RecommendationItem({
             </div>
           )}
         </div>
-        <h3 className="text-[15px] sm:text-base font-semibold text-[var(--text-primary)] truncate">
-          {item.title}
+        <h3 className="text-[15px] sm:text-base font-semibold text-[var(--text-primary)]">
+          <TruncatedTitle title={item.title} />
         </h3>
         <p className="text-sm text-[var(--text-secondary)] line-clamp-2 mt-1 mb-2">
           {item.description || "No description available."}
@@ -269,8 +318,8 @@ export default function RecommendationItem({
 
       {/* Info section */}
       <div className="p-3">
-        <h3 className="text-[15px] font-semibold text-[var(--text-primary)] truncate">
-          {item.title}
+        <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">
+          <TruncatedTitle title={item.title} />
         </h3>
         <div className="flex items-center gap-2 mt-0.5 text-sm text-[var(--text-secondary)]">
           <span className="truncate">{item.creator}</span>

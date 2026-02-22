@@ -474,58 +474,78 @@ export async function reviewMediaAcrossCollections(
     return { error: "You must be logged in." };
   }
 
+  const rating =
+    data.rating != null ? Math.max(1, Math.min(5, data.rating)) : null;
+  const reviewText = data.review?.trim() || null;
+  const containsSpoilers = data.containsSpoilers ?? false;
+
+  // Check if user has this media in any of their collections
   const { data: userCollections } = await supabase
     .from("collections")
     .select("id")
     .eq("user_id", user.id);
 
-  if (!userCollections?.length) {
-    return { error: `No ${CRAVELIST_LABEL}s found. Add this media to a ${CRAVELIST_LABEL.toLowerCase()} first.` };
+  const collectionIds = userCollections?.map((c) => c.id) ?? [];
+  let itemsInCollection: { id: string; collection_id: string }[] = [];
+
+  if (collectionIds.length > 0) {
+    const { data: items } = await supabase
+      .from("collection_items")
+      .select("id, collection_id")
+      .eq("media_id", mediaId)
+      .eq("media_type", mediaType)
+      .in("collection_id", collectionIds);
+    itemsInCollection = items ?? [];
   }
 
-  const collectionIds = userCollections.map((c) => c.id);
+  if (itemsInCollection.length > 0) {
+    // Update collection_items (existing behavior)
+    const updateData: Record<string, unknown> = {};
+    if (rating != null) updateData.item_rating = rating;
+    if (data.review !== undefined) updateData.review_text = reviewText;
+    if (data.containsSpoilers !== undefined)
+      updateData.contains_spoilers = containsSpoilers;
 
-  const { data: items } = await supabase
-    .from("collection_items")
-    .select("id, collection_id")
-    .eq("media_id", mediaId)
-    .eq("media_type", mediaType)
-    .in("collection_id", collectionIds);
+    if (Object.keys(updateData).length === 0) {
+      return { success: true };
+    }
 
-  if (!items?.length) {
-    return { error: `Media not found in any of your ${CRAVELIST_LABEL}s.` };
+    const { error } = await supabase
+      .from("collection_items")
+      .update(updateData)
+      .eq("media_id", mediaId)
+      .eq("media_type", mediaType)
+      .in("collection_id", collectionIds);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    for (const cid of collectionIds) {
+      revalidatePath(`/collections/${cid}`);
+    }
+  } else {
+    // Standalone review: upsert into media_reviews
+    const { error } = await supabase.from("media_reviews").upsert(
+      {
+        user_id: user.id,
+        media_id: mediaId,
+        media_type: mediaType,
+        item_rating: rating,
+        review_text: reviewText,
+        contains_spoilers: containsSpoilers,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,media_id,media_type",
+      },
+    );
+
+    if (error) {
+      return { error: error.message };
+    }
   }
 
-  const updateData: Record<string, unknown> = {};
-  if (data.rating != null) {
-    const r = Math.max(1, Math.min(5, data.rating));
-    updateData.item_rating = r;
-  }
-  if (data.review !== undefined) {
-    updateData.review_text = data.review?.trim() || null;
-  }
-  if (data.containsSpoilers !== undefined) {
-    updateData.contains_spoilers = data.containsSpoilers;
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    return { success: true };
-  }
-
-  const { error } = await supabase
-    .from("collection_items")
-    .update(updateData)
-    .eq("media_id", mediaId)
-    .eq("media_type", mediaType)
-    .in("collection_id", collectionIds);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  for (const cid of collectionIds) {
-    revalidatePath(`/collections/${cid}`);
-  }
   revalidatePath("/account");
   revalidatePath(`/media/${mediaType}/${mediaId}`);
   return { success: true };

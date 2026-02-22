@@ -34,32 +34,82 @@ export default async function MediaDetailPage({ params }: PageProps) {
   try {
     let mediaDetails: MediaDetails;
 
+    let animeRelations: Array<{
+      id: number;
+      title: string;
+      posterUrl: string | null;
+      voteAverage: number;
+      relationType: string;
+      year: number | null;
+      episodes: number | null;
+    }> = [];
+
     if (type === "anime") {
       const details = await getAnimeDetails(idNum);
       if (!details) throw new Error("Anime not found");
+
+      const relations = details.relations.map((r) => ({
+        id: r.id,
+        title: r.title,
+        posterUrl: r.posterUrl,
+        voteAverage: r.voteAverage,
+        relationType: r.relationType,
+        year: r.year,
+        episodes: r.episodes,
+      }));
+      const prequelCount = relations.filter((r) => r.relationType === "PREQUEL").length;
+      const currentInList = relations.some((r) => r.id === details.id);
+      animeRelations = currentInList
+        ? relations
+        : [
+            ...relations.slice(0, prequelCount),
+            {
+              id: details.id,
+              title: details.title,
+              posterUrl: details.posterUrl,
+              voteAverage: details.rating ? details.rating / 10 : 0,
+              relationType: "CURRENT",
+              year: details.year,
+              episodes: details.episodes,
+            },
+            ...relations.slice(prequelCount),
+          ];
 
       mediaDetails = {
         title: details.title,
         overview: details.description || null,
         posterUrl: details.posterUrl,
-        backdropUrl: null,
+        backdropUrl: details.bannerImage,
         voteAverage: details.rating ? details.rating / 10 : 0,
-        voteCount: 0,
-        releaseDate: details.year ? `${details.year}-01-01` : null,
+        voteCount: details.popularity ? Math.round(details.popularity) : 0,
+        releaseDate: details.releaseDate,
         runtime: details.duration ? `${details.duration} min` : null,
         genres: details.genres,
         directors: [],
-        trailerKey: null,
+        trailerKey: details.trailerKey,
         type: "anime",
         episodes: details.episodes,
         studios: details.studios,
         format: details.format,
-        cast: [],
-        recommendations: [],
-        releaseStatus: null,
+        cast: details.cast.map((c) => ({
+          id: c.id,
+          name: c.name,
+          character: c.character,
+          profileUrl: c.profileUrl,
+          personUrl: c.personUrl,
+        })),
+        recommendations: details.recommendations.map((r) => ({
+          id: r.id,
+          title: r.title,
+          posterUrl: r.posterUrl,
+          voteAverage: r.voteAverage,
+          type: "anime" as const,
+        })),
+        releaseStatus: details.status,
         originalLanguage: null,
         originCountry: [],
         writers: [],
+        source: details.source,
       };
     } else {
       const details = await getMediaDetails(type as "movie" | "tv", idNum);
@@ -110,7 +160,8 @@ export default async function MediaDetailPage({ params }: PageProps) {
     const [
       authResult,
       communityResult,
-      reviewsResult,
+      collectionReviewsResult,
+      standaloneReviewsResult,
       episodeQuality,
       tvSeasons,
       watchProviders,
@@ -131,7 +182,24 @@ export default async function MediaDetailPage({ params }: PageProps) {
           .eq("media_type", type)
           .not("review_text", "is", null)
           .order("created_at", { ascending: false })
-          .limit(20),
+          .limit(25),
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from("media_reviews")
+              .select(
+                "id, item_rating, review_text, contains_spoilers, created_at, user_id, profiles:user_id(username, full_name, avatar_url)",
+              )
+              .eq("media_id", id)
+              .eq("media_type", type)
+              .not("review_text", "is", null)
+              .order("created_at", { ascending: false })
+              .limit(25);
+            return data ?? [];
+          } catch {
+            return [];
+          }
+        })(),
         episodeQualityPromise,
         tvSeasonsPromise,
         watchProvidersPromise,
@@ -147,7 +215,10 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
     const user = authResult.data?.user;
     const allItems = communityResult.data ?? [];
-    const rawReviews = reviewsResult.data ?? [];
+    const rawCollectionReviews = collectionReviewsResult.data ?? [];
+    const rawStandaloneReviews: unknown[] = Array.isArray(standaloneReviewsResult)
+      ? standaloneReviewsResult
+      : (standaloneReviewsResult as { data?: unknown[] })?.data ?? [];
 
     const communityStats: Record<string, number> = {};
     for (const item of allItems) {
@@ -155,29 +226,48 @@ export default async function MediaDetailPage({ params }: PageProps) {
       communityStats[s] = (communityStats[s] || 0) + 1;
     }
 
+    const toReview = (r: any, userId: string, profile: any) => ({
+      id: r.id as string,
+      rating: r.item_rating as number | null,
+      text: r.review_text as string,
+      containsSpoilers: (r.contains_spoilers as boolean) ?? false,
+      createdAt: r.created_at as string,
+      user: {
+        id: userId,
+        username: (profile?.username as string) ?? null,
+        fullName: (profile?.full_name as string) ?? null,
+        avatarUrl: (profile?.avatar_url as string) ?? null,
+      },
+    });
+
     const seenUserIds = new Set<string>();
-    const reviews = rawReviews
+    const collectionReviews = rawCollectionReviews
       .map((r: any) => {
         const col = r.collections;
         const profile = col?.profiles;
         const userId = col?.user_id as string;
         if (!userId || seenUserIds.has(userId)) return null;
         seenUserIds.add(userId);
-        return {
-          id: r.id as string,
-          rating: r.item_rating as number | null,
-          text: r.review_text as string,
-          containsSpoilers: (r.contains_spoilers as boolean) ?? false,
-          createdAt: r.created_at as string,
-          user: {
-            id: userId,
-            username: (profile?.username as string) ?? null,
-            fullName: (profile?.full_name as string) ?? null,
-            avatarUrl: (profile?.avatar_url as string) ?? null,
-          },
-        };
+        return toReview(r, userId, profile);
       })
-      .filter(Boolean) as {
+      .filter(Boolean) as { id: string; rating: number | null; text: string; containsSpoilers: boolean; createdAt: string; user: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null } }[];
+
+    const standaloneReviews = rawStandaloneReviews
+      .map((r: any) => {
+        const userId = r.user_id as string;
+        const profile = r.profiles;
+        if (!userId || seenUserIds.has(userId)) return null;
+        seenUserIds.add(userId);
+        return toReview(r, userId, profile);
+      })
+      .filter(Boolean) as { id: string; rating: number | null; text: string; containsSpoilers: boolean; createdAt: string; user: { id: string; username: string | null; fullName: string | null; avatarUrl: string | null } }[];
+
+    const reviews = [...collectionReviews, ...standaloneReviews]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 20) as {
       id: string;
       rating: number | null;
       text: string;
@@ -331,10 +421,11 @@ export default async function MediaDetailPage({ params }: PageProps) {
         currentStatus={currentStatus}
         communityStats={communityStats}
         reviews={reviews}
-        canReview={hasInCollection}
+        canReview={!!user}
         episodeQuality={episodeQuality}
         collectionNames={collectionNames}
         tvSeasons={tvSeasons}
+        animeRelations={animeRelations}
         watchProviders={watchProviders}
         otherCravelists={otherCravelists}
       />

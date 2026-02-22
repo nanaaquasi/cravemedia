@@ -184,11 +184,13 @@ export default function JourneyItemCard({
                 </button>
               )
             )}
-            {(item.type === "movie" || item.type === "tv") &&
+            {(item.type === "movie" ||
+              item.type === "tv" ||
+              item.type === "anime") &&
               item.externalId && (
                 <Link
                   href={`/media/${item.type}/${item.externalId}`}
-                  className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-[var(--text-secondary)] hover:bg-white/20 transition-colors cursor-pointer"
                 >
                   Details
                 </Link>

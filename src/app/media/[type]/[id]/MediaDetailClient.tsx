@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import DOMPurify from "isomorphic-dompurify";
 import {
+  ArrowLeft,
   Eye,
   CheckCircle,
   EyeOff,
@@ -21,6 +24,7 @@ import {
   type WatchStatus,
 } from "@/app/actions/collection";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
+import TruncatedTitle from "@/components/TruncatedTitle";
 import { getCravelistLabel } from "@/config/labels";
 import EpisodeQualityGrid from "@/components/EpisodeQualityGrid";
 import type { EnrichedRecommendation } from "@/lib/types";
@@ -30,6 +34,26 @@ import {
   type TVSeasonSummary,
   type WatchProvider,
 } from "@/lib/tmdb";
+
+const OVERVIEW_TRUNCATE_LENGTH = 280;
+
+function sanitizeOverviewHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["br", "i", "b", "em", "strong"],
+    ALLOWED_ATTR: [],
+  });
+}
+
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
 
 function getJustWatchUrl(title: string, type: "movie" | "tv"): string {
   const slug = title
@@ -45,6 +69,7 @@ export interface CastMember {
   name: string;
   character: string;
   profileUrl: string | null;
+  personUrl?: string | null;
 }
 
 export interface RecommendedTitle {
@@ -52,7 +77,17 @@ export interface RecommendedTitle {
   title: string;
   posterUrl: string | null;
   voteAverage: number;
-  type: "movie" | "tv";
+  type: "movie" | "tv" | "anime";
+}
+
+export interface AnimeRelationItem {
+  id: number;
+  title: string;
+  posterUrl: string | null;
+  voteAverage: number;
+  relationType: string;
+  year: number | null;
+  episodes: number | null;
 }
 
 export interface MediaDetails {
@@ -77,6 +112,7 @@ export interface MediaDetails {
   originalLanguage?: string | null;
   originCountry?: string[];
   writers?: string[];
+  source?: string | null;
 }
 
 function getTimeAgo(dateStr: string): string {
@@ -111,6 +147,46 @@ function InfoRow({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="text-sm text-white break-words">{value}</p>
+    </div>
+  );
+}
+
+function OverviewBlock({ overview }: { overview: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const plainText = stripHtmlToText(overview);
+  const isLong = plainText.length > OVERVIEW_TRUNCATE_LENGTH;
+  const displayText = expanded
+    ? null
+    : isLong
+      ? plainText.slice(0, OVERVIEW_TRUNCATE_LENGTH)
+      : plainText;
+  const safeHtml = sanitizeOverviewHtml(overview);
+
+  return (
+    <div>
+      <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
+        Overview
+      </p>
+      {expanded ? (
+        <div
+          className="text-[var(--text-secondary)] leading-relaxed prose prose-invert prose-sm max-w-none [&_i]:italic [&_b]:font-semibold"
+          dangerouslySetInnerHTML={{ __html: safeHtml }}
+        />
+      ) : (
+        <p className="text-[var(--text-secondary)] leading-relaxed whitespace-pre-line">
+          {displayText}
+          {isLong ? "…" : ""}
+        </p>
+      )}
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1 text-sm font-medium text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
     </div>
   );
 }
@@ -158,6 +234,7 @@ interface MediaDetailClientProps {
   episodeQuality?: EpisodeQualityData;
   collectionNames?: string[];
   tvSeasons?: TVSeasonSummary[];
+  animeRelations?: AnimeRelationItem[];
   watchProviders?: WatchProvider[];
   otherCravelists?: {
     id: string;
@@ -178,6 +255,7 @@ export default function MediaDetailClient({
   episodeQuality = [],
   collectionNames = [],
   tvSeasons = [],
+  animeRelations = [],
   watchProviders = [],
   otherCravelists = [],
 }: MediaDetailClientProps) {
@@ -193,6 +271,7 @@ export default function MediaDetailClient({
   const [reviewText, setReviewText] = useState("");
   const [reviewSpoilers, setReviewSpoilers] = useState(false);
   const [isSavingReview, setIsSavingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(
     new Set(),
   );
@@ -246,6 +325,7 @@ export default function MediaDetailClient({
   };
 
   const handleSaveReview = async () => {
+    setReviewError(null);
     setIsSavingReview(true);
     const result = await reviewMediaAcrossCollections(mediaId, details.type, {
       rating: reviewRating || undefined,
@@ -255,6 +335,8 @@ export default function MediaDetailClient({
     setIsSavingReview(false);
     if (!result.error) {
       setShowReviewModal(false);
+    } else {
+      setReviewError(result.error);
     }
   };
 
@@ -292,10 +374,21 @@ export default function MediaDetailClient({
         ? "TV Show"
         : (details.format ?? "Anime");
 
+  const router = useRouter();
+
   return (
     <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
       {/* Hero */}
       <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
+        {/* Back button - inline on banner */}
+        <button
+          onClick={() => router.back()}
+          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Back</span>
+        </button>
         {details.backdropUrl ? (
           <Image
             src={details.backdropUrl}
@@ -453,16 +546,7 @@ export default function MediaDetailClient({
 
           {/* Overview + Genres: mobile only (swapped with Infos on mobile) */}
           <div className="flex flex-col gap-4 lg:hidden">
-            {details.overview && (
-              <div>
-                <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                  Overview
-                </p>
-                <p className="text-[var(--text-secondary)] leading-relaxed">
-                  {details.overview}
-                </p>
-              </div>
-            )}
+            {details.overview && <OverviewBlock overview={details.overview} />}
             {details.genres.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
@@ -507,6 +591,9 @@ export default function MediaDetailClient({
                 label={`Studio${details.studios.length > 1 ? "s" : ""}`}
                 value={details.studios.join(", ")}
               />
+            )}
+            {details.source && (
+              <InfoRow label="Source" value={details.source} />
             )}
 
             <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
@@ -739,12 +826,7 @@ export default function MediaDetailClient({
           {/* Overview (hidden on mobile - shown in left column) */}
           {details.overview && (
             <div className="hidden lg:block">
-              <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                Overview
-              </p>
-              <p className="text-[var(--text-secondary)] leading-relaxed">
-                {details.overview}
-              </p>
+              <OverviewBlock overview={details.overview} />
             </div>
           )}
 
@@ -958,14 +1040,14 @@ export default function MediaDetailClient({
           {/* Cast */}
           {details.cast && details.cast.length > 0 && (
             <div>
-              <h2 className="text-lg font-bold text-white mb-3">Cast</h2>
+              <h2 className="text-lg font-bold text-white mb-3">
+                {details.type === "anime" ? "Characters & Voice Actors" : "Cast"}
+              </h2>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {details.cast.map((member) => (
-                  <Link
-                    key={member.id}
-                    href={`/person/${member.id}`}
-                    className="shrink-0 w-24 sm:w-28 text-center group block"
-                  >
+                {details.cast.map((member) => {
+                  const className = "shrink-0 w-24 sm:w-28 text-center group block";
+                  const content = (
+                    <>
                     <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2 ring-0 group-hover:ring-2 group-hover:ring-purple-500/50 transition-all">
                       {member.profileUrl ? (
                         <Image
@@ -988,8 +1070,103 @@ export default function MediaDetailClient({
                     <p className="text-[11px] text-[var(--text-muted)] leading-tight line-clamp-1">
                       {member.character}
                     </p>
-                  </Link>
-                ))}
+                    </>
+                  );
+                  return member.personUrl ? (
+                    <a
+                      key={member.id}
+                      href={member.personUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={className}
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <Link key={member.id} href={`/person/${member.id}`} className={className}>
+                      {content}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Watch Order (anime only) */}
+          {details.type === "anime" && animeRelations.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-white mb-3">
+                Watch Order
+              </h2>
+              <p className="text-sm text-[var(--text-muted)] mb-3">
+                Start from the beginning or explore related entries.
+              </p>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {animeRelations.map((rel) => {
+                  const relationLabel =
+                    rel.relationType === "CURRENT"
+                      ? "Current"
+                      : rel.relationType === "PREQUEL"
+                        ? "Prequel"
+                        : rel.relationType === "SEQUEL"
+                          ? "Sequel"
+                          : rel.relationType === "PARENT"
+                            ? "Main series"
+                            : "Side story";
+                  const isCurrent = rel.relationType === "CURRENT";
+                  return (
+                    <Link
+                      key={rel.id}
+                      href={`/media/anime/${rel.id}`}
+                      className={`group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer ${isCurrent ? "ring-2 ring-purple-500/60" : ""}`}
+                    >
+                      <div className="relative aspect-[3/4] w-full overflow-hidden">
+                        {rel.posterUrl ? (
+                          <Image
+                            src={rel.posterUrl}
+                            alt={rel.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="176px"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-3xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
+                            🎌
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <span className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/90 font-medium">
+                          {relationLabel}
+                        </span>
+                        {rel.voteAverage > 0 && (
+                          <span className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
+                            ★ {rel.voteAverage.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-2.5">
+                        <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">
+                          <TruncatedTitle title={rel.title} />
+                        </h3>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--text-muted)]">
+                          {rel.episodes != null && (
+                            <span>
+                              {rel.episodes} episode
+                              {rel.episodes === 1 ? "" : "s"}
+                            </span>
+                          )}
+                          {rel.year != null && (
+                            <>
+                              {rel.episodes != null && <span>·</span>}
+                              <span>{rel.year}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1033,7 +1210,7 @@ export default function MediaDetailClient({
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
-                          🎬
+                          {rec.type === "anime" ? "🎌" : "🎬"}
                         </div>
                       )}
                       {rec.voteAverage > 0 && (
@@ -1042,9 +1219,17 @@ export default function MediaDetailClient({
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-medium text-white leading-tight line-clamp-2 group-hover:text-purple-300 transition-colors">
-                      {rec.title}
-                    </p>
+                    <div className="relative group/title">
+                      <p className="text-xs font-medium text-white leading-tight line-clamp-2 group-hover:text-purple-300 transition-colors">
+                        {rec.title}
+                      </p>
+                      <span
+                        className="absolute bottom-full left-0 z-50 mb-1 max-w-[240px] px-3 py-2 rounded-lg bg-zinc-800 text-white text-xs font-medium shadow-xl border border-white/10 whitespace-normal break-words opacity-0 pointer-events-none group-hover/title:opacity-100 transition-opacity"
+                        role="tooltip"
+                      >
+                        {rec.title}
+                      </span>
+                    </div>
                   </Link>
                 ))}
               </div>
@@ -1128,6 +1313,7 @@ export default function MediaDetailClient({
                     setReviewRating(0);
                     setReviewText("");
                     setReviewSpoilers(false);
+                    setReviewError(null);
                     setShowReviewModal(true);
                   }}
                   className="px-4 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium transition-colors cursor-pointer"
@@ -1277,6 +1463,11 @@ export default function MediaDetailClient({
                 This review contains spoilers
               </span>
             </label>
+            {reviewError && (
+              <p className="text-sm text-amber-400 mb-4">
+                {reviewError}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => !isSavingReview && setShowReviewModal(false)}

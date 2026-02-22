@@ -106,10 +106,31 @@ export function ListsProvider({
     }
   }, [user, localLists]);
 
-  // Fetch data when user changes
+  // Fetch data when user changes (AbortController prevents duplicate fetches in React Strict Mode)
   useEffect(() => {
-    refreshLists();
-  }, [refreshLists]);
+    const ac = new AbortController();
+    const run = async () => {
+      if (!user) {
+        setLists(localLists);
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/lists", { signal: ac.signal });
+        if (!res.ok) throw new Error("Failed to fetch lists");
+        const data = await res.json();
+        setLists(data.lists || []);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+        console.error("Error fetching lists", e);
+      } finally {
+        if (!ac.signal.aborted) setIsLoading(false);
+      }
+    };
+    run();
+    return () => ac.abort();
+  }, [user, localLists]);
 
   // Set up realtime subscriptions for automatic updates
   useEffect(() => {
@@ -220,10 +241,12 @@ export function ListsProvider({
 
       if (error || !collection) return null;
 
-      // Add items
-      const itemsToInsert = items.map((item) => ({
+      // Add items - use unique media_id when externalId is null to avoid unique constraint violations
+      // (collection_id, media_id, media_type) must be unique; "unknown" would fail for multiple items
+      const itemsToInsert = items.map((item, index) => ({
         collection_id: collection.id,
-        media_id: item.externalId || "unknown", // Items should have externalId
+        media_id:
+          item.externalId || `${item.type}-fallback-${collection.id}-${index}`,
         media_type: item.type,
         title: item.title,
         image_url: item.posterUrl,
@@ -231,7 +254,14 @@ export function ListsProvider({
       }));
 
       if (itemsToInsert.length > 0) {
-        await supabase.from("collection_items").insert(itemsToInsert);
+        const { error: insertError } = await supabase
+          .from("collection_items")
+          .insert(itemsToInsert);
+
+        if (insertError) {
+          console.error("Failed to insert collection items:", insertError);
+          return null;
+        }
       }
 
       // Refetch handled by realtime or simple state update
@@ -276,11 +306,14 @@ export function ListsProvider({
         return;
       }
 
-      // Supabase logic
-      // Assume it's a collection (journeys shouldn't really be edited this way usually?)
+      // Supabase logic - use unique media_id when externalId is null
+      const mediaId =
+        item.externalId ||
+        `${item.type}-fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
       await supabase.from("collection_items").insert({
         collection_id: listId,
-        media_id: item.externalId || "unknown",
+        media_id: mediaId,
         media_type: item.type,
         title: item.title,
         image_url: item.posterUrl,
