@@ -13,7 +13,6 @@ import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 import {
   HERO_POSTERS,
   ROTATING_WORDS,
-  SUGGESTION_QUERIES,
   PLACEHOLDER_PROMPTS,
 } from "@/config/home-page";
 
@@ -61,11 +60,6 @@ export default function Home() {
   const [isFading, setIsFading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
-  // Use deterministic order for SSR, then shuffle on client to avoid hydration mismatch
-  const [quickSuggestions, setQuickSuggestions] = useState(() =>
-    SUGGESTION_QUERIES.slice(0, 18),
-  );
-
   const [pickOfTheDay, setPickOfTheDay] = useState<{
     mediaId: string;
     type: string;
@@ -75,17 +69,6 @@ export default function Home() {
   const [featuredCollections, setFeaturedCollections] = useState<
     FeaturedCollection[]
   >([]);
-
-  useEffect(() => {
-    const id = setTimeout(
-      () =>
-        setQuickSuggestions(
-          [...SUGGESTION_QUERIES].sort(() => Math.random() - 0.5),
-        ),
-      0,
-    );
-    return () => clearTimeout(id);
-  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -204,11 +187,15 @@ export default function Home() {
           showTypeSelect={showTypeSelect}
           showModeSelect={showModeSelect}
           initialTypeSelection={initialTypeSelection}
+          initialQuery={pendingQuery}
+          selectedType={showTypeSelect ? initialTypeSelection : contentType}
+          selectedMode={showModeSelect ? undefined : pendingMode}
+          previousAnswers={refine.answers}
         />
       )}
 
       {/* "What are you craving?" + Search form - centered in viewport */}
-      <div className="flex flex-col justify-center relative overflow-hidden min-h-[calc(100dvh-5rem)] shrink-0">
+      <div className="flex flex-col justify-center relative min-h-[calc(100dvh-5rem)] shrink-0">
         {/* Floating poster background */}
         <div
           className="absolute inset-0 pointer-events-none motion-reduce:opacity-0"
@@ -256,7 +243,6 @@ export default function Home() {
           <SearchForm
             onSubmit={handleSubmit}
             isLoading={false}
-            quickSuggestions={quickSuggestions}
             placeholderPrompts={PLACEHOLDER_PROMPTS}
           />
         </div>

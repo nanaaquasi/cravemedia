@@ -1,38 +1,71 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SUGGESTION_CATEGORIES } from "@/config/suggestion-categories";
+import { X } from "lucide-react";
 
 const QUERY_MAX_LENGTH = 200;
+const PROMPTS_PER_CATEGORY = 5;
+
+/** Fisher-Yates shuffle, then take first n unique items. */
+function shuffleAndTake<T>(arr: readonly T[], n: number): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, Math.min(n, copy.length));
+}
 
 export type SearchMode = "list" | "journey";
 
 interface SearchFormProps {
   onSubmit: (query: string) => void;
   isLoading: boolean;
-  quickSuggestions: string[];
-  /** Placeholder prompts for typewriter effect. Falls back to quickSuggestions if not provided. */
+  /** Placeholder prompts for typewriter effect (e.g. PLACEHOLDER_PROMPTS). */
   placeholderPrompts?: readonly string[];
 }
 
 const TYPING_SPEED_MS = 55;
 const PAUSE_BETWEEN_PHRASES_MS = 2500;
 
+const ALL_PROMPTS_FALLBACK = SUGGESTION_CATEGORIES.flatMap((c) =>
+  c.prompts.slice(0, 2),
+);
+
 export default function SearchForm({
   onSubmit,
   isLoading,
-  quickSuggestions,
   placeholderPrompts,
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState("");
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [displayedPrompts, setDisplayedPrompts] = useState<string[]>([]);
 
-  const phrases = (placeholderPrompts ?? quickSuggestions).slice(0, 6);
+  const handleCategoryToggle = useCallback((catId: string) => {
+    setExpandedCategoryId((prev) => {
+      if (prev === catId) return null;
+      const cat = SUGGESTION_CATEGORIES.find((c) => c.id === catId);
+      if (cat) {
+        setDisplayedPrompts(shuffleAndTake(cat.prompts, PROMPTS_PER_CATEGORY));
+      }
+      return catId;
+    });
+  }, []);
+
+  // Always use PLACEHOLDER_PROMPTS for typewriter; fallback only if not provided
+  const phrases = (placeholderPrompts ?? ALL_PROMPTS_FALLBACK).slice(0, 6);
   const [displayedText, setDisplayedText] = useState("");
   const [phraseIndex, setPhraseIndex] = useState(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const chips = quickSuggestions.slice(0, 6);
   const isEmpty = !query.trim();
+  const expandedCategory = SUGGESTION_CATEGORIES.find(
+    (c) => c.id === expandedCategoryId,
+  );
 
   const handleChipClick = (suggestion: string) => {
     if (!isLoading) {
@@ -40,10 +73,10 @@ export default function SearchForm({
     }
   };
 
-  // Typewriter effect: type char by char, pause when full, then next phrase
+  // Typewriter effect: plays PLACEHOLDER_PROMPTS when input is empty
   useEffect(() => {
-    const list = (placeholderPrompts ?? quickSuggestions)?.slice(0, 6) ?? [];
-    if (!isEmpty || list.length === 0) return;
+    const list = (placeholderPrompts ?? ALL_PROMPTS_FALLBACK).slice(0, 7);
+    if (list.length === 0 || !isEmpty) return;
 
     const phrase = list[phraseIndex];
     let charIndex = displayedText.length;
@@ -70,7 +103,7 @@ export default function SearchForm({
     };
     // displayedText.length used only to init charIndex when resuming; omit to avoid re-running on every keystroke
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEmpty, phraseIndex, placeholderPrompts, quickSuggestions]);
+  }, [isEmpty, phraseIndex, placeholderPrompts]);
 
   const handleSubmit = () => {
     const text = query.trim();
@@ -90,15 +123,6 @@ export default function SearchForm({
           }`}
         >
           <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
-            {/* Typewriter placeholder overlay */}
-            {isEmpty && phrases.length > 0 && (
-              <div className="absolute inset-0 flex items-start p-5 sm:p-8 pointer-events-none z-10">
-                <span className="text-lg sm:text-2xl text-white/50 leading-relaxed">
-                  {displayedText}
-                  <span className="animate-pulse">|</span>
-                </span>
-              </div>
-            )}
             <textarea
               ref={textareaRef}
               value={query}
@@ -112,9 +136,18 @@ export default function SearchForm({
               placeholder=""
               maxLength={QUERY_MAX_LENGTH}
               disabled={isLoading}
-              className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[100px] disabled:opacity-50 caret-white relative"
+              className="flex-1 bg-transparent text-lg sm:text-2xl text-white outline-none resize-none min-h-[100px] disabled:opacity-50 caret-white relative z-0"
               aria-label="Tell us what you're craving"
             />
+            {/* Typewriter placeholder overlay - on top when empty */}
+            {isEmpty && phrases.length > 0 && (
+              <div className="absolute inset-0 flex items-start p-5 sm:p-8 pointer-events-none z-10">
+                <span className="text-lg sm:text-2xl text-white/50 leading-relaxed">
+                  {displayedText || phrases[0]}
+                  <span className="animate-pulse">|</span>
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2 mt-4">
               <span
                 className={`shrink-0 text-xs font-medium tabular-nums transition-colors ${
@@ -172,30 +205,76 @@ export default function SearchForm({
           </div>
         </div>
 
-        {/* Quick suggestion chips */}
-        {chips.length > 0 && (
-          <div className="mt-4 sm:mt-5">
-            <span className="block text-sm text-white/45 mb-2 sm:mb-0 sm:inline sm:mr-2">
-              Try:
-            </span>
-            <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2 sm:mx-0 sm:px-0 sm:pb-0">
-              <div className="flex gap-2 sm:flex-wrap sm:justify-center min-w-max sm:min-w-0">
-                {chips.map((suggestion) => (
+        {/* Category chips + expand panel */}
+        <div className="mt-4 sm:mt-5 relative">
+          <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2 sm:mx-0 sm:px-0 sm:pb-0">
+            <div className="flex gap-2 sm:flex-wrap sm:justify-center min-w-max sm:min-w-0">
+              {SUGGESTION_CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                const isExpanded = expandedCategoryId === cat.id;
+                return (
                   <button
-                    key={suggestion}
-                    onClick={() => handleChipClick(suggestion)}
+                    key={cat.id}
+                    onClick={() => handleCategoryToggle(cat.id)}
                     disabled={isLoading}
-                    className="shrink-0 px-3 py-1.5 rounded-full text-sm text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed truncate max-w-[200px] sm:max-w-none"
+                    className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border ${
+                      isExpanded
+                        ? "bg-white/15 text-white border-white/30"
+                        : "text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border-white/10 hover:border-white/20"
+                    }`}
                   >
-                    {suggestion.length > 45
-                      ? `${suggestion.slice(0, 43)}…`
-                      : suggestion}
+                    <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
+                    <span>{cat.label}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
-        )}
+
+          {/* Dropdown overlays categories */}
+          {expandedCategory && (
+            <div
+              className="absolute left-0 right-0 top-0 z-20 rounded-2xl border border-white/15 bg-[#0a0a0d]/95 backdrop-blur-md overflow-hidden shadow-xl shadow-black/50"
+              role="dialog"
+              aria-label={`${expandedCategory.label} suggestions`}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const Icon = expandedCategory.icon;
+                    return <Icon className="w-4 h-4 text-white/70" />;
+                  })()}
+                  <h3 className="text-sm font-semibold text-white">
+                    {expandedCategory.label}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setExpandedCategoryId(null)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <ul className="divide-y divide-white/5 max-h-[240px] overflow-y-auto overflow-x-hidden">
+                {displayedPrompts.map((prompt) => (
+                  <li key={prompt}>
+                    <button
+                      onClick={() => {
+                        handleChipClick(prompt);
+                        setExpandedCategoryId(null);
+                      }}
+                      disabled={isLoading}
+                      className="w-full text-left px-4 py-3 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed break-words"
+                    >
+                      {prompt}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
         {/* AI disclaimer */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-4 sm:mt-6 text-center sm:text-left">

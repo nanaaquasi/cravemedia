@@ -13,7 +13,7 @@ export default function FloatingSearchButton({
     <button
       onClick={onClick}
       disabled={isLoading}
-      className="fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-16 h-16 rounded-2xl flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 group shadow-xl"
+      className="hidden fixed bottom-[max(2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 w-16 h-16 rounded-2xl flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 group shadow-xl"
       aria-label="Search for recommendations"
     >
       {/* Gradient background */}

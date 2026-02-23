@@ -592,6 +592,17 @@ function pickBestResult(
   return best;
 }
 
+/** Strip season/topic info for TMDB lookup — AI may return "Mindhunter (Season 1-2)" but TMDB has "Mindhunter" */
+function stripSeasonInfoFromTitle(title: string): string | null {
+  const trimmed = title.trim();
+  const stripped = trimmed.replace(
+    /\s*\([Ss]eason[s]?\s*\d+(\s*[-–—to]+\s*\d+)?\)\s*$/i,
+    "",
+  );
+  const result = stripped.trim();
+  return result && result !== trimmed ? result : null;
+}
+
 /** Try alternate title variants for better TMDB matching */
 function getTitleVariants(title: string): string[] {
   const variants = [title.trim()];
@@ -633,6 +644,19 @@ async function findBestMatch(
     if (match) return match;
   }
 
+  // Strategy 2.5: For TV, strip "(Season 1-2)" etc. — AI gives tailored recs but TMDB has series name only
+  if (type === "tv") {
+    const baseTitle = stripSeasonInfoFromTitle(title);
+    if (baseTitle) {
+      results = await searchFn(baseTitle, year);
+      if (results.length === 0) results = await searchFn(baseTitle);
+      if (results.length > 0) {
+        const match = await tryWithResults(results);
+        if (match) return match;
+      }
+    }
+  }
+
   // Strategy 3: Year ±1 for TV (e.g. Babylon 5 pilot 1993, series 1994)
   if (type === "tv" && year) {
     for (const y of [year - 1, year + 1]) {
@@ -657,9 +681,11 @@ async function findBestMatch(
   }
 
   // Strategy 5: Multi-search fallback (searches movies + TV + people)
+  const multiQuery =
+    type === "tv" ? (stripSeasonInfoFromTitle(title) ?? title) : title;
   const multiData = await tmdbFetch<{ results: TMDBSearchResult[] }>(
     "/search/multi",
-    { query: title },
+    { query: multiQuery },
   );
   const multiResults = (multiData.results || []).filter(
     (r) => r.media_type === type || (!r.media_type && type === "movie"),

@@ -41,4 +41,5 @@ export const PLACEHOLDER_PROMPTS = [
   "Mood, genre, or 'like X'...",
   "e.g. mind-bending thriller",
   "The more specific, the better",
+  "Out of ideas? Try one of the prompts below...",
 ] as const;

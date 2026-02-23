@@ -183,7 +183,10 @@ export async function POST(request: NextRequest) {
         },
       );
 
-      const enrichedItems = await Promise.all(enrichmentPromises);
+      const allEnriched = await Promise.all(enrichmentPromises);
+      const enrichedItems = allEnriched.filter(
+        (item): item is JourneyItem => item.externalId != null,
+      );
       const totalRuntimeMinutes =
         aiResponse.total_runtime_minutes ??
         aiResponse.totalRuntimeMinutes ??
@@ -304,7 +307,10 @@ export async function POST(request: NextRequest) {
       },
     );
 
-    const enrichedItems = await Promise.all(enrichmentPromises);
+    const allEnriched = await Promise.all(enrichmentPromises);
+    const enrichedItems = allEnriched.filter(
+      (item): item is EnrichedRecommendation => item.externalId != null,
+    );
 
     const response: RecommendationResponse = {
       collectionTitle: aiResponse.collectionTitle,

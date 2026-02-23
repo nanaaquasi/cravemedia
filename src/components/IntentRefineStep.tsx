@@ -21,6 +21,62 @@ const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   })),
 ];
 
+function formatTypeLabel(type: ContentType | ContentType[]): string {
+  if (type === "all") return "All";
+  const arr = Array.isArray(type) ? type : [type];
+  return arr
+    .map((t) =>
+      t === "movie"
+        ? "Movies"
+        : t === "tv"
+          ? "TV Shows"
+          : t === "book"
+            ? "Books"
+            : t === "anime"
+              ? "Anime"
+              : "All",
+    )
+    .join(", ");
+}
+
+/** Format type for natural sentence: "Movies and TV Shows" or "TV Shows" */
+function formatTypeForSentence(type: ContentType | ContentType[]): string {
+  if (type === "all") return "recommendations";
+  const arr = Array.isArray(type) ? type : [type];
+  const labels = arr.map((t) =>
+    t === "movie"
+      ? "Movies"
+      : t === "tv"
+        ? "TV Shows"
+        : t === "book"
+          ? "Books"
+          : t === "anime"
+            ? "Anime"
+            : "All",
+  );
+  if (labels.length <= 1) return labels[0] ?? "recommendations";
+  return labels.slice(0, -1).join(", ") + " and " + labels[labels.length - 1];
+}
+
+/** Normalize query to flow as a phrase in a sentence (strip leading filler, punctuation) */
+function normalizeQueryForSentence(query: string): string {
+  let q = query.trim().replace(/\?+$/, "").trim();
+  const prefixes = [
+    /^what'?s\s+/i,
+    /^what is\s+/i,
+    /^i want\s+/i,
+    /^make me\s+/i,
+    /^show me\s+/i,
+    /^give me\s+/i,
+    /^i need\s+/i,
+    /^something\s+/i,
+  ];
+  for (const re of prefixes) {
+    q = q.replace(re, "");
+  }
+  return q.trim() || query.trim();
+}
+
 interface IntentRefineStepProps {
   questions: RefineQuestion[];
   round: number;
@@ -32,6 +88,14 @@ interface IntentRefineStepProps {
   showTypeSelect: boolean;
   showModeSelect: boolean;
   initialTypeSelection: ContentType | ContentType[];
+  /** Original query — shown throughout the flow for recognition over recall */
+  initialQuery?: string;
+  /** Selected type after user picks — shown on mode select + AI steps */
+  selectedType?: ContentType | ContentType[];
+  /** Selected mode after user picks — shown on AI steps */
+  selectedMode?: SearchMode;
+  /** Previous answers from earlier questions — shown during AI question flow */
+  previousAnswers?: RefineAnswer[];
 }
 
 /* ─── shared background ────────────────────────────────────────────────── */
@@ -75,6 +139,69 @@ function AnimatedBackground() {
   );
 }
 
+/* ─── Persistent context bar (recognition over recall) ───────────────────── */
+function ContextBar({
+  initialQuery,
+  selectedType,
+  selectedMode,
+  previousAnswers,
+}: {
+  initialQuery?: string;
+  selectedType?: ContentType | ContentType[];
+  selectedMode?: SearchMode;
+  previousAnswers?: RefineAnswer[];
+}) {
+  const query = initialQuery?.trim();
+  if (!query) return null;
+
+  const queryPhrase = normalizeQueryForSentence(query);
+  const typeStr = selectedType
+    ? formatTypeForSentence(selectedType)
+    : "recommendations";
+  const modeStr =
+    selectedMode === "journey" ? "journey" : selectedMode === "list" ? "list" : null;
+
+  let sentence: string;
+  if (modeStr && selectedType) {
+    sentence = `A ${modeStr} of ${typeStr}: ${queryPhrase}`;
+  } else if (selectedType) {
+    sentence = `${typeStr}: ${queryPhrase}`;
+  } else {
+    sentence = queryPhrase;
+  }
+
+  const answerSuffix =
+    previousAnswers && previousAnswers.length > 0
+      ? previousAnswers
+          .map((a) => a.selected.join(", "))
+          .join(" • ")
+      : null;
+
+  return (
+    <div
+      className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-white/60 max-w-2xl rounded-2xl bg-pink-500/10 backdrop-blur-md border border-pink-500/20 px-4 py-3"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="text-white/40 text-xs uppercase tracking-wider mr-1">
+        Your craving
+      </span>
+      <span className="text-white/30" aria-hidden>
+        —
+      </span>
+      <span className="text-center">
+        {sentence}
+        {answerSuffix && (
+          <>
+            <span className="text-white/40 mx-1">·</span>
+            <span className="text-white/50">{answerSuffix}</span>
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
 /* ───────────────────────────────────────────────────────────────────────── */
 
 export default function IntentRefineStep({
@@ -88,6 +215,10 @@ export default function IntentRefineStep({
   showTypeSelect,
   showModeSelect,
   initialTypeSelection,
+  initialQuery,
+  selectedType,
+  selectedMode,
+  previousAnswers,
 }: IntentRefineStepProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
@@ -221,6 +352,11 @@ export default function IntentRefineStep({
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full text-center"
           >
+            {initialQuery?.trim() && (
+              <div className="mb-4 text-center">
+                <ContextBar initialQuery={initialQuery} />
+              </div>
+            )}
             <p className="text-sm text-purple-300/70 font-medium mb-3 uppercase tracking-wider">
               Narrow it down
             </p>
@@ -308,6 +444,11 @@ export default function IntentRefineStep({
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="w-full text-center"
           >
+            {(initialQuery?.trim() || selectedType) && (
+              <div className="mb-4 text-center">
+                <ContextBar initialQuery={initialQuery} selectedType={selectedType} />
+              </div>
+            )}
             <p className="text-sm text-purple-300/70 font-medium mb-3 uppercase tracking-wider">
               How do you want your results?
             </p>
@@ -435,7 +576,17 @@ export default function IntentRefineStep({
       >
         <AnimatedBackground />
 
-        <div className="relative z-10 text-center">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+          {(initialQuery?.trim() || selectedType || selectedMode || (previousAnswers && previousAnswers.length > 0)) && (
+            <div className="mb-6">
+              <ContextBar
+                initialQuery={initialQuery}
+                selectedType={selectedType}
+                selectedMode={selectedMode}
+                previousAnswers={previousAnswers}
+              />
+            </div>
+          )}
           <motion.div
             className="w-10 h-10 mx-auto mb-6 border-2 border-white/20 border-t-purple-400 rounded-full"
             animate={{ rotate: 360 }}
@@ -457,6 +608,20 @@ export default function IntentRefineStep({
   // Total progress dots = all questions across all visible rounds
   const progressDotCount = totalQuestions;
 
+  // Answers from current round (questions already answered before this one)
+  const currentRoundAnswersSoFar: RefineAnswer[] = questions
+    .slice(0, currentQuestionIndex)
+    .filter((q) => (selections[q.id] || []).length > 0)
+    .map((q) => ({
+      questionId: q.id,
+      questionText: q.text,
+      selected: selections[q.id] || [],
+    }));
+  const allAnswersForDisplay = [
+    ...(previousAnswers || []),
+    ...currentRoundAnswersSoFar,
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -472,6 +637,16 @@ export default function IntentRefineStep({
 
       {/* Question content — vertically centered */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
+        {(initialQuery?.trim() || selectedType || selectedMode || allAnswersForDisplay.length > 0) && (
+          <div className="mb-6 text-center">
+            <ContextBar
+              initialQuery={initialQuery}
+              selectedType={selectedType}
+              selectedMode={selectedMode}
+              previousAnswers={allAnswersForDisplay}
+            />
+          </div>
+        )}
         {/* Progress Dots - Top Centered */}
         <div className="flex items-center gap-2 mb-8">
           {Array.from({ length: progressDotCount }).map((_, i) => {
@@ -526,19 +701,19 @@ export default function IntentRefineStep({
                         currentQuestion.multiSelect,
                       )
                     }
-                    className={`px-5 py-3 rounded-2xl text-base font-medium transition-all duration-200 cursor-pointer border ${
+                    className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-base font-medium transition-all duration-200 cursor-pointer border ${
                       isSelected
                         ? "bg-purple-500/30 text-purple-200 border-purple-500/50 shadow-lg shadow-purple-500/20"
                         : "bg-white/6 text-white/80 border-white/8 hover:bg-white/10 hover:border-white/15"
                     }`}
                   >
                     {currentQuestion.multiSelect && (
-                      <span className="mr-2 inline-block w-4 h-4 rounded border align-text-bottom relative top-px">
+                      <span className="w-4 h-4 rounded border border-current flex items-center justify-center shrink-0">
                         {isSelected && (
                           <svg
                             viewBox="0 0 16 16"
                             fill="currentColor"
-                            className="w-4 h-4 text-purple-300 absolute inset-0"
+                            className="w-3 h-3 text-purple-300"
                           >
                             <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
                           </svg>

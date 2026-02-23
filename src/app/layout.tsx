@@ -10,6 +10,7 @@ const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-dm-sans",
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const viewport = {
@@ -60,20 +61,11 @@ export const metadata: Metadata = {
 
 import { ListsProvider } from "@/context/ListsContext";
 
-// ...
-
-import { createClient } from "@/lib/supabase/server";
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   return (
     <html lang="en" className={dmSans.variable}>
       <body className="bg-gradient-mesh min-h-screen overflow-x-hidden">
@@ -83,8 +75,8 @@ export default async function RootLayout({
           showSpinner={false}
           crawlSpeed={200}
         />
-        <ListsProvider user={user}>
-          <GlobalLayout user={user}>{children}</GlobalLayout>
+        <ListsProvider user={null}>
+          <GlobalLayout user={null}>{children}</GlobalLayout>
         </ListsProvider>
         <Analytics />
         <SpeedInsights />
