@@ -1,0 +1,19 @@
+{
+  "name": "cravemedia-extension",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.25",
+    "@types/chrome": "^0.0.287",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.0"
+  }
+}
