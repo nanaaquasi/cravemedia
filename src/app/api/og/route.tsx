@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
 
-    const title = searchParams.get("title") || "Crave Media";
+    const title = searchParams.get("title") || "Craveo";
     const type = searchParams.get("type") || "Explore";
 
     // Optional: passed as comma-separated URLs
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
               letterSpacing: "-0.05em",
             }}
           >
-            Crave Media
+            Craveo
           </span>
         </div>
 

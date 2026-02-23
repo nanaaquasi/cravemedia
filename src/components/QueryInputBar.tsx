@@ -271,7 +271,7 @@ export default function QueryInputBar({
               AI
             </span>
             <span className="text-sm text-white/50">
-              cravemedia may create unexpected results.
+              craveo may create unexpected results.
             </span>
           </div>
         </div>

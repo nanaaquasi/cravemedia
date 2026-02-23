@@ -18,10 +18,10 @@ export async function generateMetadata({ params }: PageProps) {
   if (!person) return { title: "Person" };
 
   return {
-    title: `${person.name} — Cravemedia`,
+    title: `${person.name} — Craveo`,
     description: person.biography?.slice(0, 160) ?? undefined,
     openGraph: {
-      title: `${person.name} — Cravemedia`,
+      title: `${person.name} — Craveo`,
       images: person.profileUrl ? [{ url: person.profileUrl }] : undefined,
     },
   };

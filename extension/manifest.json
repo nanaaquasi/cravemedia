@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Craveo Saved Lists",
+  "description": "Quick access to your saved lists without visiting the site",
+  "version": "1.0.0",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "permissions": ["storage", "identity"],
+  "host_permissions": [
+    "https://*.vercel.app/*",
+    "http://localhost:*/*",
+    "https://*/*"
+  ]
+}

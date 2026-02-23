@@ -43,15 +43,15 @@ export async function generateMetadata({
   };
 
   return {
-    title: `${collection.name} - Cravemedia ${CRAVELIST_LABEL}`,
+    title: `${collection.name} - Craveo ${CRAVELIST_LABEL}`,
     description:
       collection.description ||
-        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Craveo`,
     openGraph: {
       title: collection.name,
       description:
         collection.description ||
-        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Craveo`,
       images: [ogImage],
     },
     twitter: {
@@ -59,7 +59,7 @@ export async function generateMetadata({
       title: collection.name,
       description:
         collection.description ||
-        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Cravemedia`,
+        `A custom media ${CRAVELIST_LABEL.toLowerCase()} on Craveo`,
       images: [ogImage],
     },
   };

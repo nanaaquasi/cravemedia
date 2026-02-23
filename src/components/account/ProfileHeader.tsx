@@ -10,9 +10,10 @@ interface ProfileHeaderProps {
     followers: number;
     following: number;
   };
+  isNewUser?: boolean;
 }
 
-export function ProfileHeader({ profile, email, stats }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, email, stats, isNewUser }: ProfileHeaderProps) {
   return (
     <div className="relative h-[120px] md:h-[160px] w-full bg-zinc-900/20 rounded-3xl overflow-hidden group mb-10 bg-center bg-[url('https://media.themoviedb.org/t/p/w1920_and_h800_multi_faces/zo8CIjJ2nfNOevqNajwMRO6Hwka.jpg')]">
       {/* Background Image with Overlay */}
@@ -42,9 +43,16 @@ export function ProfileHeader({ profile, email, stats }: ProfileHeaderProps) {
 
         {/* User Info */}
         <div className="flex flex-col justify-center">
-          <h1 className="text-xl md:text-2xl font-bold text-white leading-tight mb-1">
-            {profile?.full_name || "Anonymous User"}
-          </h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-xl md:text-2xl font-bold text-white leading-tight">
+              {profile?.full_name || "Anonymous User"}
+            </h1>
+            {isNewUser && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/30 text-purple-200 border border-purple-500/40">
+                Welcome!
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-4 text-sm">
             <p className="text-zinc-400">

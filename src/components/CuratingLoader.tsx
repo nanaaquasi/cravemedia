@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import type { ContentType } from "@/lib/types";
 import { motion } from "framer-motion";
 
 const JOURNEY_MESSAGES = [
@@ -61,7 +62,7 @@ type MediaTypeKey = keyof typeof MEDIA_SPECIFIC_MESSAGES;
 
 interface CuratingLoaderProps {
   mode?: "list" | "journey";
-  mediaType?: "all" | MediaTypeKey | MediaTypeKey[];
+  mediaType?: ContentType | ContentType[];
 }
 
 function randomIndex(length: number, exclude?: number): number {
@@ -73,13 +74,14 @@ function randomIndex(length: number, exclude?: number): number {
   return idx;
 }
 
-function getMessagesForMediaType(
-  mediaType: CuratingLoaderProps["mediaType"]
-): string[] {
+function getMessagesForMediaType(mediaType: ContentType | ContentType[] | undefined): string[] {
   if (!mediaType || mediaType === "all") {
     return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
   }
   const keys = Array.isArray(mediaType) ? mediaType : [mediaType];
+  if (keys.includes("all")) {
+    return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
+  }
   const merged = keys.flatMap((k) =>
     MEDIA_SPECIFIC_MESSAGES[k as MediaTypeKey] ?? []
   );

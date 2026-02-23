@@ -80,7 +80,7 @@ export default function Header({
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-sm font-bold shadow-lg shadow-purple-500/25 group-hover:shadow-purple-500/40 transition-shadow">
           C
         </div>
-        <span className="text-lg font-semibold tracking-tight">cravemedia</span>
+        <span className="text-lg font-semibold tracking-tight">craveo</span>
       </Link>
 
       <div className="flex items-center gap-3">

@@ -40,20 +40,20 @@ export async function generateMetadata({
   };
 
   return {
-    title: `${journey.title} - Cravemedia Journey`,
+    title: `${journey.title} - Craveo Journey`,
     description:
-      journey.description || "A personalized media journey on Cravemedia",
+      journey.description || "A personalized media journey on Craveo",
     openGraph: {
       title: journey.title,
       description:
-        journey.description || "A personalized media journey on Cravemedia",
+        journey.description || "A personalized media journey on Craveo",
       images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: journey.title,
       description:
-        journey.description || "A personalized media journey on Cravemedia",
+        journey.description || "A personalized media journey on Craveo",
       images: [ogImage],
     },
   };

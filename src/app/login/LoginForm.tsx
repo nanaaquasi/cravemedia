@@ -97,7 +97,7 @@ function LoginFormInner() {
           className="text-center mb-8"
         >
           <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent mb-2">
-            {isLogin ? "Welcome Back" : "Join Cravemedia"}
+            {isLogin ? "Welcome Back" : "Join craveo"}
           </h1>
           <p className="text-zinc-400 text-sm">
             {isLogin

@@ -134,6 +134,71 @@ export default async function AccountPage() {
       item_count: c.collection_items?.length || 0,
     })) || [];
 
+  const isEmpty =
+    !currentJourney &&
+    (completedJourneys?.length ?? 0) === 0 &&
+    (wishlistJourneys?.length ?? 0) === 0 &&
+    (collections?.length ?? 0) === 0;
+
+  let featuredJourneys: Journey[] = [];
+  let featuredCollectionsForGetStarted: (Collection & {
+    items?: { image_url: string | null }[];
+    item_count?: number;
+    curator_first_name?: string | null;
+  })[] = [];
+
+  if (isEmpty) {
+    const [journeysRes, collectionsRes] = await Promise.all([
+      supabase
+        .from("journeys")
+        .select(
+          "id, title, description, query, content_type, items, total_items, total_runtime_minutes, overall_rating, status, current_position, created_at, updated_at, completed_at, forked_count"
+        )
+        .eq("is_public", true)
+        .order("forked_count", { ascending: false })
+        .order("overall_rating", { ascending: false, nullsFirst: false })
+        .order("updated_at", { ascending: false })
+        .limit(6),
+      supabase
+        .from("collections")
+        .select(
+          "*, collection_items(image_url), profiles:user_id(username, full_name)"
+        )
+        .eq("is_public", true)
+        .order("updated_at", { ascending: false })
+        .limit(6),
+    ]);
+
+    featuredJourneys = (journeysRes.data as unknown as Journey[]) ?? [];
+    const rawCollections = collectionsRes.data ?? [];
+    featuredCollectionsForGetStarted = rawCollections.map((c: Record<string, unknown>) => {
+      const profile = c.profiles as {
+        username?: string | null;
+        full_name?: string | null;
+      } | null;
+      const fullName = profile?.full_name?.trim();
+      const username = profile?.username?.trim();
+      const firstName = fullName
+        ? fullName.split(/\s+/)[0]
+        : username ?? null;
+      const items = (c.collection_items as { image_url: string | null }[]) ?? [];
+      return {
+        ...c,
+        curator_first_name: firstName,
+        items: items.map((i) => ({ image_url: i.image_url })),
+        item_count: items.length,
+      };
+    }) as (Collection & {
+      items?: { image_url: string | null }[];
+      item_count?: number;
+      curator_first_name?: string | null;
+    })[];
+  }
+
+  const isNewUser =
+    user.created_at &&
+    Date.now() - new Date(user.created_at).getTime() < 48 * 60 * 60 * 1000;
+
   return (
     <AccountView
       profile={profile}
@@ -141,6 +206,9 @@ export default async function AccountPage() {
       initialCollections={formattedCollections}
       initialDashboardData={dashboardData}
       inProgressItems={(inProgressItems as unknown as CollectionItem[]) || []}
+      featuredJourneys={featuredJourneys}
+      featuredCollections={featuredCollectionsForGetStarted}
+      isNewUser={!!isNewUser}
     />
   );
 }

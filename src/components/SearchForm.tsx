@@ -282,7 +282,7 @@ export default function SearchForm({
             AI
           </span>
           <span className="text-sm text-white/45">
-            cravemedia may create unexpected results.
+            craveo may create unexpected results.
           </span>
         </div>
       </div>

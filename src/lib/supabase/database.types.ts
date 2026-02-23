@@ -374,6 +374,7 @@ export type Database = {
           current_position: number | null;
           description: string | null;
           difficulty_progression: string | null;
+          forked_count: number;
           forked_from: string | null;
           id: string;
           intent_answers: Json | null;
@@ -402,6 +403,7 @@ export type Database = {
           current_position?: number | null;
           description?: string | null;
           difficulty_progression?: string | null;
+          forked_count?: number;
           forked_from?: string | null;
           id?: string;
           intent_answers?: Json | null;
@@ -430,6 +432,7 @@ export type Database = {
           current_position?: number | null;
           description?: string | null;
           difficulty_progression?: string | null;
+          forked_count?: number;
           forked_from?: string | null;
           id?: string;
           intent_answers?: Json | null;

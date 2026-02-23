@@ -26,11 +26,11 @@ export const metadata: Metadata = {
         ? `https://${process.env.VERCEL_URL}`
         : "http://localhost:3000"),
   ),
-  title: "Cravemedia — Discover Movies, TV Shows & Books",
+  title: "Craveo — Discover Movies, TV Shows & Books",
   description:
     "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.",
   openGraph: {
-    title: "Cravemedia — Discover Movies, TV Shows & Books",
+    title: "Craveo — Discover Movies, TV Shows & Books",
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     type: "website",
@@ -39,13 +39,13 @@ export const metadata: Metadata = {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Cravemedia — Discover Movies, TV Shows & Books",
+        alt: "Craveo — Discover Movies, TV Shows & Books",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cravemedia — Discover Movies, TV Shows & Books",
+    title: "Craveo — Discover Movies, TV Shows & Books",
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     images: [
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Cravemedia — Discover Movies, TV Shows & Books",
+        alt: "Craveo — Discover Movies, TV Shows & Books",
       },
     ],
   },

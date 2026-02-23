@@ -1,16 +1,59 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
 import { SavedList, EnrichedRecommendation, JourneyItem } from "@/lib/types";
 
-export async function GET() {
+function corsHeaders(request: NextRequest): Record<string, string> {
+  const origin = request.headers.get("origin") ?? "";
+  const isExtension = origin.startsWith("chrome-extension://");
+  return {
+    ...(isExtension && { "Access-Control-Allow-Origin": origin }),
+    ...(isExtension && { "Access-Control-Allow-Headers": "Authorization" }),
+    ...(isExtension && { "Access-Control-Allow-Methods": "GET, OPTIONS" }),
+  };
+}
+
+export async function OPTIONS(request: NextRequest) {
+  const headers = corsHeaders(request);
+  return new NextResponse(null, { status: 204, headers });
+}
+
+export async function GET(request: NextRequest) {
+  const headers = corsHeaders(request);
+
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const authHeader = request.headers.get("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+
+    let user: { id: string } | null = null;
+    let supabase: Awaited<ReturnType<typeof createClient>>;
+
+    if (bearerToken) {
+      supabase = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          global: { headers: { Authorization: `Bearer ${bearerToken}` } },
+        },
+      );
+      const { data, error } = await supabase.auth.getUser(bearerToken);
+      if (error || !data.user) {
+        return NextResponse.json(
+          { lists: [], error: "Invalid or expired token" },
+          { status: 401, headers },
+        );
+      }
+      user = data.user;
+    } else {
+      supabase = await createClient();
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    }
 
     if (!user) {
-      return NextResponse.json({ lists: [] });
+      return NextResponse.json({ lists: [] }, { headers });
     }
 
     // 1. Fetch Collections
@@ -98,12 +141,12 @@ export async function GET() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-    return NextResponse.json({ lists: allLists });
+    return NextResponse.json({ lists: allLists }, { headers });
   } catch (error) {
     console.error("Error fetching lists:", error);
     return NextResponse.json(
       { error: "Failed to fetch lists" },
-      { status: 500 },
+      { status: 500, headers },
     );
   }
 }

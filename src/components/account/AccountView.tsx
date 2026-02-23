@@ -12,9 +12,11 @@ import { JourneyShowcase } from "./JourneyShowcase";
 import { ActivityFeed } from "./ActivityFeed";
 import { NoJourneysEmptyState, NoActivityEmptyState } from "./EmptyStates";
 import { ProfileDashboardData, subscribeToUserActivity } from "./queries";
+import type { Journey } from "./queries";
 import { Profile, Collection, CollectionItem } from "@/lib/supabase/types";
 import { InProgressMedia } from "./InProgressMedia";
-import { Clock, Plus, LayoutGrid, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Clock, Plus, LayoutGrid, Loader2, Play, Sparkles } from "lucide-react";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
 import {
   CRAVELIST_LABEL,
@@ -29,6 +31,13 @@ interface AccountViewProps {
   initialCollections: Collection[];
   initialDashboardData: ProfileDashboardData;
   inProgressItems: CollectionItem[];
+  featuredJourneys?: Journey[];
+  featuredCollections?: (Collection & {
+    items?: { image_url: string | null }[];
+    item_count?: number;
+    curator_first_name?: string | null;
+  })[];
+  isNewUser?: boolean;
 }
 
 export function AccountView({
@@ -37,6 +46,9 @@ export function AccountView({
   initialCollections,
   initialDashboardData,
   inProgressItems,
+  featuredJourneys = [],
+  featuredCollections = [],
+  isNewUser = false,
 }: AccountViewProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
@@ -111,7 +123,7 @@ export function AccountView({
   return (
     <div className="min-h-screen pb-20 font-sans">
       <div className="max-w-6xl mx-auto mt-6">
-        <ProfileHeader profile={profile} email={email} stats={finalStats} />
+        <ProfileHeader profile={profile} email={email} stats={finalStats} isNewUser={isNewUser} />
         <ProfileNav activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="mt-8">
@@ -160,11 +172,63 @@ export function AccountView({
                 </div>
               )}
 
-              {/* If no current and no saved, show empty state */}
+              {/* If no current and no saved, show Get Started or empty state */}
               {!dashboardData.currentJourney &&
-                dashboardData.wishlistJourneys.length === 0 && (
+                dashboardData.wishlistJourneys.length === 0 &&
+                (featuredJourneys.length > 0 || featuredCollections.length > 0 ? (
+                  <div className="space-y-8">
+                    <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
+                        <Sparkles className="w-8 h-8 text-purple-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Get Started
+                      </h3>
+                      <p className="text-zinc-400 mb-6 max-w-md mx-auto">
+                        Explore popular journeys and cravings to get inspired
+                      </p>
+                      {featuredJourneys.length > 0 && (
+                        <JourneyShowcase
+                          journeys={featuredJourneys}
+                          title="Popular Journeys"
+                        />
+                      )}
+                      {featuredCollections.length > 0 && (
+                        <div className="mt-8 space-y-4">
+                          <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                            <LayoutGrid className="w-5 h-5 text-purple-400" />
+                            Featured {CRAVELIST_LABEL_PLURAL}
+                          </h2>
+                          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide justify-center md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:max-w-4xl md:mx-auto">
+                            {featuredCollections.map((col, i) => (
+                              <div
+                                key={col.id}
+                                className="shrink-0 w-72 md:shrink md:w-auto"
+                              >
+                                <CollectionCard
+                                  collection={col}
+                                  variant="featured"
+                                  gradientIndex={i}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-8 flex justify-center">
+                        <Link
+                          href="/search"
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4 fill-current" />
+                          Create a Journey
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                   <NoJourneysEmptyState />
-                )}
+                ))}
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
@@ -204,9 +268,61 @@ export function AccountView({
 
               {!dashboardData.currentJourney &&
                 dashboardData.wishlistJourneys.length === 0 &&
-                dashboardData.completedJourneys.length === 0 && (
+                dashboardData.completedJourneys.length === 0 &&
+                (featuredJourneys.length > 0 || featuredCollections.length > 0 ? (
+                  <div className="space-y-8">
+                    <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
+                        <Sparkles className="w-8 h-8 text-purple-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Get Started
+                      </h3>
+                      <p className="text-zinc-400 mb-6 max-w-md mx-auto">
+                        Explore popular journeys and cravings to get inspired
+                      </p>
+                      {featuredJourneys.length > 0 && (
+                        <JourneyShowcase
+                          journeys={featuredJourneys}
+                          title="Popular Journeys"
+                        />
+                      )}
+                      {featuredCollections.length > 0 && (
+                        <div className="mt-8 space-y-4">
+                          <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                            <LayoutGrid className="w-5 h-5 text-purple-400" />
+                            Featured {CRAVELIST_LABEL_PLURAL}
+                          </h2>
+                          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide justify-center md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:max-w-4xl md:mx-auto">
+                            {featuredCollections.map((col, i) => (
+                              <div
+                                key={col.id}
+                                className="shrink-0 w-72 md:shrink md:w-auto"
+                              >
+                                <CollectionCard
+                                  collection={col}
+                                  variant="featured"
+                                  gradientIndex={i}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-8 flex justify-center">
+                        <Link
+                          href="/search"
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4 fill-current" />
+                          Create a Journey
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                   <NoJourneysEmptyState />
-                )}
+                ))}
             </div>
           )}
 

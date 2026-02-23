@@ -52,7 +52,7 @@ export default function ShareModal({
   };
 
   const shareToTwitter = () => {
-    const text = encodeURIComponent(`Check out "${title}" on Crave Media!`);
+    const text = encodeURIComponent(`Check out "${title}" on Craveo!`);
     window.open(
       `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`,
       "_blank",
@@ -61,7 +61,7 @@ export default function ShareModal({
 
   const shareToWhatsApp = () => {
     const text = encodeURIComponent(
-      `Check out "${title}" on Crave Media! ${url}`,
+      `Check out "${title}" on Craveo! ${url}`,
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
   };

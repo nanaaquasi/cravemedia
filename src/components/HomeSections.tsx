@@ -118,14 +118,14 @@ export function HomeSections({
         </section>
       )}
 
-      {/* Why Cravemedia is Different */}
+      {/* Why Craveo is Different */}
       <section
         className="animate-in fade-in slide-in-from-bottom-4 duration-500 px-0 sm:px-6"
         style={{ animationDelay: "120ms" }}
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl sm:text-4xl font-bold text-white text-center mb-3">
-            Why Cravemedia is Different
+            Why craveo is Different
           </h2>
           <p className="text-zinc-400 text-sm sm:text-base text-center mb-10">
             How we compare to Trakt, Letterboxd, Goodreads—and what we do
@@ -140,7 +140,7 @@ export function HomeSections({
                 Trakt, Letterboxd, Goodreads
               </div>
               <div className="p-4 sm:p-5 border-b border-white/10 font-medium text-white">
-                Cravemedia
+                Craveo
               </div>
 
               {WHY_DIFFERENT_ROWS.map((row) => (
@@ -173,9 +173,7 @@ export function HomeSections({
                       {row.other}
                     </p>
                     <p className="text-zinc-300">
-                      <span className="font-medium text-white">
-                        Cravemedia:
-                      </span>{" "}
+                      <span className="font-medium text-white">Craveo:</span>{" "}
                       {row.crave}
                     </p>
                   </div>
