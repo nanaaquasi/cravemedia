@@ -34,12 +34,12 @@ export const SUGGESTION_QUERIES = [
 ] as const;
 
 export const PLACEHOLDER_PROMPTS = [
-  "e.g. something slow-burn and emotional, like a rainy Sunday afternoon...",
   "Start with a mood or a title...",
   "e.g. something that will ruin my sleep",
   "Describe what you want...",
   "Mood, genre, or 'like X'...",
   "e.g. mind-bending thriller",
   "The more specific, the better",
+  "e.g. something slow-burn and emotional, like a rainy Sunday afternoon...",
   "Out of ideas? Try one of the prompts below...",
 ] as const;
