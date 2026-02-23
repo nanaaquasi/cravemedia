@@ -66,7 +66,9 @@ export default function SearchForm({
   const [phraseIndex, setPhraseIndex] = useState(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isEmpty = !deferredQuery.trim();
+  // Use query (not deferredQuery) for isEmpty so typewriter stops immediately on first keystroke.
+  // deferredQuery would lag and keep typewriter firing, competing with input updates and causing typing delay.
+  const isEmpty = !query.trim();
   const expandedCategory = SUGGESTION_CATEGORIES.find(
     (c) => c.id === expandedCategoryId,
   );
