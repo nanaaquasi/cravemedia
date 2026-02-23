@@ -1,0 +1,41 @@
+---
+description: Always prefer MCP tools when available for relevant tasks
+alwaysApply: true
+---
+
+# Use MCP Tools Always
+
+When performing tasks, **always prefer MCP (Model Context Protocol) tools** over equivalent non-MCP approaches when they are available and relevant.
+
+## MCP Tool Priorities
+
+### Supabase / Database
+- Use **plugin-supabase-supabase** or **user-supabase** MCP for:
+  - Running migrations (`apply_migration`)
+  - Executing SQL (`execute_sql`)
+  - Listing tables, migrations, branches
+  - Generating TypeScript types
+  - Edge functions, project config
+
+### Browser / Web Testing
+- Use **cursor-ide-browser** MCP for:
+  - Navigating and testing the app in a browser
+  - Taking screenshots, checking elements
+  - Form filling, clicking, scrolling
+  - Performance profiling
+
+### Figma
+- Use **user-Figma** MCP when the user shares Figma URLs or references designs.
+
+### Web Fetching
+- Use **mcp_web_fetch** for fetching URL content instead of web search when the URL is known.
+
+### Complex Tasks
+- Use **mcp_task** with subagent_type `explore` for broad codebase exploration, `shell` for git/terminal work, `generalPurpose` for multi-step research.
+
+## Checklist Before Acting
+1. Is there an MCP tool that can do this? → Use it.
+2. Need to run a migration? → Use Supabase MCP `apply_migration`.
+3. Need to test in browser? → Use cursor-ide-browser.
+4. Need to fetch a URL? → Use mcp_web_fetch.
+5. Need to explore the codebase broadly? → Use mcp_task with explore agent.
