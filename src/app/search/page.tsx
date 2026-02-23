@@ -387,7 +387,9 @@ function SearchContent() {
           )}
 
           <AnimatePresence>
-            {showImmersiveLoader && <CuratingLoader mode={viewMode} />}
+            {showImmersiveLoader && (
+              <CuratingLoader mode={viewMode} mediaType={contentType} />
+            )}
           </AnimatePresence>
 
           {error && (
