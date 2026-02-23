@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useDeferredValue, useRef, useState } from "react";
 import { SUGGESTION_CATEGORIES } from "@/config/suggestion-categories";
 import { X } from "lucide-react";
 
@@ -43,6 +43,7 @@ export default function SearchForm({
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
   );
@@ -65,7 +66,7 @@ export default function SearchForm({
   const [phraseIndex, setPhraseIndex] = useState(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isEmpty = !query.trim();
+  const isEmpty = !deferredQuery.trim();
   const expandedCategory = SUGGESTION_CATEGORIES.find(
     (c) => c.id === expandedCategoryId,
   );
@@ -119,7 +120,7 @@ export default function SearchForm({
     <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-6 px-2 sm:px-0">
       <div className="w-full max-w-3xl mx-auto sm:px-6">
         <div
-          className={`relative rounded-3xl border border-white/25 bg-white/3 backdrop-blur-md transition-all duration-200 min-h-[100px] sm:min-h-[200px] ${
+          className={`relative rounded-3xl border border-white/25 bg-white/3 sm:backdrop-blur-md transition-colors duration-200 min-h-[100px] sm:min-h-[200px] ${
             isEmpty ? "" : "border-white/0 bg-white/5 ring-0"
           }`}
         >
@@ -152,15 +153,18 @@ export default function SearchForm({
             <div className="flex items-center justify-between gap-2 mt-4">
               <span
                 className={`shrink-0 text-xs font-medium tabular-nums transition-colors ${
-                  query.length > 0 ? "text-white/40" : "text-white/40"
+                  deferredQuery.length > 0 ? "text-white/40" : "text-white/40"
                 }`}
               >
-                {query.length}/{QUERY_MAX_LENGTH}
+                {deferredQuery.length}/{QUERY_MAX_LENGTH}
               </span>
               <div className="flex items-center gap-2">
                 {!isEmpty && (
                   <button
-                    onClick={() => setQuery("")}
+                    onClick={() => {
+                      setQuery("");
+                      textareaRef.current?.focus();
+                    }}
                     className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
                     aria-label="Clear"
                   >
@@ -182,7 +186,7 @@ export default function SearchForm({
                 ) : (
                   <button
                     onClick={handleSubmit}
-                    disabled={!query.trim()}
+                    disabled={!deferredQuery.trim()}
                     className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/30"
                     aria-label="Search"
                   >
@@ -208,7 +212,7 @@ export default function SearchForm({
 
         {/* Category chips + expand panel */}
         <div className="mt-4 sm:mt-5 relative">
-          <div className="overflow-x-auto scrollbar-hide -mx-1 px-1 pb-2 sm:mx-0 sm:px-0 sm:pb-0">
+          <div className="overflow-x-auto scrollbar-hide pb-2 sm:px-0 min-w-0">
             <div className="flex gap-2 sm:flex-wrap sm:justify-center min-w-max sm:min-w-0">
               {SUGGESTION_CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
