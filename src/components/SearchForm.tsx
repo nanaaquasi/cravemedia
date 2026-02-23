@@ -24,6 +24,8 @@ interface SearchFormProps {
   isLoading: boolean;
   /** Placeholder prompts for typewriter effect (e.g. PLACEHOLDER_PROMPTS). */
   placeholderPrompts?: readonly string[];
+  /** Optional label above the input (e.g. "WHAT ARE YOU CRAVING?") */
+  labelText?: string;
 }
 
 const TYPING_SPEED_MS = 55;
@@ -37,6 +39,7 @@ export default function SearchForm({
   onSubmit,
   isLoading,
   placeholderPrompts,
+  labelText,
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState("");
@@ -117,9 +120,7 @@ export default function SearchForm({
       <div className="w-full max-w-3xl mx-auto sm:px-6">
         <div
           className={`relative rounded-3xl border border-white/25 bg-white/3 backdrop-blur-md transition-all duration-200 min-h-[100px] sm:min-h-[200px] ${
-            isEmpty
-              ? ""
-              : "border-white/40 bg-white/15 ring-1 ring-purple-500/40"
+            isEmpty ? "" : "border-white/0 bg-white/5 ring-0"
           }`}
         >
           <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
@@ -151,7 +152,7 @@ export default function SearchForm({
             <div className="flex items-center justify-between gap-2 mt-4">
               <span
                 className={`shrink-0 text-xs font-medium tabular-nums transition-colors ${
-                  query.length > 0 ? "text-white/60" : "text-white/40"
+                  query.length > 0 ? "text-white/40" : "text-white/40"
                 }`}
               >
                 {query.length}/{QUERY_MAX_LENGTH}
@@ -278,11 +279,12 @@ export default function SearchForm({
 
         {/* AI disclaimer */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-4 sm:mt-6 text-center sm:text-left">
-          <span className="shrink-0 text-sm font-semibold px-3 py-1.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/30">
+          <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/30">
             AI
           </span>
-          <span className="text-sm text-white/45">
-            craveo may create unexpected results.
+          <span className="text-xs text-white/45">
+            craveo uses AI to personalize results — responses may occasionally
+            miss the mark
           </span>
         </div>
       </div>

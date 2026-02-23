@@ -12,9 +12,27 @@ import { HomeSections } from "@/components/HomeSections";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 import {
   HERO_POSTERS,
-  ROTATING_WORDS,
   PLACEHOLDER_PROMPTS,
+  EARLY_USERS_COUNT,
+  AVG_MATCH_RATING,
+  HERO_LABEL,
 } from "@/config/home-page";
+import { Star } from "lucide-react";
+
+const AVATAR_BG_COLORS = [
+  "#ec4899", // pink
+  "#8b5cf6", // purple
+  "#06b6d4", // cyan
+  "#f59e0b", // amber
+  "#22c55e", // green
+] as const;
+
+function getAvatarBgColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++)
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+  return AVATAR_BG_COLORS[Math.abs(hash) % AVATAR_BG_COLORS.length];
+}
 
 function inferContentTypesFromQuery(
   query: string,
@@ -55,11 +73,16 @@ export default function Home() {
   >("all");
   const refine = useIntentRefine();
 
-  // Cycling headline word
-  const [wordIndex, setWordIndex] = useState(0);
-  const [isFading, setIsFading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
 
+  const [heroAvatars, setHeroAvatars] = useState<
+    {
+      id: string;
+      username: string | null;
+      fullName: string | null;
+      avatarUrl: string | null;
+    }[]
+  >([]);
   const [pickOfTheDay, setPickOfTheDay] = useState<{
     mediaId: string;
     type: string;
@@ -74,24 +97,16 @@ export default function Home() {
     Promise.all([
       fetch("/api/pick-of-the-day").then((r) => r.json()),
       fetch("/api/featured-collections").then((r) => r.json()),
-    ]).then(([pick, featured]) => {
+      fetch("/api/hero-avatars").then((r) => r.json()),
+    ]).then(([pick, featured, avatars]) => {
       setPickOfTheDay(pick.mediaId && pick.posterUrl ? pick : null);
       setFeaturedCollections(featured.collections ?? []);
+      setHeroAvatars(avatars.avatars ?? []);
     });
   }, []);
 
   useEffect(() => {
-    // Prefetch search page for faster transition
     router.prefetch("/search");
-
-    const interval = setInterval(() => {
-      setIsFading(true);
-      setTimeout(() => {
-        setWordIndex((i) => (i + 1) % ROTATING_WORDS.length);
-        setIsFading(false);
-      }, 400);
-    }, 3000);
-    return () => clearInterval(interval);
   }, [router]);
 
   useEffect(() => {
@@ -223,27 +238,77 @@ export default function Home() {
         </div>
         <div className="relative z-10 flex flex-col items-center">
           <div className="text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 mt-10">
+            <div className="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-semibold uppercase tracking-wide mb-6">
+              <Star className="w-3.5 h-3.5" strokeWidth={2} />
+              PERSOaNALIZED DISCOVERY ENGINE
+            </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-              <span className="bg-linear-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-size-[200%_auto] animate-[gradientShift_6s_ease_infinite]">
-                What are you
-              </span>
+              <span className="text-white">Find what to watch</span>
               <br />
-              <span
-                className={`text-white inline-block transition-all duration-400 ${isFading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"}`}
-              >
-                {ROTATING_WORDS[wordIndex]}
+              <span className="text-white">or read </span>
+              <span className="bg-linear-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent bg-size-[200%_auto] animate-[gradientShift_6s_ease_infinite]">
+                next.
               </span>
             </h1>
-            <p className="text-(--text-secondary) text-base md:text-lg leading-relaxed  px-6 md:px-0">
-              Discover your next favorite show, movie, or book through
-              personalized journeys that actually make sense.
+            <p className="text-(--text-secondary) text-base md:text-md leading-relaxed px-6 md:px-3 mb-6">
+              Describe what you&apos;re in the mood for — in plain English.
+              Craveo finds the perfect match, not just what&apos;s trending.
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs text-(--text-secondary)">
+              <div className="flex items-center gap-1">
+                <div className="flex -space-x-2">
+                  {heroAvatars.slice(0, 5).map((a, i) => (
+                    <div
+                      key={a.id}
+                      className="relative w-6 h-6 rounded-full border-2 border-(--bg-primary) overflow-hidden flex items-center justify-center shrink-0"
+                      style={{
+                        zIndex: 5 - i,
+                        backgroundColor: getAvatarBgColor(a.id),
+                      }}
+                    >
+                      {a.avatarUrl &&
+                      (a.avatarUrl.startsWith("http://") ||
+                        a.avatarUrl.startsWith("https://")) ? (
+                        <Image
+                          src={a.avatarUrl}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="30px"
+                          unoptimized
+                        />
+                      ) : (
+                        <span className="text-xs font-medium text-white/90">
+                          {(a.username ?? a.fullName ?? "?")
+                            .slice(0, 1)
+                            .toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <span>Join {EARLY_USERS_COUNT} early users</span>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <div className="flex text-amber-400">
+                  {[1, 2, 3, 4].map((n) => (
+                    <Star
+                      key={n}
+                      className="w-4 h-4 fill-current"
+                      strokeWidth={0}
+                    />
+                  ))}
+                </div>
+                <span>{AVG_MATCH_RATING} avg match rating</span>
+              </div>
+            </div>
           </div>
 
           <SearchForm
             onSubmit={handleSubmit}
             isLoading={false}
             placeholderPrompts={PLACEHOLDER_PROMPTS}
+            labelText={HERO_LABEL}
           />
         </div>
       </div>

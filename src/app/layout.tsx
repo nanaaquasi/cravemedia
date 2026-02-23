@@ -19,13 +19,18 @@ export const viewport = {
   viewportFit: "cover",
 };
 
-export const metadata: Metadata = {
-  metadataBase: new URL(
+function getMetadataBase(): string {
+  const raw =
     process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "http://localhost:3000"),
-  ),
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return raw.startsWith("localhost") ? `http://${raw}` : `https://${raw}`;
+}
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getMetadataBase()),
   title: "Craveo — Discover Movies, TV Shows & Books",
   description:
     "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.",

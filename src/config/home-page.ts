@@ -6,12 +6,11 @@ export const HERO_POSTERS = [
   "https://image.tmdb.org/t/p/w500/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
 ] as const;
 
-export const ROTATING_WORDS = [
-  "craving?",
-  "in the mood for?",
-  "looking for?",
-  "obsessed with?",
-] as const;
+export const EARLY_USERS_COUNT = 47;
+export const AVG_MATCH_RATING = "4.2";
+export const HERO_LABEL = "WHAT ARE YOU CRAVING?";
+export const HERO_PLACEHOLDER =
+  "e.g. something slow-burn and emotional, like a rainy Sunday afternoon...";
 
 export const SUGGESTION_QUERIES = [
   "I need to ugly cry right now",
@@ -35,6 +34,7 @@ export const SUGGESTION_QUERIES = [
 ] as const;
 
 export const PLACEHOLDER_PROMPTS = [
+  "e.g. something slow-burn and emotional, like a rainy Sunday afternoon...",
   "Start with a mood or a title...",
   "e.g. something that will ruin my sleep",
   "Describe what you want...",
