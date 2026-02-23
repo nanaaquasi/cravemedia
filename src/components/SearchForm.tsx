@@ -78,7 +78,7 @@ export default function SearchForm({
 
   // Typewriter effect: plays PLACEHOLDER_PROMPTS when input is empty
   useEffect(() => {
-    const list = (placeholderPrompts ?? ALL_PROMPTS_FALLBACK).slice(0, 7);
+    const list = (placeholderPrompts ?? ALL_PROMPTS_FALLBACK).slice(0, 8);
     if (list.length === 0 || !isEmpty) return;
 
     const phrase = list[phraseIndex];
