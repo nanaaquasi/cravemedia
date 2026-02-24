@@ -2,6 +2,7 @@ interface GoogleBooksVolume {
   id: string;
   volumeInfo: {
     title: string;
+    description?: string;
     authors?: string[];
     publishedDate?: string;
     pageCount?: number;
