@@ -283,6 +283,25 @@ export default function IntentRefineStep({
     setSelections({});
   }, [isLastQuestion, questions, selections, onSubmitAnswers]);
 
+  const handleSkipQuestion = useCallback(() => {
+    if (!isLastQuestion) {
+      setCurrentQuestionIndex((i) => i + 1);
+      return;
+    }
+
+    const answers: RefineAnswer[] = questions
+      .filter((q) => (selections[q.id] || []).length > 0)
+      .map((q) => ({
+        questionId: q.id,
+        questionText: q.text,
+        selected: selections[q.id],
+      }));
+
+    onSubmitAnswers(answers);
+    setCurrentQuestionIndex(0);
+    setSelections({});
+  }, [isLastQuestion, questions, selections, onSubmitAnswers]);
+
   const currentSelections = currentQuestion
     ? selections[currentQuestion.id] || []
     : [];
@@ -742,7 +761,7 @@ export default function IntentRefineStep({
               </motion.button>
 
               <button
-                onClick={onSkip}
+                onClick={handleSkipQuestion}
                 className="order-2 sm:order-1 text-sm text-white/30 hover:text-white/60 transition-colors cursor-pointer px-4 py-2"
               >
                 Skip
