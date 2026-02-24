@@ -4,10 +4,11 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { track } from "@vercel/analytics";
-import { ContentType } from "@/lib/types";
+import { ContentType, EnrichedRecommendation } from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
+import SimilarToModal from "@/components/SimilarToModal";
 import { HomeSections } from "@/components/HomeSections";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 import {
@@ -68,6 +69,7 @@ export default function Home() {
   const [pendingMode, setPendingMode] = useState<SearchMode>("list");
   const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
+  const [isSimilarToModalOpen, setIsSimilarToModalOpen] = useState(false);
   const [initialTypeSelection, setInitialTypeSelection] = useState<
     ContentType | ContentType[]
   >("all");
@@ -163,6 +165,26 @@ export default function Home() {
       refine.startRefine(pendingQuery, contentType);
     },
     [refine, pendingQuery, contentType],
+  );
+
+  const handleSimilarToFind = useCallback(
+    (params: {
+      items: EnrichedRecommendation[];
+      mood?: string;
+      mode: SearchMode;
+      type: ContentType;
+      synthesizedQuery: string;
+    }) => {
+      setPendingQuery(params.synthesizedQuery);
+      setContentType(params.type);
+      setPendingMode(params.mode);
+      setShowTypeSelect(false);
+      setShowModeSelect(false);
+      setInitialTypeSelection(params.type);
+      setIsSimilarToModalOpen(false);
+      refine.startRefine(params.synthesizedQuery, params.type);
+    },
+    [refine],
   );
 
   const handleSkipRefine = useCallback(async () => {
@@ -309,9 +331,16 @@ export default function Home() {
             isLoading={false}
             placeholderPrompts={PLACEHOLDER_PROMPTS}
             labelText={HERO_LABEL}
+            onSimilarToClick={() => setIsSimilarToModalOpen(true)}
           />
         </div>
       </div>
+
+      <SimilarToModal
+        isOpen={isSimilarToModalOpen}
+        onClose={() => setIsSimilarToModalOpen(false)}
+        onFindSimilar={handleSimilarToFind}
+      />
 
       <div className="relative pt-0 sm:pt-4 pb-16">
         <HomeSections

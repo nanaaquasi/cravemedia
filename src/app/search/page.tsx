@@ -392,18 +392,20 @@ function SearchContent() {
             )}
           </AnimatePresence>
 
-          {error && (
-            <div className="text-center py-16 sm:py-20 px-4 sm:px-6 animate-fade-in-up">
-              <p className="text-3xl mb-3">😵</p>
-              <p className="text-[var(--text-secondary)] text-base mb-1">
-                {error}
-              </p>
-              <button
-                onClick={() => globalThis.location.reload()}
-                className="text-base text-purple-400 hover:text-purple-300 mt-3 cursor-pointer"
-              >
-                Try again
-              </button>
+          {error && !results && !journeyResults && (
+            <div className="flex-1 flex flex-col justify-center items-center min-h-0">
+              <div className="text-center py-16 sm:py-20 px-4 sm:px-6 animate-fade-in-up">
+                <p className="text-3xl mb-3">😵</p>
+                <p className="text-[var(--text-secondary)] text-base mb-1">
+                  {error}
+                </p>
+                <button
+                  onClick={() => globalThis.location.reload()}
+                  className="text-base text-purple-400 hover:text-purple-300 mt-3 cursor-pointer"
+                >
+                  Try again
+                </button>
+              </div>
             </div>
           )}
 
@@ -535,6 +537,7 @@ function SearchContent() {
       <FloatingSearchButton
         onClick={() => router.push("/")}
         isLoading={isLoading}
+        showSpinner={!showImmersiveLoader}
       />
 
       <Toast message={saveToast} onClose={() => setSaveToast(null)} />

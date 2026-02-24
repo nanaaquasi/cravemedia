@@ -184,9 +184,17 @@ export async function POST(request: NextRequest) {
       );
 
       const allEnriched = await Promise.all(enrichmentPromises);
-      const enrichedItems = allEnriched.filter(
+      const withExternalId = allEnriched.filter(
         (item): item is JourneyItem => item.externalId != null,
       );
+      // Deduplicate by externalId to avoid same book/movie appearing multiple times
+      const seenIds = new Set<string>();
+      const enrichedItems = withExternalId.filter((item) => {
+        const id = String(item.externalId);
+        if (seenIds.has(id)) return false;
+        seenIds.add(id);
+        return true;
+      });
       const totalRuntimeMinutes =
         aiResponse.total_runtime_minutes ??
         aiResponse.totalRuntimeMinutes ??
@@ -308,9 +316,17 @@ export async function POST(request: NextRequest) {
     );
 
     const allEnriched = await Promise.all(enrichmentPromises);
-    const enrichedItems = allEnriched.filter(
+    const withExternalId = allEnriched.filter(
       (item): item is EnrichedRecommendation => item.externalId != null,
     );
+    // Deduplicate by externalId to avoid same book/movie appearing multiple times
+    const seenIds = new Set<string>();
+    const enrichedItems = withExternalId.filter((item) => {
+      const id = String(item.externalId);
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
 
     const response: RecommendationResponse = {
       collectionTitle: aiResponse.collectionTitle,

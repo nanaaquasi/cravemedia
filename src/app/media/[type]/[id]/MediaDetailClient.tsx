@@ -73,11 +73,11 @@ export interface CastMember {
 }
 
 export interface RecommendedTitle {
-  id: number;
+  id: number | string;
   title: string;
   posterUrl: string | null;
   voteAverage: number;
-  type: "movie" | "tv" | "anime";
+  type: "movie" | "tv" | "anime" | "book";
 }
 
 export interface AnimeRelationItem {
@@ -101,8 +101,9 @@ export interface MediaDetails {
   runtime: string | null;
   genres: string[];
   directors: string[];
+  authors?: string[];
   trailerKey: string | null;
-  type: "movie" | "tv" | "anime";
+  type: "movie" | "tv" | "anime" | "book";
   episodes?: number | null;
   studios?: string[];
   format?: string;
@@ -340,9 +341,12 @@ export default function MediaDetailClient({
     }
   };
 
+  const isBook = details.type === "book";
   const collectionItem: EnrichedRecommendation = {
     title: details.title,
-    creator: details.directors.join(", ") || "",
+    creator: isBook
+      ? (details.authors ?? []).join(", ") || ""
+      : details.directors.join(", ") || "",
     year: details.releaseDate
       ? Number.parseInt(details.releaseDate.slice(0, 4), 10)
       : 0,
@@ -356,7 +360,6 @@ export default function MediaDetailClient({
     externalId: mediaId,
   };
 
-  const isBook = false;
   const statusConfig = status
     ? STATUS_OPTIONS.find((s) => s.value === status) ?? STATUS_OPTIONS[4]
     : null;
@@ -372,7 +375,9 @@ export default function MediaDetailClient({
       ? "Movie"
       : details.type === "tv"
         ? "TV Show"
-        : (details.format ?? "Anime");
+        : details.type === "book"
+          ? "Book"
+          : (details.format ?? "Anime");
 
   const router = useRouter();
 
@@ -450,7 +455,9 @@ export default function MediaDetailClient({
                     ? "🎬"
                     : details.type === "tv"
                       ? "📺"
-                      : "🎌"}
+                      : details.type === "book"
+                        ? "📚"
+                        : "🎌"}
                 </div>
               )}
             </div>
@@ -572,14 +579,20 @@ export default function MediaDetailClient({
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3">
               {details.runtime && (
-              <InfoRow label="Runtime" value={details.runtime} />
-            )}
-            {details.directors.length > 0 && (
-              <InfoRow
-                label={`Director${details.directors.length > 1 ? "s" : ""}`}
-                value={details.directors.join(", ")}
-              />
-            )}
+                <InfoRow label={isBook ? "Pages" : "Runtime"} value={details.runtime} />
+              )}
+              {isBook && details.authors && details.authors.length > 0 && (
+                <InfoRow
+                  label={`Author${details.authors.length > 1 ? "s" : ""}`}
+                  value={details.authors.join(", ")}
+                />
+              )}
+              {!isBook && details.directors.length > 0 && (
+                <InfoRow
+                  label={`Director${details.directors.length > 1 ? "s" : ""}`}
+                  value={details.directors.join(", ")}
+                />
+              )}
             {details.writers && details.writers.length > 0 && (
               <InfoRow
                 label={`Writer${details.writers.length > 1 ? "s" : ""}`}
@@ -624,13 +637,13 @@ export default function MediaDetailClient({
               <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
                 {(communityStats.watching ?? 0) > 0 && (
                   <InfoRow
-                    label="People Watching"
+                    label={isBook ? "People Reading" : "People Watching"}
                     value={String(communityStats.watching)}
                   />
                 )}
                 {(communityStats.watched ?? 0) > 0 && (
                   <InfoRow
-                    label="People Finished"
+                    label={isBook ? "People Read" : "People Finished"}
                     value={String(communityStats.watched)}
                   />
                 )}
@@ -1210,7 +1223,11 @@ export default function MediaDetailClient({
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
-                          {rec.type === "anime" ? "🎌" : "🎬"}
+                          {rec.type === "anime"
+                            ? "🎌"
+                            : rec.type === "book"
+                              ? "📚"
+                              : "🎬"}
                         </div>
                       )}
                       {rec.voteAverage > 0 && (

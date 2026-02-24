@@ -12,6 +12,17 @@ interface TMDBSearchResult {
   runtime?: number;
   media_type?: string;
   overview?: string;
+  genre_ids?: number[];
+  origin_country?: string[];
+}
+
+/** TMDB genre ID for Animation; JP + Animation = likely anime */
+const TMDB_ANIME_GENRE_ID = 16;
+
+function isLikelyAnime(result: TMDBSearchResult): boolean {
+  const hasAnimation = result.genre_ids?.includes(TMDB_ANIME_GENRE_ID) ?? false;
+  const isJapanese = result.origin_country?.includes("JP") ?? false;
+  return hasAnimation && isJapanese;
 }
 
 interface TMDBDetails {
@@ -74,8 +85,9 @@ export async function searchTV(
   if (year) params.first_air_date_year = year.toString();
 
   const data = await tmdbFetch<TMDBSearchResponse>("/search/tv", params);
-  console.log(data.results);
-  return data.results || [];
+  const results = data.results || [];
+  // Filter out anime — AniList is used for anime; TMDB anime is less accurate
+  return results.filter((r) => !isLikelyAnime(r));
 }
 
 export async function getMovieDetails(id: number): Promise<TMDBDetails> {

@@ -90,7 +90,7 @@ export default function MediaSearchModal({
             <input
               type="text"
               autoFocus
-              placeholder="Search for movies, books, games..."
+              placeholder="Search for movies, books, TV shows..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all shadow-inner"

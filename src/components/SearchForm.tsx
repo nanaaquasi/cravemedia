@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useDeferredValue, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useDeferredValue,
+  useRef,
+  useState,
+} from "react";
 import { SUGGESTION_CATEGORIES } from "@/config/suggestion-categories";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 
 const QUERY_MAX_LENGTH = 200;
 const PROMPTS_PER_CATEGORY = 5;
@@ -26,6 +32,8 @@ interface SearchFormProps {
   placeholderPrompts?: readonly string[];
   /** Optional label above the input (e.g. "WHAT ARE YOU CRAVING?") */
   labelText?: string;
+  /** Optional callback when user clicks "Similar To" button */
+  onSimilarToClick?: () => void;
 }
 
 const TYPING_SPEED_MS = 55;
@@ -40,6 +48,7 @@ export default function SearchForm({
   isLoading,
   placeholderPrompts,
   labelText,
+  onSimilarToClick,
 }: SearchFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [query, setQuery] = useState("");
@@ -119,14 +128,14 @@ export default function SearchForm({
   };
 
   return (
-    <div className="w-full flex flex-col items-center pb-8 sm:pb-12 mt-4 sm:mt-6 px-2 sm:px-0">
+    <div className="w-full flex flex-col items-center pb-8 sm:pb-8 mt-4 sm:mt-6 px-2 sm:px-0">
       <div className="w-full max-w-3xl mx-auto sm:px-6">
         <div
           className={`relative rounded-3xl border border-white/25 bg-white/3 sm:backdrop-blur-md transition-colors duration-200 min-h-[100px] sm:min-h-[200px] ${
             isEmpty ? "" : "border-white/0 bg-white/5 ring-0"
           }`}
         >
-          <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-8">
+          <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-4">
             <textarea
               ref={textareaRef}
               value={query}
@@ -153,13 +162,26 @@ export default function SearchForm({
               </div>
             )}
             <div className="flex items-center justify-between gap-2 mt-4">
-              <span
-                className={`shrink-0 text-xs font-medium tabular-nums transition-colors ${
-                  deferredQuery.length > 0 ? "text-white/40" : "text-white/40"
-                }`}
-              >
-                {deferredQuery.length}/{QUERY_MAX_LENGTH}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {onSimilarToClick && (
+                  <button
+                    type="button"
+                    onClick={onSimilarToClick}
+                    title="Similar To"
+                    aria-label="Similar To"
+                    className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                )}
+                <span
+                  className={`hidden text-xs font-medium tabular-nums transition-colors ${
+                    deferredQuery.length > 0 ? "text-white/40" : "text-white/40"
+                  }`}
+                >
+                  {deferredQuery.length}/{QUERY_MAX_LENGTH}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 {!isEmpty && (
                   <button

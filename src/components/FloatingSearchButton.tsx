@@ -3,11 +3,14 @@
 interface FloatingSearchButtonProps {
   onClick: () => void;
   isLoading?: boolean;
+  /** When false, hides the spinner (e.g. when another loader like CuratingLoader is visible) */
+  showSpinner?: boolean;
 }
 
 export default function FloatingSearchButton({
   onClick,
   isLoading = false,
+  showSpinner = true,
 }: FloatingSearchButtonProps) {
   return (
     <button
@@ -31,7 +34,7 @@ export default function FloatingSearchButton({
       <div className="absolute inset-0 rounded-2xl border border-white/25 group-hover:border-white/40 transition-colors" />
       {/* Icon */}
       <span className="relative z-10 text-2xl text-white drop-shadow-md">
-        {isLoading ? (
+        {isLoading && showSpinner ? (
           <div className="w-7 h-7 border-2 border-white/40 border-t-white rounded-full animate-spin" />
         ) : (
           "✦"

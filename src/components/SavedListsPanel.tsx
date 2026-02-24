@@ -77,7 +77,10 @@ export default function SavedListsPanel({
 
   const getItemHref = (item: EnrichedRecommendation) => {
     if (
-      (item.type === "movie" || item.type === "tv" || item.type === "anime") &&
+      (item.type === "movie" ||
+        item.type === "tv" ||
+        item.type === "anime" ||
+        item.type === "book") &&
       item.externalId
     ) {
       return `/media/${item.type}/${item.externalId}`;

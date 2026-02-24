@@ -46,6 +46,7 @@ export function useRecommendations() {
 
         const data = await response.json();
 
+        setError(null); // Clear any stale error from a prior failed request
         if (mode === "journey") {
           setJourneyResults(data as JourneyResponse);
         } else {

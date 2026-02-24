@@ -45,13 +45,19 @@ export default function RecommendationItem({
           : "Anime";
 
   const detailHref =
-    (item.type === "movie" || item.type === "tv" || item.type === "anime") &&
+    (item.type === "movie" ||
+      item.type === "tv" ||
+      item.type === "anime" ||
+      item.type === "book") &&
     item.externalId
       ? `/media/${item.type}/${item.externalId}`
       : null;
 
   const canLookup =
-    (item.type === "movie" || item.type === "tv" || item.type === "anime") &&
+    (item.type === "movie" ||
+      item.type === "tv" ||
+      item.type === "anime" ||
+      item.type === "book") &&
     !item.externalId;
 
   async function handleLookupClick() {

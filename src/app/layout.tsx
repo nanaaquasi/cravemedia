@@ -80,7 +80,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={dmSans.variable}>
-      <body className="bg-gradient-mesh min-h-screen overflow-x-hidden">
+      <body className="bg-gradient-mesh min-h-screen overflow-x-clip">
         <NextTopLoader
           color="#a855f7"
           height={3}

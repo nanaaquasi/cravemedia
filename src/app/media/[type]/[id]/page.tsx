@@ -11,6 +11,7 @@ import {
   type WatchProvider,
 } from "@/lib/tmdb";
 import { getAnimeDetails } from "@/lib/anilist";
+import { getBookDetails } from "@/lib/books";
 import { createClient } from "@/lib/supabase/server";
 import MediaDetailClient, { MediaDetails } from "./MediaDetailClient";
 import type { WatchStatus } from "@/app/actions/collection";
@@ -22,12 +23,13 @@ interface PageProps {
 export default async function MediaDetailPage({ params }: PageProps) {
   const { type, id } = await params;
 
-  if (type !== "movie" && type !== "tv" && type !== "anime") {
+  if (type !== "movie" && type !== "tv" && type !== "anime" && type !== "book") {
     redirect("/");
   }
 
-  const idNum = parseInt(id, 10);
-  if (isNaN(idNum)) {
+  const isBook = type === "book";
+  const idNum = isBook ? 0 : parseInt(id, 10);
+  if (!isBook && isNaN(idNum)) {
     redirect("/");
   }
 
@@ -110,6 +112,27 @@ export default async function MediaDetailPage({ params }: PageProps) {
         originCountry: [],
         writers: [],
         source: details.source,
+      };
+    } else if (type === "book") {
+      const details = await getBookDetails(id);
+      if (!details) throw new Error("Book not found");
+
+      mediaDetails = {
+        title: details.title,
+        overview: details.overview,
+        posterUrl: details.posterUrl,
+        backdropUrl: null,
+        voteAverage: details.voteAverage,
+        voteCount: details.voteCount,
+        releaseDate: details.releaseDate,
+        runtime: details.runtime,
+        genres: details.genres,
+        directors: [],
+        authors: details.authors,
+        trailerKey: null,
+        type: "book",
+        cast: [],
+        recommendations: [],
       };
     } else {
       const details = await getMediaDetails(type as "movie" | "tv", idNum);
