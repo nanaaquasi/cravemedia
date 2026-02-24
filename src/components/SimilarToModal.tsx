@@ -135,13 +135,13 @@ export default function SimilarToModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex justify-end md:justify-center md:items-center overflow-hidden md:px-4">
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity overflow-hidden"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative flex flex-col w-full max-w-md md:max-w-2xl h-full md:h-auto md:max-h-[85vh] bg-gradient-mesh md:bg-zinc-900 border-l border-white/5 md:border md:border-white/10 md:rounded-2xl shadow-2xl overflow-hidden animate-slide-in-right">
         <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between shrink-0 gap-4">
           <div>
             <h2 className="text-xl font-semibold text-white">
@@ -292,7 +292,7 @@ export default function SimilarToModal({
             )}
           </div>
 
-          <div className="mt-4 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-2">
+          <div className="mt-4 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain pb-4">
             {selectedItems.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {selectedItems.map((item, idx) => (
@@ -356,7 +356,10 @@ export default function SimilarToModal({
                 <span className="text-white">{getTypeLabel(derivedType)}</span>
               </div>
             )}
+          </div>
 
+          {/* Sticky footer - sticks to bottom on mobile, full width */}
+          <div className="shrink-0 -mx-6 px-6 py-4 pb-6 md:pb-4 pt-0 md:pt-4 mt-auto">
             <button
               onClick={handleFindSimilar}
               disabled={selectedItems.length === 0}
