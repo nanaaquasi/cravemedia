@@ -83,7 +83,22 @@ export default function Header({
         <span className="text-lg font-semibold tracking-tight">craveo</span>
       </Link>
 
-      <div className="flex items-center gap-3">
+      {/** Mobile: profile avatar */}
+      <Link
+        href={user ? "/account" : "/login"}
+        className="md:hidden flex items-center justify-center w-9 h-9 rounded-full overflow-hidden border border-white/10 bg-black/20 active:scale-95 transition-transform"
+        aria-label={user ? "Profile" : "Sign in"}
+      >
+        {user ? (
+          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold text-white">
+            {user.email?.[0].toUpperCase() || "U"}
+          </div>
+        ) : (
+          <UserIcon className="w-5 h-5 text-white/60" />
+        )}
+      </Link>
+
+      <div className="hidden md:flex items-center gap-3">
         <button
           onClick={onOpenSavedLists}
           className={`relative flex items-center gap-2 p-2 sm:pr-4 sm:pl-3 rounded-full transition-colors cursor-pointer group ${

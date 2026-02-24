@@ -490,7 +490,7 @@ export async function reviewCollectionItem(
 
   const updateData: Record<string, unknown> = {};
   if (data.rating != null) {
-    const r = Math.max(1, Math.min(5, data.rating));
+    const r = Math.max(1, Math.min(10, data.rating));
     updateData.item_rating = r;
   }
   if (data.review !== undefined) {
@@ -535,7 +535,7 @@ export async function reviewMediaAcrossCollections(
   }
 
   const rating =
-    data.rating != null ? Math.max(1, Math.min(5, data.rating)) : null;
+    data.rating != null ? Math.max(1, Math.min(10, data.rating)) : null;
   const reviewText = data.review?.trim() || null;
   const containsSpoilers = data.containsSpoilers ?? false;
 

@@ -22,15 +22,12 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
   const isOnFirstStep = completedCount === 0;
   const stepToShow = isOnFirstStep ? firstItem : currentItem;
   const currentLabel =
-    stepToShow?.type === "book"
-      ? "Currently reading"
-      : "Currently watching";
+    stepToShow?.type === "book" ? "Currently reading" : "Currently watching";
 
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Play className="w-5 h-5 text-green-400 fill-current" />
           Current Journey
         </h2>
       </div>
@@ -53,7 +50,7 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
                   Started {new Date(journey.started_at!).toLocaleDateString()}
                 </p>
               </div>
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-2">
                 {journey.title}
               </h3>
               {stepToShow ? (
@@ -82,7 +79,7 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
 
             <Link
               href={`/journey/${journey.id}`}
-              className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-colors whitespace-nowrap"
+              className="flex items-center self-start gap-2 bg-white text-black px-6 py-3 rounded-xl font-bold hover:bg-zinc-200 transition-colors whitespace-nowrap"
             >
               Continue Journey
               <ArrowRight className="w-4 h-4" />
@@ -94,7 +91,8 @@ export function CurrentJourney({ journey }: CurrentJourneyProps) {
             <div className="flex justify-between text-sm">
               <span className="text-zinc-400 font-medium">Progress</span>
               <span className="text-white font-bold">
-                {Math.round(progress)}% ({completedCount} / {journey.total_items})
+                {Math.round(progress)}% ({completedCount} /{" "}
+                {journey.total_items})
               </span>
             </div>
             <div className="h-3 bg-white/5 rounded-full overflow-hidden">

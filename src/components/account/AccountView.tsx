@@ -18,10 +18,7 @@ import { InProgressMedia } from "./InProgressMedia";
 import Link from "next/link";
 import { Clock, Plus, LayoutGrid, Loader2, Play, Sparkles } from "lucide-react";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
-import {
-  CRAVELIST_LABEL,
-  CRAVELIST_LABEL_PLURAL,
-} from "@/config/labels";
+import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
 
@@ -59,11 +56,6 @@ export function AccountView({
   const { createList, refreshLists } = useLists();
 
   useEffect(() => {
-    // We already have initial data from server, but we can refresh if needed
-    // or just rely on the server data for the first render.
-    // The current implementation blocked render with loading=true.
-    // Now we initialize with server data and loading=false.
-
     // Subscribe to realtime updates
     if (profile?.id) {
       const channel = subscribeToUserActivity(profile.id, (newActivity) => {
@@ -122,8 +114,13 @@ export function AccountView({
 
   return (
     <div className="min-h-screen pb-20 font-sans">
-      <div className="max-w-6xl mx-auto mt-6">
-        <ProfileHeader profile={profile} email={email} stats={finalStats} isNewUser={isNewUser} />
+      <div className="max-w-7xl mx-auto mt-6">
+        <ProfileHeader
+          profile={profile}
+          email={email}
+          stats={finalStats}
+          isNewUser={isNewUser}
+        />
         <ProfileNav activeTab={activeTab} onTabChange={setActiveTab} />
 
         <div className="mt-8">
@@ -164,7 +161,10 @@ export function AccountView({
                   </div>
                   <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
                     {initialCollections.slice(0, 3).map((col) => (
-                      <div key={col.id} className="shrink-0 w-72 md:shrink md:w-auto">
+                      <div
+                        key={col.id}
+                        className="shrink-0 w-72 md:shrink md:w-auto"
+                      >
                         <CollectionCard collection={col} />
                       </div>
                     ))}
@@ -175,7 +175,8 @@ export function AccountView({
               {/* If no current and no saved, show Get Started or empty state */}
               {!dashboardData.currentJourney &&
                 dashboardData.wishlistJourneys.length === 0 &&
-                (featuredJourneys.length > 0 || featuredCollections.length > 0 ? (
+                (featuredJourneys.length > 0 ||
+                featuredCollections.length > 0 ? (
                   <div className="space-y-8">
                     <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
@@ -269,7 +270,8 @@ export function AccountView({
               {!dashboardData.currentJourney &&
                 dashboardData.wishlistJourneys.length === 0 &&
                 dashboardData.completedJourneys.length === 0 &&
-                (featuredJourneys.length > 0 || featuredCollections.length > 0 ? (
+                (featuredJourneys.length > 0 ||
+                featuredCollections.length > 0 ? (
                   <div className="space-y-8">
                     <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
@@ -355,7 +357,9 @@ export function AccountView({
           {activeTab === "Collections" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">My {CRAVELIST_LABEL_PLURAL}</h2>
+                <h2 className="text-xl font-bold text-white">
+                  My {CRAVELIST_LABEL_PLURAL}
+                </h2>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors cursor-pointer"
@@ -365,7 +369,8 @@ export function AccountView({
                 </button>
               </div>
               <p className="text-zinc-500 text-sm -mt-4 mb-8">
-                Organise and manage your custom {CRAVELIST_LABEL_PLURAL.toLowerCase()} here.
+                Organise and manage your custom{" "}
+                {CRAVELIST_LABEL_PLURAL.toLowerCase()} here.
               </p>
 
               {initialCollections.length > 0 ? (

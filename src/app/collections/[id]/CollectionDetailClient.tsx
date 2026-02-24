@@ -26,6 +26,7 @@ import {
   Loader2,
   Trash2,
   Star,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
@@ -124,6 +125,9 @@ export default function CollectionDetailClient({
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(items);
   const [prevItems, setPrevItems] = useState(items);
 
@@ -163,6 +167,20 @@ export default function CollectionDetailClient({
       setEditDescription(collection.description ?? "");
     }
   }, [collection.name, collection.description, isEditingCollection]);
+
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        statusDropdownRef.current &&
+        !statusDropdownRef.current.contains(e.target as Node)
+      ) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [statusDropdownOpen]);
 
   if (items !== prevItems) {
     setPrevItems(items);
@@ -368,6 +386,35 @@ export default function CollectionDetailClient({
     typeof window !== "undefined"
       ? `${window.location.origin}/collections/${collection.id}`
       : "";
+
+  const getItemStatus = (item: CollectionItem): WatchStatus => {
+    const raw = item.status as string | undefined;
+    if (raw === "finished") return "watched";
+    if (raw === "unfinished") return "not_seen";
+    const valid: WatchStatus[] = [
+      "watched",
+      "dropped",
+      "watching",
+      "on_hold",
+      "not_seen",
+      "not_interested",
+    ];
+    return (valid.includes(raw as WatchStatus) ? raw : "not_seen") as WatchStatus;
+  };
+
+  const filteredItems =
+    statusFilter === "all"
+      ? orderedItems
+      : orderedItems.filter((i) => getItemStatus(i) === statusFilter);
+
+  const statusCounts = orderedItems.reduce(
+    (acc, item) => {
+      const s = getItemStatus(item);
+      acc[s] = (acc[s] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<WatchStatus, number>,
+  );
 
   return (
     <div className="flex flex-col min-h-screen pb-12">
@@ -620,6 +667,57 @@ export default function CollectionDetailClient({
           <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0 mt-4 md:mt-0">
             {orderedItems.length > 0 && (
               <>
+                {/* Status filter */}
+                <div className="relative" ref={statusDropdownRef}>
+                  <button
+                    onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-colors cursor-pointer"
+                    aria-expanded={statusDropdownOpen}
+                  >
+                    <span>
+                      {statusFilter === "all"
+                        ? "Status"
+                        : WATCH_STATUSES.find((s) => s.value === statusFilter)
+                            ?.label ?? statusFilter}
+                    </span>
+                    <span className="text-white/50">
+                      ({statusFilter === "all" ? orderedItems.length : statusCounts[statusFilter] ?? 0})
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-white/50 transition-transform ${
+                        statusDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {statusDropdownOpen && (
+                    <div className="absolute left-0 top-full mt-1 min-w-[140px] py-1 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl z-50">
+                      <button
+                        onClick={() => {
+                          setStatusFilter("all");
+                          setStatusDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors cursor-pointer"
+                      >
+                        <span>All statuses</span>
+                        <span className="text-white/50">{orderedItems.length}</span>
+                      </button>
+                      {WATCH_STATUSES.map(({ value, label }) => (
+                        <button
+                          key={value}
+                          onClick={() => {
+                            setStatusFilter(value);
+                            setStatusDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                          <span>{label}</span>
+                          <span className="text-white/50">{statusCounts[value] ?? 0}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* View Toggle */}
                 <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
                   <button
@@ -697,42 +795,102 @@ export default function CollectionDetailClient({
 
       {/* Items Grid */}
       {orderedItems.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={orderedItems.map((i) => i.id)}
-            strategy={
-              viewMode === "list"
-                ? verticalListSortingStrategy
-                : rectSortingStrategy
-            }
+        statusFilter === "all" ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
-                  : "grid grid-cols-1 md:grid-cols-2 gap-4"
+            <SortableContext
+              items={orderedItems.map((i) => i.id)}
+              strategy={
+                viewMode === "list"
+                  ? verticalListSortingStrategy
+                  : rectSortingStrategy
               }
             >
-              {orderedItems.map((dbItem, index) => (
-                <SortableItemWrapper
-                  key={dbItem.id}
-                  dbItem={dbItem}
-                  index={index}
-                  viewMode={viewMode}
-                  isEditMode={isEditMode}
-                  isOwner={isOwner}
-                  onStatusChange={handleStatusChange}
-                  onOpenReview={handleOpenReview}
-                  onRemoveItem={handleRemoveItem}
-                />
-              ))}
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
+                    : "grid grid-cols-1 md:grid-cols-2 gap-4"
+                }
+              >
+                {orderedItems.map((dbItem, index) => (
+                  <SortableItemWrapper
+                    key={dbItem.id}
+                    dbItem={dbItem}
+                    index={index}
+                    viewMode={viewMode}
+                    isEditMode={isEditMode}
+                    isOwner={isOwner}
+                    onStatusChange={handleStatusChange}
+                    onOpenReview={handleOpenReview}
+                    onRemoveItem={handleRemoveItem}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+              <LayoutGrid className="w-8 h-8 text-zinc-500" />
             </div>
-          </SortableContext>
-        </DndContext>
+            <h2 className="text-xl font-bold text-white mb-2">
+              No items match this filter
+            </h2>
+            <p className="text-zinc-400 text-sm max-w-sm mb-6">
+              No items with status &quot;
+              {WATCH_STATUSES.find((s) => s.value === statusFilter)?.label ??
+                statusFilter}
+              &quot;. Try a different filter.
+            </p>
+            <button
+              onClick={() => setStatusFilter("all")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Clear filter
+            </button>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={() => {}}
+          >
+            <SortableContext
+              items={filteredItems.map((i) => i.id)}
+              strategy={
+                viewMode === "list"
+                  ? verticalListSortingStrategy
+                  : rectSortingStrategy
+              }
+            >
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6"
+                    : "grid grid-cols-1 md:grid-cols-2 gap-4"
+                }
+              >
+                {filteredItems.map((dbItem, index) => (
+                  <SortableItemWrapper
+                    key={dbItem.id}
+                    dbItem={dbItem}
+                    index={index}
+                    viewMode={viewMode}
+                    isEditMode={false}
+                    isOwner={isOwner}
+                    onStatusChange={handleStatusChange}
+                    onOpenReview={handleOpenReview}
+                    onRemoveItem={handleRemoveItem}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )
       ) : (
         <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
           <div className="w-20 h-20 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-6">
@@ -786,16 +944,16 @@ export default function CollectionDetailClient({
                 reviewItem.title ??
                 "Untitled"}
             </p>
-            <div className="flex gap-1 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
+            <div className="flex gap-0.5 mb-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
                 <button
                   key={star}
                   type="button"
                   onClick={() => setReviewRating(star)}
-                  className="p-1 rounded transition-colors cursor-pointer"
+                  className="p-0.5 rounded transition-colors cursor-pointer"
                 >
                   <Star
-                    className={`w-8 h-8 ${
+                    className={`w-6 h-6 ${
                       star <= reviewRating
                         ? "text-amber-400 fill-amber-400"
                         : "text-zinc-500 hover:text-amber-400/50"
@@ -804,6 +962,9 @@ export default function CollectionDetailClient({
                 </button>
               ))}
             </div>
+            <p className="text-zinc-500 text-xs -mt-2 mb-2">
+              {reviewRating}/10
+            </p>
             <textarea
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value.slice(0, 280))}

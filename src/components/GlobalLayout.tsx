@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import SavedListsPanel from "@/components/SavedListsPanel";
 import { useLists } from "@/hooks/useLists";
 import { useRouter } from "next/navigation";
@@ -30,12 +31,16 @@ export default function GlobalLayout({
   return (
     <>
       <Header onOpenSavedLists={() => setShowSavedLists(true)} user={user} />
-      <div className="pt-20 flex flex-col min-h-screen px-4 md:px-10 lg:px-10 xl:px-20 overflow-x-hidden">
+      <div className="pt-20 flex flex-col min-h-screen px-4 md:px-10 lg:px-10 xl:px-20 overflow-x-hidden pb-20 md:pb-0">
         <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
         <Footer />
       </div>
+      <MobileBottomNav
+        onOpenLists={() => setShowSavedLists(true)}
+        listsCount={lists.length}
+      />
       <SavedListsPanel
         lists={lists}
         isOpen={showSavedLists}
