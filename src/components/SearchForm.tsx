@@ -135,35 +135,33 @@ export default function SearchForm({
             isEmpty ? "" : "border-white/0 bg-white/5 ring-0"
           }`}
         >
-          <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-3 sm:p-4">
-            <div className="relative flex-1 min-h-0">
-              <textarea
-                ref={textareaRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                placeholder=""
-                maxLength={QUERY_MAX_LENGTH}
-                disabled={isLoading}
-                className="absolute inset-0 w-full h-full bg-transparent text-lg sm:text-xl text-white outline-none resize-none disabled:opacity-50 caret-white z-0 px-3 py-1.5 leading-relaxed"
-                aria-label="Tell us what you're craving"
-              />
-              {/* Typewriter placeholder - same box as textarea for exact alignment */}
-              {isEmpty && phrases.length > 0 && (
-                <div className="absolute inset-0 px-3 py-1.5 pointer-events-none z-10 flex items-start">
-                  <span className="text-base sm:text-lg text-white/50 leading-relaxed">
-                    {displayedText || phrases[0]}
-                    <span className="animate-pulse">|</span>
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="flex items-center justify-between gap-2 mt-3">
+          <div className="relative min-h-[100px] sm:min-h-[200px] flex flex-col p-4 sm:p-4">
+            <textarea
+              ref={textareaRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder=""
+              maxLength={QUERY_MAX_LENGTH}
+              disabled={isLoading}
+              className="flex-1 bg-transparent text-lg sm:text-xl text-white outline-none resize-none min-h-[100px] disabled:opacity-50 caret-white relative z-0"
+              aria-label="Tell us what you're craving"
+            />
+            {/* Typewriter placeholder overlay - on top when empty */}
+            {isEmpty && phrases.length > 0 && (
+              <div className="absolute inset-0 flex items-start p-5 sm:p-4 pointer-events-none z-10">
+                <span className="text-lg sm:text-xl text-white/50 leading-relaxed">
+                  {displayedText || phrases[0]}
+                  <span className="animate-pulse">|</span>
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2 mt-4">
               <div className="flex items-center gap-2 shrink-0">
                 {onSimilarToClick && (
                   <button
