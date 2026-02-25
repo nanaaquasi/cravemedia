@@ -289,18 +289,8 @@ export default function IntentRefineStep({
       return;
     }
 
-    const answers: RefineAnswer[] = questions
-      .filter((q) => (selections[q.id] || []).length > 0)
-      .map((q) => ({
-        questionId: q.id,
-        questionText: q.text,
-        selected: selections[q.id],
-      }));
-
-    onSubmitAnswers(answers);
-    setCurrentQuestionIndex(0);
-    setSelections({});
-  }, [isLastQuestion, questions, selections, onSubmitAnswers]);
+    onSkip();
+  }, [isLastQuestion, onSkip]);
 
   const currentSelections = currentQuestion
     ? selections[currentQuestion.id] || []
