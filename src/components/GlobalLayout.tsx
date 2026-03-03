@@ -6,17 +6,16 @@ import Footer from "@/components/Footer";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import SavedListsPanel from "@/components/SavedListsPanel";
 import { useLists } from "@/hooks/useLists";
+import { useSession } from "@/context/SessionContext";
 import { useRouter } from "next/navigation";
 import { EnrichedRecommendation } from "@/lib/types";
-import { User } from "@supabase/supabase-js";
 
 export default function GlobalLayout({
   children,
-  user,
 }: {
   children: React.ReactNode;
-  user: User | null;
 }) {
+  const { user } = useSession();
   const [showSavedLists, setShowSavedLists] = useState(false);
   const { lists, deleteList, removeItemFromList, exportListAsText } =
     useLists();
@@ -30,7 +29,7 @@ export default function GlobalLayout({
 
   return (
     <>
-      <Header onOpenSavedLists={() => setShowSavedLists(true)} user={user} />
+      <Header onOpenSavedLists={() => setShowSavedLists(true)} />
       <div className="pt-20 flex flex-col min-h-screen px-4 md:px-10 lg:px-10 xl:px-20 overflow-x-clip pb-20 md:pb-0">
         <div className="flex-1 flex flex-col min-h-0">
           {children}

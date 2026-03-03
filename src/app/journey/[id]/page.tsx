@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { toSessionUser } from "@/app/api/auth/session/route";
 import JourneyDetailClient from "./JourneyDetailClient";
 import { JourneyResponse, JourneyItem } from "@/lib/types";
 import type { Metadata } from "next";
@@ -178,7 +179,7 @@ export default async function JourneyDetailPage({
       journeyId={id}
       isOwner={isOwner}
       isPublic={isPublic}
-      user={user}
+      user={toSessionUser(user)}
       saveOnLoad={save === "1"}
       savedToast={saved === "1"}
       existingCloneId={existingCloneId}

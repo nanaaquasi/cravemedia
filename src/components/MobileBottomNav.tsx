@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, BookMarked, User, LayoutGrid } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/context/SessionContext";
 
 interface MobileBottomNavProps {
   onOpenLists: () => void;
@@ -16,18 +15,7 @@ export default function MobileBottomNav({
   listsCount,
 }: MobileBottomNavProps) {
   const pathname = usePathname();
-  const [user, setUser] = useState<{ email?: string | null } | null>(null);
-  const supabase = createClient();
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const { user } = useSession();
 
   const isHome = pathname === "/";
   const isProfile = pathname === "/account" || pathname === "/login";

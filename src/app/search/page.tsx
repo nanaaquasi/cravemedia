@@ -1,14 +1,13 @@
 "use client";
 
 import { saveJourneyData } from "@/app/actions/journey";
-import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
 
 import { useState, useCallback, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { ContentType, EnrichedRecommendation, JourneyItem } from "@/lib/types";
 import { useRecommendations, RecommendMode } from "@/hooks/useRecommendations";
+import { useSession } from "@/context/SessionContext";
 import { useLists } from "@/hooks/useLists";
 import { getJourneyIdFromResults } from "@/hooks/useJourneyProgress";
 import ContentTypeSelector from "@/components/ContentTypeSelector";
@@ -46,16 +45,7 @@ function SearchContent() {
     null,
   );
   const [showImmersiveLoader, setShowImmersiveLoader] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const supabase = createClient();
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-    };
-    checkUser();
-  }, [supabase]);
+  const { user } = useSession();
 
   const { results, journeyResults, isLoading, error, fetchRecommendations } =
     useRecommendations();

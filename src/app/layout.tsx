@@ -72,6 +72,7 @@ export const metadata: Metadata = {
 };
 
 import { ListsProvider } from "@/context/ListsContext";
+import { SessionProvider } from "@/context/SessionContext";
 
 export default function RootLayout({
   children,
@@ -87,9 +88,11 @@ export default function RootLayout({
           showSpinner={false}
           crawlSpeed={200}
         />
-        <ListsProvider user={null}>
-          <GlobalLayout user={null}>{children}</GlobalLayout>
-        </ListsProvider>
+        <SessionProvider>
+          <ListsProvider>
+            <GlobalLayout>{children}</GlobalLayout>
+          </ListsProvider>
+        </SessionProvider>
         <Analytics />
         <SpeedInsights />
       </body>

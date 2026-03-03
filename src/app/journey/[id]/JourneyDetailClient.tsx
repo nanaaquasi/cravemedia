@@ -9,14 +9,14 @@ import { useRouter } from "next/navigation";
 import ShareModal from "@/components/ShareModal";
 import { toggleJourneyVisibility, cloneJourney } from "@/app/actions/journey";
 import Toast from "@/components/Toast";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/app/api/auth/session/route";
 
 interface JourneyDetailClientProps {
   journey: JourneyResponse;
   journeyId: string;
   isOwner: boolean;
   isPublic: boolean;
-  user: User | null;
+  user: SessionUser | null;
   /** When true, auto-clone on mount (guest returned from login via Sign in to Save) */
   saveOnLoad?: boolean;
   /** When true, show "Saved to your journeys" toast (redirected after clone) */

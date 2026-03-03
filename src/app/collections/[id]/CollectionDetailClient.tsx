@@ -1,7 +1,7 @@
 "use client";
 
 import { Collection, CollectionItem } from "@/lib/supabase/types";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/app/api/auth/session/route";
 import { EnrichedRecommendation } from "@/lib/types";
 import RecommendationItem from "@/components/RecommendationItem";
 import {
@@ -83,7 +83,7 @@ interface CollectionDetailClientProps {
   items: CollectionItem[];
   isOwner: boolean;
   isPublic: boolean;
-  user: User | null;
+  user: SessionUser | null;
   ownerProfile?: OwnerProfile;
   /** When true, auto-clone on mount (guest returned from login via Sign in to Save) */
   saveOnLoad?: boolean;

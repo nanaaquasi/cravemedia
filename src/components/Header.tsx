@@ -3,25 +3,21 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { useLists } from "@/hooks/useLists";
+import { useSession } from "@/context/SessionContext";
 import { LogOut, User as UserIcon, ChevronDown } from "lucide-react";
 import { signout } from "@/app/auth/actions";
 import { CRAVELIST_LABEL } from "@/config/labels";
 
 interface HeaderProps {
   onOpenSavedLists: () => void;
-  user: User | null;
 }
 
-export default function Header({
-  onOpenSavedLists,
-  user: initialUser,
-}: HeaderProps) {
+export default function Header({ onOpenSavedLists }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { lists } = useLists();
-  const [user, setUser] = useState<User | null>(initialUser);
+  const { user } = useSession();
   const supabase = createClient();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -44,20 +40,6 @@ export default function Header({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    setUser(initialUser);
-  }, [initialUser]);
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -90,9 +72,17 @@ export default function Header({
         aria-label={user ? "Profile" : "Sign in"}
       >
         {user ? (
-          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold text-white">
-            {user.email?.[0].toUpperCase() || "U"}
-          </div>
+          user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-sm font-bold text-white">
+              {user.email?.[0].toUpperCase() || user.full_name?.[0]?.toUpperCase() || "U"}
+            </div>
+          )
         ) : (
           <UserIcon className="w-5 h-5 text-white/60" />
         )}
@@ -141,9 +131,17 @@ export default function Header({
               } ${isDropdownOpen ? "border-purple-500/50 bg-black/60" : ""}`}
             >
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white">
-                  {user.email?.[0].toUpperCase() || "U"}
-                </div>
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                    {user.email?.[0].toUpperCase() || user.full_name?.[0]?.toUpperCase() || "U"}
+                  </div>
+                )}
               </div>
               <ChevronDown
                 className={`w-4 h-4 text-white/50 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}

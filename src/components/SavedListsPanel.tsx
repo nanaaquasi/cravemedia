@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ShareModal from "./ShareModal";
-import { User } from "@supabase/supabase-js";
+import type { SessionUser } from "@/app/api/auth/session/route";
 import { toggleCollectionVisibility } from "@/app/actions/collection";
 import { toggleJourneyVisibility } from "@/app/actions/journey";
 
@@ -22,7 +22,7 @@ interface SavedListsPanelProps {
   onRemoveItem: (listId: string, item: EnrichedRecommendation) => void;
   onExport: (list: SavedList) => string;
   onMoreLikeThis?: (item: EnrichedRecommendation) => void;
-  user?: User | null;
+  user?: SessionUser | null;
 }
 
 export default function SavedListsPanel({

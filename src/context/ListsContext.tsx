@@ -10,7 +10,7 @@ import {
 } from "react";
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { useSession } from "@/context/SessionContext";
 import {
   deleteCollectionItem,
   deleteCollection,
@@ -56,43 +56,14 @@ export interface ListsContextType {
 
 const ListsContext = createContext<ListsContextType | undefined>(undefined);
 
-export function ListsProvider({
-  children,
-  user: initialUser = null,
-}: {
-  children: ReactNode;
-  user?: User | null;
-}) {
+export function ListsProvider({ children }: { children: ReactNode }) {
+  const { user } = useSession();
   const [lists, setLists] = useState<SavedList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(initialUser);
-
-  useEffect(() => {
-    setUser(initialUser);
-  }, [initialUser]);
   const supabase = createClient();
 
   // Local storage fallback for non-auth users
   const [localLists, setLocalLists] = useState<SavedList[]>([]);
-
-  // Check auth state
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    checkUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const refreshLists = useCallback(async () => {
     if (!user) {
