@@ -235,8 +235,7 @@ export async function POST(request: NextRequest) {
 
     const typeArray = Array.isArray(type) ? type : [type];
     const isAnimeOnly =
-      type === "anime" ||
-      (typeArray.length === 1 && typeArray[0] === "anime");
+      type === "anime" || (typeArray.length === 1 && typeArray[0] === "anime");
     const itemsToEnrich = isAnimeOnly
       ? aiResponse.items.slice(0, 12)
       : aiResponse.items;

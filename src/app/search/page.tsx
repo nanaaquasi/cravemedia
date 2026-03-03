@@ -157,7 +157,11 @@ function SearchContent() {
       if (results) {
         setSaveToast("Saving cravelist...");
         try {
-          const saved = await createList(title, description || "", results.items);
+          const saved = await createList(
+            title,
+            description || "",
+            results.items,
+          );
           if (saved) {
             setSavedCollectionId(saved.id);
             setSaveToast(`Saved "${title}" with ${results.items.length} items`);

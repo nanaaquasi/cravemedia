@@ -20,6 +20,7 @@ import {
   generateJourneyWithAnthropic,
   generateRefineWithAnthropic,
 } from "./ai-anthropic";
+import { withRetry } from "./ai-retry";
 
 export type AIProvider = "gemini" | "openai" | "anthropic";
 
@@ -44,13 +45,13 @@ export async function generateRecommendations(
 
   switch (provider) {
     case "gemini":
-      return generateWithGemini(query, type, options);
+      return withRetry(() => generateWithGemini(query, type, options));
     case "openai":
-      return generateWithOpenAI(query, type);
+      return withRetry(() => generateWithOpenAI(query, type));
     case "anthropic":
-      return generateWithAnthropic(query, type);
+      return withRetry(() => generateWithAnthropic(query, type));
     default:
-      return generateWithGemini(query, type, options);
+      return withRetry(() => generateWithGemini(query, type, options));
   }
 }
 
@@ -79,14 +80,18 @@ export async function generateJourney(
 
   switch (provider) {
     case "openai":
-      raw = await generateJourneyWithOpenAI(query, type);
+      raw = await withRetry(() => generateJourneyWithOpenAI(query, type));
       break;
     case "anthropic":
-      raw = await generateJourneyWithAnthropic(query, type);
+      raw = await withRetry(() =>
+        generateJourneyWithAnthropic(query, type),
+      );
       break;
     case "gemini":
     default:
-      raw = await generateJourneyWithGemini(query, type, options);
+      raw = await withRetry(() =>
+        generateJourneyWithGemini(query, type, options),
+      );
   }
 
   return normalizeJourneyResponse(raw);
@@ -101,11 +106,17 @@ export async function generateRefineQuestions(
 
   switch (provider) {
     case "openai":
-      return generateRefineWithOpenAI(query, type, previousAnswers);
+      return withRetry(() =>
+        generateRefineWithOpenAI(query, type, previousAnswers),
+      );
     case "anthropic":
-      return generateRefineWithAnthropic(query, type, previousAnswers);
+      return withRetry(() =>
+        generateRefineWithAnthropic(query, type, previousAnswers),
+      );
     case "gemini":
     default:
-      return generateRefineWithGemini(query, type, previousAnswers);
+      return withRetry(() =>
+        generateRefineWithGemini(query, type, previousAnswers),
+      );
   }
 }
