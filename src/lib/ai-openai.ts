@@ -14,6 +14,10 @@ import { cleanAndParseJSON } from "./ai-utils";
 export async function generateWithOpenAI(
   query: string,
   type: ContentType | ContentType[],
+  options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
+  } = {},
 ): Promise<AIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -28,7 +32,13 @@ export async function generateWithOpenAI(
     max_tokens: 3000,
     temperature: 0.7,
     messages: [
-      { role: "system", content: getSystemPrompt(type) },
+      {
+        role: "system",
+        content: getSystemPrompt(type, {
+          excludeTitles: options.excludeTitles,
+          userContext: options.userContext,
+        }),
+      },
       { role: "user", content: query },
     ],
     response_format: { type: "json_object" },
@@ -45,6 +55,10 @@ export async function generateWithOpenAI(
 export async function generateJourneyWithOpenAI(
   query: string,
   type: ContentType | ContentType[],
+  options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
+  } = {},
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -59,7 +73,13 @@ export async function generateJourneyWithOpenAI(
     max_tokens: 4000,
     temperature: 0.7,
     messages: [
-      { role: "system", content: getJourneySystemPrompt(type) },
+      {
+        role: "system",
+        content: getJourneySystemPrompt(type, {
+          excludeTitles: options.excludeTitles,
+          userContext: options.userContext,
+        }),
+      },
       { role: "user", content: query },
     ],
     response_format: { type: "json_object" },
@@ -77,6 +97,7 @@ export async function generateRefineWithOpenAI(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
+  options?: { userContext?: import("./types").UserRecommendContext },
 ): Promise<RefineResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -91,7 +112,12 @@ export async function generateRefineWithOpenAI(
     max_tokens: 2000,
     temperature: 0.8,
     messages: [
-      { role: "system", content: getRefineSystemPrompt(type, previousAnswers) },
+      {
+        role: "system",
+        content: getRefineSystemPrompt(type, previousAnswers, {
+          userContext: options?.userContext,
+        }),
+      },
       { role: "user", content: query },
     ],
     response_format: { type: "json_object" },

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { generateRecommendations, generateJourney } from "@/lib/ai";
+import { getUserRecommendContext } from "@/lib/user-context";
 import { checkRecommendRateLimit } from "@/lib/ratelimit";
-import { enrichMovieOrTV } from "@/lib/tmdb";
-import { enrichBook } from "@/lib/books";
-import { enrichAnime } from "@/lib/anilist";
 import {
-  getCachedRecommendation,
-  setCachedRecommendation,
-  getCachedJourney,
-  setCachedJourney,
+  cachedEnrichMovieOrTV,
+  cachedEnrichAnime,
+  cachedEnrichBook,
+} from "@/lib/enrichment-cache";
+import {
+  getCachedRecommendationAsync,
+  setCachedRecommendationAsync,
+  getCachedJourneyAsync,
+  setCachedJourneyAsync,
 } from "@/lib/recommendation-cache";
 import {
   ContentType,
@@ -43,6 +47,33 @@ function filterByYearIfNeeded<T extends { year?: string | number }>(
     if (y == null || y === "") return false;
     const yearNum = typeof y === "string" ? Number.parseInt(y.slice(0, 4), 10) : Math.floor(y);
     return !Number.isNaN(yearNum) && yearNum >= minYear;
+  });
+}
+
+/** Detect if query asks for single-season / one-season / miniseries / limited series TV */
+function queryWantsSingleSeason(query: string): boolean {
+  const q = query.toLowerCase();
+  return (
+    /\b(single[- ]?season|one[- ]?season|1[- ]?season)\b/.test(q) ||
+    /\b(miniseries|mini[- ]?series)\b/.test(q) ||
+    /\b(limited\s+series|limited\s+run)\b/.test(q)
+  );
+}
+
+/** Filter out multi-season TV shows when query asks for single-season only */
+function filterBySingleSeasonIfNeeded<
+  T extends { type?: string; runtime?: string | null },
+>(items: T[], query: string): T[] {
+  if (!queryWantsSingleSeason(query)) return items;
+  return items.filter((item) => {
+    if (item.type !== "tv") return true;
+    const r = item.runtime ?? "";
+    const multiMatch = /^(\d+)\s*seasons?$/.exec(r.trim());
+    if (multiMatch) {
+      const num = Number.parseInt(multiMatch[1], 10);
+      return num === 1;
+    }
+    return true;
   });
 }
 
@@ -84,6 +115,36 @@ function parseRuntimeMinutes(runtime: string | null): number {
   return 0;
 }
 
+/** Normalize title for comparison (handles "The Matrix" vs "Matrix", case, etc.) */
+function normalizeTitleForMatch(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/^(the|a|an)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*[\(\[]\d{4}[\)\]]\s*$/, ""); // strip trailing (2010) or [2010]
+}
+
+/** Filter out items whose titles match the excluded list (LLM may ignore prompt) */
+function filterByExcludedTitles<T extends { title?: string }>(
+  items: T[],
+  excludeTitles: string[],
+): T[] {
+  if (excludeTitles.length === 0) return items;
+  const excludeSet = new Set(
+    excludeTitles.map((t) => normalizeTitleForMatch(t)),
+  );
+  return items.filter((item) => {
+    const norm = normalizeTitleForMatch(item.title ?? "");
+    if (excludeSet.has(norm)) return false;
+    // Also exclude if item title starts with excluded + space/colon (e.g. "Matrix" excludes "Matrix Reloaded")
+    for (const ex of excludeSet) {
+      if (norm.startsWith(ex + " ") || norm.startsWith(ex + ":")) return false;
+    }
+    return true;
+  });
+}
+
 export async function POST(request: NextRequest) {
   const rateLimitResult = await checkRecommendRateLimit(request.headers);
   if (!rateLimitResult.success) {
@@ -99,6 +160,7 @@ export async function POST(request: NextRequest) {
       query,
       type,
       mode = "list",
+      excludeTitles = [],
       maxOutputTokens = 3000, // Default value
       temperature = 0.4, // Default value
       responseMimeType = "application/json", // Default value
@@ -106,10 +168,15 @@ export async function POST(request: NextRequest) {
       query: string;
       type: ContentType | ContentType[];
       mode?: "list" | "journey";
+      excludeTitles?: string[];
       maxOutputTokens?: number;
       temperature?: number;
       responseMimeType?: string;
     };
+
+    const sanitizedExcludeTitles = Array.isArray(excludeTitles)
+      ? excludeTitles.filter((t) => typeof t === "string" && t.trim().length > 0).slice(0, 50)
+      : [];
 
     // Validate input
     if (!query || typeof query !== "string" || query.trim().length === 0) {
@@ -135,9 +202,24 @@ export async function POST(request: NextRequest) {
 
     const trimmedQuery = query.trim();
 
+    // Fetch user context for personalization (logged-in only)
+    let userContext: Awaited<ReturnType<typeof getUserRecommendContext>> = null;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      userContext = await getUserRecommendContext(user.id);
+    }
+
+    const useCache =
+      sanitizedExcludeTitles.length === 0 && !userContext;
+
     if (mode === "journey") {
-      // Journey mode
-      const cached = getCachedJourney(trimmedQuery, type);
+      // Journey mode — skip cache when excluding titles
+      const cached = useCache
+        ? await getCachedJourneyAsync(trimmedQuery, type)
+        : null;
       if (cached) {
         const { title: jt, description: jd } = ensureMultiTypeLabel(
           cached.journeyTitle,
@@ -152,6 +234,8 @@ export async function POST(request: NextRequest) {
       }
 
       const aiResponse = await generateJourney(trimmedQuery, type, {
+        excludeTitles: sanitizedExcludeTitles,
+        userContext: userContext ?? undefined,
         maxOutputTokens,
         temperature,
         responseMimeType,
@@ -167,9 +251,14 @@ export async function POST(request: NextRequest) {
       const isAnimeOnlyJourney =
         type === "anime" ||
         (journeyTypeArray.length === 1 && journeyTypeArray[0] === "anime");
+      const filteredJourneyItems = filterByExcludedTitles(
+        aiResponse.items,
+        sanitizedExcludeTitles,
+      );
+      const hasExclusions = sanitizedExcludeTitles.length > 0;
       const journeyItems = isAnimeOnlyJourney
-        ? aiResponse.items.slice(0, 12)
-        : aiResponse.items;
+        ? filteredJourneyItems.slice(0, hasExclusions ? 16 : 12)
+        : filteredJourneyItems;
 
       const enrichmentPromises = journeyItems.map(
         async (raw: JourneyItemRaw): Promise<JourneyItem> => {
@@ -200,11 +289,11 @@ export async function POST(request: NextRequest) {
             };
 
             if (effectiveType === "book") {
-              enriched = await enrichBook(raw.title, raw.creator);
+              enriched = await cachedEnrichBook(raw.title, raw.creator);
             } else if (effectiveType === "anime") {
-              enriched = await enrichAnime(raw.title, raw.year);
+              enriched = await cachedEnrichAnime(raw.title, raw.year);
             } else {
-              enriched = await enrichMovieOrTV(
+              enriched = await cachedEnrichMovieOrTV(
                 raw.title,
                 raw.year,
                 effectiveType,
@@ -254,16 +343,17 @@ export async function POST(request: NextRequest) {
       );
 
       const allEnriched = await Promise.all(enrichmentPromises);
-      let withExternalId = allEnriched.filter(
-        (item): item is JourneyItem => item.externalId != null,
-      );
-      withExternalId = filterByYearIfNeeded(withExternalId, trimmedQuery);
-      // Deduplicate by externalId to avoid same book/movie appearing multiple times
-      const seenIds = new Set<string>();
-      const enrichedItems = withExternalId.filter((item) => {
-        const id = String(item.externalId);
-        if (seenIds.has(id)) return false;
-        seenIds.add(id);
+      let enrichedItems = filterByYearIfNeeded(allEnriched, trimmedQuery);
+      enrichedItems = filterBySingleSeasonIfNeeded(enrichedItems, trimmedQuery);
+      // Deduplicate by externalId when present; for items without externalId, use title+creator+year
+      const seenKeys = new Set<string>();
+      enrichedItems = enrichedItems.filter((item) => {
+        const key =
+          item.externalId != null
+            ? String(item.externalId)
+            : `${item.title}|${item.creator}|${item.year}`;
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
         return true;
       });
       const totalRuntimeMinutes =
@@ -289,7 +379,9 @@ export async function POST(request: NextRequest) {
         itemCount: enrichedItems.length,
       };
 
-      setCachedJourney(trimmedQuery, type, response);
+      if (useCache) {
+        await setCachedJourneyAsync(trimmedQuery, type, response);
+      }
 
       createSearchSession(trimmedQuery, type, mode).catch((err) =>
         console.error("createSearchSession:", err),
@@ -298,8 +390,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // List mode (default)
-    const cached = getCachedRecommendation(trimmedQuery, type);
+    // List mode (default) — skip cache when excluding titles
+    const cached = useCache
+      ? await getCachedRecommendationAsync(trimmedQuery, type)
+      : null;
     if (cached) {
       const { title: ct, description: cd } = ensureMultiTypeLabel(
         cached.collectionTitle,
@@ -314,6 +408,8 @@ export async function POST(request: NextRequest) {
     }
 
     const aiResponse = await generateRecommendations(trimmedQuery, type, {
+      excludeTitles: sanitizedExcludeTitles,
+      userContext: userContext ?? undefined,
       maxOutputTokens,
       temperature,
       responseMimeType,
@@ -322,9 +418,14 @@ export async function POST(request: NextRequest) {
     const typeArray = Array.isArray(type) ? type : [type];
     const isAnimeOnly =
       type === "anime" || (typeArray.length === 1 && typeArray[0] === "anime");
+    const filteredItems = filterByExcludedTitles(
+      aiResponse.items,
+      sanitizedExcludeTitles,
+    );
+    const hasExclusions = sanitizedExcludeTitles.length > 0;
     const itemsToEnrich = isAnimeOnly
-      ? aiResponse.items.slice(0, 12)
-      : aiResponse.items;
+      ? filteredItems.slice(0, hasExclusions ? 24 : 12)
+      : filteredItems;
 
     const enrichmentPromises = itemsToEnrich.map(
       async (item): Promise<EnrichedRecommendation> => {
@@ -347,7 +448,7 @@ export async function POST(request: NextRequest) {
 
         try {
           if (effectiveType === "book") {
-            const enriched = await enrichBook(item.title, item.creator);
+            const enriched = await cachedEnrichBook(item.title, item.creator);
             return {
               ...item,
               type: effectiveType,
@@ -358,7 +459,7 @@ export async function POST(request: NextRequest) {
               aiPopularity: item.popularityScore,
             };
           } else if (effectiveType === "anime") {
-            const enriched = await enrichAnime(item.title, item.year);
+            const enriched = await cachedEnrichAnime(item.title, item.year);
             return {
               ...item,
               type: effectiveType,
@@ -369,7 +470,7 @@ export async function POST(request: NextRequest) {
               aiPopularity: item.popularityScore,
             };
           } else {
-            const enriched = await enrichMovieOrTV(
+            const enriched = await cachedEnrichMovieOrTV(
               item.title,
               item.year,
               effectiveType,
@@ -401,16 +502,17 @@ export async function POST(request: NextRequest) {
     );
 
     const allEnriched = await Promise.all(enrichmentPromises);
-    let withExternalId = allEnriched.filter(
-      (item): item is EnrichedRecommendation => item.externalId != null,
-    );
-    withExternalId = filterByYearIfNeeded(withExternalId, trimmedQuery);
-    // Deduplicate by externalId to avoid same book/movie appearing multiple times
-    const seenIds = new Set<string>();
-    const enrichedItems = withExternalId.filter((item) => {
-      const id = String(item.externalId);
-      if (seenIds.has(id)) return false;
-      seenIds.add(id);
+    let enrichedItems = filterByYearIfNeeded(allEnriched, trimmedQuery);
+    enrichedItems = filterBySingleSeasonIfNeeded(enrichedItems, trimmedQuery);
+    // Deduplicate by externalId when present; for items without externalId, use title+creator+year
+    const seenKeys = new Set<string>();
+    enrichedItems = enrichedItems.filter((item) => {
+      const key =
+        item.externalId != null
+          ? String(item.externalId)
+          : `${item.title}|${item.creator}|${item.year}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
       return true;
     });
 
@@ -427,7 +529,9 @@ export async function POST(request: NextRequest) {
       itemCount: enrichedItems.length,
     };
 
-    setCachedRecommendation(trimmedQuery, type, response);
+    if (useCache) {
+      await setCachedRecommendationAsync(trimmedQuery, type, response);
+    }
 
     createSearchSession(trimmedQuery, type, mode).catch((err) =>
       console.error("createSearchSession:", err),

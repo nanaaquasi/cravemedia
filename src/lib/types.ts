@@ -122,3 +122,12 @@ export interface RefineResponse {
   isComplete: boolean;
   refinedQuery?: string;
 }
+
+/** User context for personalized recommendations (logged-in only) */
+export interface UserRecommendContext {
+  favoriteGenres: string[] | null;
+  streamingServices: string[] | null;
+  topGenres: Array<{ genre: string; count: number }> | null;
+  recentlyWatched: Array<{ title: string; type: string; rating?: number }>;
+  recentlyRated: Array<{ title: string; rating: number }>;
+}

@@ -6,6 +6,7 @@ import { RefineQuestion, RefineAnswer, ContentType } from "@/lib/types";
 import { ensureQueryReflectsTypes } from "@/lib/query-utils";
 import { SearchMode } from "@/components/SearchForm";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
+import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 
 const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   { value: "all", label: "All" },
@@ -100,7 +101,27 @@ interface IntentRefineStepProps {
 }
 
 /* ─── shared background ────────────────────────────────────────────────── */
-function AnimatedBackground() {
+function AnimatedBackground({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
+  if (prefersReducedMotion) {
+    return (
+      <div className="absolute inset-0 overflow-hidden" aria-hidden>
+        <div
+          className="absolute top-[20%] left-[25%] rounded-full w-[350px] h-[350px] -translate-x-1/2 -translate-y-1/2 blur-[60px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(88,28,135,0.4) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute top-[60%] left-[65%] rounded-full w-[320px] h-[320px] -translate-x-1/2 -translate-y-1/2 blur-[60px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(190,24,93,0.35) 0%, transparent 70%)",
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden>
       <motion.div
@@ -222,6 +243,7 @@ export default function IntentRefineStep({
   selectedMode,
   previousAnswers,
 }: IntentRefineStepProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
 
@@ -345,7 +367,7 @@ export default function IntentRefineStep({
             "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
         }}
       >
-        <AnimatedBackground />
+        <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
         <div className="relative z-10 flex items-center justify-end py-5 px-2">
           <button
@@ -444,7 +466,7 @@ export default function IntentRefineStep({
             "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
         }}
       >
-        <AnimatedBackground />
+        <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
         {/* Skip in top-right */}
         <div className="relative z-10 flex items-center justify-end py-5 px-2">
@@ -594,7 +616,7 @@ export default function IntentRefineStep({
             "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
         }}
       >
-        <AnimatedBackground />
+        <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           {(initialQuery?.trim() || selectedType || selectedMode || (previousAnswers && previousAnswers.length > 0)) && (
@@ -653,7 +675,7 @@ export default function IntentRefineStep({
           "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
       }}
     >
-      <AnimatedBackground />
+      <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
       {/* Question content — vertically centered */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">

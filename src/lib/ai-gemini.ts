@@ -15,6 +15,8 @@ export async function generateWithGemini(
   query: string,
   type: ContentType | ContentType[],
   options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -32,7 +34,10 @@ export async function generateWithGemini(
     model,
     contents: query,
     config: {
-      systemInstruction: getSystemPrompt(type),
+      systemInstruction: getSystemPrompt(type, {
+        excludeTitles: options.excludeTitles,
+        userContext: options.userContext,
+      }),
       maxOutputTokens: options.maxOutputTokens || 3000,
       temperature: options.temperature ?? 0.4,
       responseMimeType: options.responseMimeType || "application/json",
@@ -51,6 +56,8 @@ export async function generateJourneyWithGemini(
   query: string,
   type: ContentType | ContentType[],
   options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -68,7 +75,10 @@ export async function generateJourneyWithGemini(
     model,
     contents: query,
     config: {
-      systemInstruction: getJourneySystemPrompt(type),
+      systemInstruction: getJourneySystemPrompt(type, {
+        excludeTitles: options.excludeTitles,
+        userContext: options.userContext,
+      }),
       maxOutputTokens: options.maxOutputTokens || 4000,
       temperature: options.temperature ?? 0.4,
       responseMimeType: options.responseMimeType || "application/json",
@@ -87,6 +97,7 @@ export async function generateRefineWithGemini(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
+  options?: { userContext?: import("./types").UserRecommendContext },
 ): Promise<RefineResponse> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -100,7 +111,9 @@ export async function generateRefineWithGemini(
     model,
     contents: query,
     config: {
-      systemInstruction: getRefineSystemPrompt(type, previousAnswers),
+      systemInstruction: getRefineSystemPrompt(type, previousAnswers, {
+        userContext: options?.userContext,
+      }),
       maxOutputTokens: 2000,
       temperature: 0.8,
       responseMimeType: "application/json",

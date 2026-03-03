@@ -25,6 +25,7 @@ interface JourneyPathProps {
   onAddToList?: (item: JourneyItem) => void;
   onMoreLikeThis?: (item: JourneyItem) => void;
   onRefine?: (feedback: string) => void;
+  onRefresh?: () => void;
   isLoading?: boolean;
   isOwner?: boolean;
   /** Visibility toggle + share for journey detail page */
@@ -68,6 +69,7 @@ export default function JourneyPath({
   onAddToList,
   onMoreLikeThis,
   onRefine,
+  onRefresh,
   isLoading = false,
   isOwner = true,
   onToggleVisibility,
@@ -405,9 +407,13 @@ export default function JourneyPath({
             )}
           </div>
 
-          {isOwner && onRefine && (
+          {isOwner && (onRefine || onRefresh) && (
             <div className="mt-4">
-              <RefineBar onRefine={onRefine} isLoading={isLoading} />
+              <RefineBar
+                onRefine={onRefine ?? (() => {})}
+                onRefresh={onRefresh}
+                isLoading={isLoading}
+              />
             </div>
           )}
         </div>

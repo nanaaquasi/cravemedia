@@ -1,4 +1,4 @@
-const RETRYABLE_STATUS = [429, 503] as const;
+const RETRYABLE_STATUS = [429, 502, 503, 504, 529] as const;
 const MAX_RETRIES = 2; // 3 total attempts
 const BASE_DELAY_MS = 1000;
 
@@ -18,7 +18,7 @@ function getStatus(err: unknown): number | undefined {
 
 function isRetryable(err: unknown): boolean {
   const status = getStatus(err);
-  return status !== undefined && RETRYABLE_STATUS.includes(status as 429 | 503);
+  return status !== undefined && (RETRYABLE_STATUS as readonly number[]).includes(status);
 }
 
 /**
@@ -44,7 +44,7 @@ export async function withRetry<T>(
       ) {
         const delay = baseDelayMs * Math.pow(2, attempt);
         console.warn(
-          `AI API rate limit (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`,
+          `AI API temporary error (status ${getStatus(err)}) — attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms...`,
         );
         await new Promise((r) => setTimeout(r, delay));
       } else {

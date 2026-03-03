@@ -85,11 +85,17 @@ function SearchContent() {
   }, [isAnyLoading]);
 
   useEffect(() => {
-    if (q && typeParam) {
-      fetchRecommendations(q, contentType, viewMode);
-    } else {
+    if (!q || !typeParam) {
       router.replace("/");
+      return;
     }
+    const controller = new AbortController();
+    fetchRecommendations(q, contentType, viewMode, {
+      signal: controller.signal,
+    });
+    return () => {
+      controller.abort();
+    };
   }, [q, typeParam, contentType, viewMode, fetchRecommendations, router]);
 
   // Clear saved collection when search changes (new results)
@@ -305,6 +311,17 @@ function SearchContent() {
     [q, updateSearchParams],
   );
 
+  const handleRefresh = useCallback(() => {
+    if (!q) return;
+    const excludeTitles =
+      viewMode === "list" && results
+        ? results.items.map((i) => i.title)
+        : viewMode === "journey" && journeyResults
+          ? journeyResults.items.map((i) => i.title)
+          : [];
+    fetchRecommendations(q, contentType, viewMode, { excludeTitles });
+  }, [q, contentType, viewMode, results, journeyResults, fetchRecommendations]);
+
   const handleMoreLikeThis = useCallback(
     (item: EnrichedRecommendation | JourneyItem) => {
       const typeLabel =
@@ -394,7 +411,9 @@ function SearchContent() {
                   {error}
                 </p>
                 <button
-                  onClick={() => globalThis.location.reload()}
+                  onClick={() =>
+                    fetchRecommendations(q ?? "", contentType, viewMode)
+                  }
                   className="text-base text-purple-400 hover:text-purple-300 mt-3 cursor-pointer"
                 >
                   Try again
@@ -480,7 +499,11 @@ function SearchContent() {
                   )}
                 </div>
                 <div className="mt-4">
-                  <RefineBar onRefine={handleRefine} isLoading={isLoading} />
+                  <RefineBar
+                  onRefine={handleRefine}
+                  onRefresh={handleRefresh}
+                  isLoading={isLoading}
+                />
                 </div>
               </aside>
 
@@ -521,6 +544,7 @@ function SearchContent() {
                 onAddToList={handleAddToList}
                 onMoreLikeThis={handleMoreLikeThis}
                 onRefine={handleRefine}
+                onRefresh={handleRefresh}
                 isLoading={isLoading}
               />
             </div>

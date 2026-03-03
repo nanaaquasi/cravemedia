@@ -5,10 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface RefineBarProps {
   onRefine: (feedback: string) => void;
+  onRefresh?: () => void;
   isLoading: boolean;
 }
 
-export default function RefineBar({ onRefine, isLoading }: RefineBarProps) {
+export default function RefineBar({
+  onRefine,
+  onRefresh,
+  isLoading,
+}: RefineBarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [feedback, setFeedback] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -42,31 +47,63 @@ export default function RefineBar({ onRefine, isLoading }: RefineBarProps) {
     <div className="mt-4">
       <AnimatePresence mode="wait">
         {!isOpen ? (
-          <motion.button
+          <div
             key="trigger"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setIsOpen(true)}
-            className="group flex items-center gap-2 text-sm text-white/50 hover:text-purple-300 transition-colors cursor-pointer"
+            className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-sm text-white/50"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="transition-transform group-hover:rotate-45"
+            <motion.button
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsOpen(true)}
+              className="group inline-flex items-center gap-2 hover:text-purple-300 transition-colors cursor-pointer"
             >
-              <path d="M12 20h9" />
-              <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z" />
-            </svg>
-            Not what you expected? Refine it
-          </motion.button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform group-hover:rotate-45"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z" />
+              </svg>
+              Not what you expected? Refine it
+            </motion.button>
+            {onRefresh && (
+              <>
+                <span className="text-white/30">or</span>
+                <button
+                  onClick={() => !isLoading && onRefresh()}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-1.5 hover:text-purple-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={isLoading ? "animate-spin" : ""}
+                  >
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M16 21h5v-5" />
+                  </svg>
+                  Refresh
+                </button>
+              </>
+            )}
+          </div>
         ) : (
           <motion.div
             key="input"

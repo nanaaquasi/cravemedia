@@ -2,13 +2,8 @@
 import { signout } from "@/app/auth/actions";
 import { LogOut } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
-
 export function SignOutButton() {
-  const supabase = createClient();
-
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
     await signout();
   };
 

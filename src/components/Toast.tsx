@@ -18,12 +18,15 @@ export default function Toast({
   useEffect(() => {
     if (message) {
       setIsVisible(true);
+      let innerTimerId: ReturnType<typeof setTimeout>;
       const timer = setTimeout(() => {
         setIsVisible(false);
-        // Wait for fade out animation to finish before calling, onClose
-        setTimeout(onClose, 300);
+        innerTimerId = setTimeout(onClose, 300);
       }, duration);
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(innerTimerId!);
+      };
     }
   }, [message, duration, onClose]);
 

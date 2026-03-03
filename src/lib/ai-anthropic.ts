@@ -14,6 +14,10 @@ import { cleanAndParseJSON } from "./ai-utils";
 export async function generateWithAnthropic(
   query: string,
   type: ContentType | ContentType[],
+  options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
+  } = {},
 ): Promise<AIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -25,9 +29,12 @@ export async function generateWithAnthropic(
 
   const message = await client.messages.create({
     model,
-    max_tokens: 3000,
+    max_tokens: 4500,
     temperature: 0.7,
-    system: getSystemPrompt(type),
+    system: getSystemPrompt(type, {
+      excludeTitles: options.excludeTitles,
+      userContext: options.userContext,
+    }),
     messages: [{ role: "user", content: query }],
   });
 
@@ -42,6 +49,10 @@ export async function generateWithAnthropic(
 export async function generateJourneyWithAnthropic(
   query: string,
   type: ContentType | ContentType[],
+  options: {
+    excludeTitles?: string[];
+    userContext?: import("./types").UserRecommendContext;
+  } = {},
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -53,9 +64,12 @@ export async function generateJourneyWithAnthropic(
 
   const message = await client.messages.create({
     model,
-    max_tokens: 4000,
+    max_tokens: 5000,
     temperature: 0.7,
-    system: getJourneySystemPrompt(type),
+    system: getJourneySystemPrompt(type, {
+      excludeTitles: options.excludeTitles,
+      userContext: options.userContext,
+    }),
     messages: [{ role: "user", content: query }],
   });
 
@@ -71,6 +85,7 @@ export async function generateRefineWithAnthropic(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
+  options?: { userContext?: import("./types").UserRecommendContext },
 ): Promise<RefineResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -84,7 +99,9 @@ export async function generateRefineWithAnthropic(
     model,
     max_tokens: 2000,
     temperature: 0.8,
-    system: getRefineSystemPrompt(type, previousAnswers),
+    system: getRefineSystemPrompt(type, previousAnswers, {
+      userContext: options?.userContext,
+    }),
     messages: [{ role: "user", content: query }],
   });
 

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { createAuthenticatedClient } from "@/lib/supabase/auth-client";
 import { Database } from "@/lib/supabase/database.types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -88,13 +88,15 @@ export function getDefaultStats(userId: string): UserStats {
   };
 }
 
-// Real-time subscription for activity updates
-export function subscribeToUserActivity(
+// Real-time subscription for activity updates (token-based, no browser refresh)
+export async function subscribeToUserActivity(
   userId: string,
   callback: (activity: Activity) => void,
-) {
-  const supabase = createClient();
-  return supabase
+): Promise<(() => void) | null> {
+  const supabase = await createAuthenticatedClient();
+  if (!supabase) return null;
+
+  const channel = supabase
     .channel(`user-activity-${userId}`)
     .on(
       "postgres_changes",
@@ -109,4 +111,8 @@ export function subscribeToUserActivity(
       },
     )
     .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { useLists } from "@/hooks/useLists";
 import { useSession } from "@/context/SessionContext";
 import { LogOut, User as UserIcon, ChevronDown } from "lucide-react";
@@ -18,12 +17,10 @@ export default function Header({ onOpenSavedLists }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { lists } = useLists();
   const { user } = useSession();
-  const supabase = createClient();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     setIsDropdownOpen(false);
-    await supabase.auth.signOut();
     await signout();
   };
 
@@ -42,11 +39,18 @@ export default function Header({ onOpenSavedLists }: HeaderProps) {
   }, []);
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 10);
+        ticking = false;
+      });
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 

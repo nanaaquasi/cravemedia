@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProfileHeader } from "./ProfileHeader";
 import { ProfileNav } from "./ProfileNav";
@@ -55,23 +55,30 @@ export function AccountView({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { createList, refreshLists } = useLists();
 
+  const unsubRef = useRef<(() => void) | null>(null);
   useEffect(() => {
-    // Subscribe to realtime updates
-    if (profile?.id) {
-      const channel = subscribeToUserActivity(profile.id, (newActivity) => {
-        setDashboardData((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            recentActivity: [newActivity, ...prev.recentActivity].slice(0, 10),
-          };
-        });
-      });
+    if (!profile?.id) return;
 
-      return () => {
-        channel.unsubscribe();
-      };
-    }
+    let mounted = true;
+    unsubRef.current = null;
+    subscribeToUserActivity(profile.id, (newActivity) => {
+      setDashboardData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          recentActivity: [newActivity, ...prev.recentActivity].slice(0, 10),
+        };
+      });
+    }).then((fn) => {
+      if (mounted && fn) unsubRef.current = fn;
+      else fn?.();
+    });
+
+    return () => {
+      mounted = false;
+      unsubRef.current?.();
+      unsubRef.current = null;
+    };
   }, [profile?.id]);
 
   if (!dashboardData) {

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { generateRefineQuestions } from "@/lib/ai";
+import { getLightweightUserContext } from "@/lib/user-context";
 import { checkRefineRateLimit } from "@/lib/ratelimit";
+import { getCachedRefine, setCachedRefine } from "@/lib/refine-cache";
 import { ContentType, RefineAnswer } from "@/lib/types";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
 
@@ -54,11 +57,46 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedQuery = query.trim();
+
+    // Fetch lightweight user context for tailored questions (logged-in only)
+    let userContext: Awaited<
+      ReturnType<typeof getLightweightUserContext>
+    > = null;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      userContext = await getLightweightUserContext(user.id);
+    }
+
+    const useCache = !userContext;
+    const cached = useCache
+      ? await getCachedRefine(trimmedQuery, type, previousAnswers)
+      : null;
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     const result = await generateRefineQuestions(
       trimmedQuery,
       type,
       previousAnswers,
+      {
+        userContext: userContext
+          ? {
+              ...userContext,
+              streamingServices: null,
+              recentlyWatched: [],
+              recentlyRated: [],
+            }
+          : undefined,
+      },
     );
+
+    if (useCache) {
+      await setCachedRefine(trimmedQuery, type, previousAnswers, result);
+    }
 
     return NextResponse.json(result);
   } catch (error) {

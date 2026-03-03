@@ -1,7 +1,10 @@
 import { ContentType, JourneyResponse, RecommendationResponse } from "./types";
+import { getRedis } from "./redis";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_SEC = 3600; // 1 hour for Redis
 const MAX_ENTRIES = 200;
+const REDIS_KEY_PREFIX = "rec:";
 
 type CacheMode = "list" | "journey";
 
@@ -108,4 +111,90 @@ export function setCachedJourney(
   const idx = accessOrder.indexOf(key);
   if (idx >= 0) accessOrder.splice(idx, 1);
   accessOrder.push(key);
+}
+
+/** Redis-backed async get; falls back to in-memory when Redis unavailable */
+export async function getCachedRecommendationAsync(
+  query: string,
+  type: ContentType | ContentType[],
+): Promise<RecommendationResponse | null> {
+  const key = getCacheKey(query, type, "list");
+  const redisKey = REDIS_KEY_PREFIX + key;
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const raw = await redis.get<string>(redisKey);
+      if (raw) {
+        const parsed = JSON.parse(raw as string) as RecommendationResponse;
+        return parsed;
+      }
+    } catch {
+      // Fall through to in-memory
+    }
+  }
+
+  return getCachedRecommendation(query, type);
+}
+
+/** Redis-backed async set; also writes to in-memory fallback */
+export async function setCachedRecommendationAsync(
+  query: string,
+  type: ContentType | ContentType[],
+  data: RecommendationResponse,
+): Promise<void> {
+  setCachedRecommendation(query, type, data);
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const redisKey = REDIS_KEY_PREFIX + getCacheKey(query, type, "list");
+      await redis.set(redisKey, JSON.stringify(data), { ex: CACHE_TTL_SEC });
+    } catch {
+      // In-memory already set
+    }
+  }
+}
+
+/** Redis-backed async get; falls back to in-memory when Redis unavailable */
+export async function getCachedJourneyAsync(
+  query: string,
+  type: ContentType | ContentType[],
+): Promise<JourneyResponse | null> {
+  const key = getCacheKey(query, type, "journey");
+  const redisKey = REDIS_KEY_PREFIX + key;
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const raw = await redis.get<string>(redisKey);
+      if (raw) {
+        const parsed = JSON.parse(raw as string) as JourneyResponse;
+        return parsed;
+      }
+    } catch {
+      // Fall through to in-memory
+    }
+  }
+
+  return getCachedJourney(query, type);
+}
+
+/** Redis-backed async set; also writes to in-memory fallback */
+export async function setCachedJourneyAsync(
+  query: string,
+  type: ContentType | ContentType[],
+  data: JourneyResponse,
+): Promise<void> {
+  setCachedJourney(query, type, data);
+
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const redisKey = REDIS_KEY_PREFIX + getCacheKey(query, type, "journey");
+      await redis.set(redisKey, JSON.stringify(data), { ex: CACHE_TTL_SEC });
+    } catch {
+      // In-memory already set
+    }
+  }
 }

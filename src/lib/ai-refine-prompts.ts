@@ -1,9 +1,10 @@
-import { ContentType, RefineAnswer } from "./types";
+import { ContentType, RefineAnswer, UserRecommendContext } from "./types";
 import { getTypeLabel } from "@/config/media-types";
 
 export function getRefineSystemPrompt(
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
+  options?: { userContext?: UserRecommendContext },
 ): string {
   const isMultiple = Array.isArray(type);
   const typeLabel = isMultiple
@@ -36,6 +37,7 @@ Based on ALL the information above, create a single, detailed, natural-language 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
 - The refined query should be 1-3 sentences, rich with specific preferences
+- The refined query must be CONCRETE and ACTIONABLE: include specific adjectives, eras, tones, and subgenres the user chose — no vague phrases like "something good"
 - Incorporate all their answers naturally${typeInstruction}
 
 Response format:
@@ -48,6 +50,12 @@ Response format:
 
   const round = previousAnswers.length + 1;
 
+  const userContextHint =
+    options?.userContext?.favoriteGenres?.length ||
+    options?.userContext?.topGenres?.length
+      ? " Given their profile and taste history, tailor questions to what they haven't yet specified."
+      : "";
+
   return `You are an expert media curator specializing in ${typeLabel}.
 
 Analyze the user's query to understand their intent and generate follow-up questions that will help create better, more personalized recommendations.
@@ -55,13 +63,15 @@ ${answersContext}
 
 This is round ${round} of follow-up questions.${
     round === 1
-      ? " Ask questions about mood, tone, and specific sub-preferences."
-      : " Build on their previous answers to drill deeper into their taste."
-  }
+      ? " Ask questions directly relevant to their query. If they mentioned a genre or theme, ask about sub-preferences within that (era, tone, length). If their query is vague, ask about mood and pacing first."
+      : " Build on their previous answers to drill deeper into their taste. NEVER ask about something they already answered. Each round must explore a DIFFERENT dimension (e.g., if round 1 covered mood, round 2 should cover era, length, or style — not the same axis)."
+  }${userContextHint}
 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
 - Generate exactly 3 questions
+- Each question must cover a DIFFERENT aspect — not 3 variations of the same question (e.g., one about era, one about tone, one about length/format)
+- NEVER repeat themes from previous questions. Do not ask about something the user already answered
 - Each question should have 3-5 concise options (1-4 words each)
 - Questions should feel conversational and fun, not clinical
 - Options should be diverse and cover different angles

@@ -5,14 +5,15 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { SessionUser } from "@/app/api/auth/session/route";
 
 interface SessionContextType {
   user: SessionUser | null;
   isLoading: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(
@@ -20,7 +21,7 @@ const SessionContext = createContext<SessionContextType | undefined>(
 );
 
 async function fetchSession(): Promise<SessionUser | null> {
-  const res = await fetch("/api/auth/session");
+  const res = await fetch("/api/auth/session", { credentials: "include" });
   const data = await res.json();
   return data.user ?? null;
 }
@@ -28,7 +29,11 @@ async function fetchSession(): Promise<SessionUser | null> {
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+
+  const refreshSession = useCallback(async () => {
+    const u = await fetchSession();
+    setUser(u);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -41,26 +46,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     load();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      if (event === "SIGNED_OUT" || !session) {
-        setUser(null);
-        return;
-      }
-      const u = await fetchSession();
-      setUser(u);
-    });
-
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   return (
-    <SessionContext.Provider value={{ user, isLoading }}>
+    <SessionContext.Provider
+      value={{ user, isLoading, refreshSession }}
+    >
       {children}
     </SessionContext.Provider>
   );

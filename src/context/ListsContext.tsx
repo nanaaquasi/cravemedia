@@ -6,10 +6,11 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
+import { createAuthenticatedClient } from "@/lib/supabase/auth-client";
 import { useSession } from "@/context/SessionContext";
 import {
   deleteCollectionItem,
@@ -60,7 +61,6 @@ export function ListsProvider({ children }: { children: ReactNode }) {
   const { user } = useSession();
   const [lists, setLists] = useState<SavedList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
 
   // Local storage fallback for non-auth users
   const [localLists, setLocalLists] = useState<SavedList[]>([]);
@@ -113,58 +113,69 @@ export function ListsProvider({ children }: { children: ReactNode }) {
     return () => ac.abort();
   }, [user, localLists]);
 
-  // Set up realtime subscriptions for automatic updates
+  // Set up realtime subscriptions for automatic updates (token-based, no browser refresh)
+  const clientRef = useRef<Awaited<ReturnType<typeof createAuthenticatedClient>>>(null);
   useEffect(() => {
     if (!user) return;
 
-    // Subscribe to collections and journeys owned by the user
-    const collectionsChannel = supabase
-      .channel("collections-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "collections",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => refreshLists(),
-      )
-      .subscribe();
+    let mounted = true;
 
-    const itemsChannel = supabase
-      .channel("collection-items-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "collection_items",
-        },
-        () => refreshLists(),
-      )
-      .subscribe();
+    createAuthenticatedClient().then((client) => {
+      if (!mounted || !client) return;
+      clientRef.current = client;
+      const supabase = client;
 
-    const journeysChannel = supabase
-      .channel("journeys-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "journeys",
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => refreshLists(),
-      )
-      .subscribe();
+      const collectionsChannel = supabase
+        .channel("collections-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "collections",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => refreshLists(),
+        )
+        .subscribe();
+
+      const itemsChannel = supabase
+        .channel("collection-items-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "collection_items",
+          },
+          () => refreshLists(),
+        )
+        .subscribe();
+
+      const journeysChannel = supabase
+        .channel("journeys-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "journeys",
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => refreshLists(),
+        )
+        .subscribe();
+    });
 
     return () => {
-      supabase.removeChannel(collectionsChannel);
-      supabase.removeChannel(itemsChannel);
-      supabase.removeChannel(journeysChannel);
+      mounted = false;
+      const c = clientRef.current;
+      if (c) {
+        c.removeAllChannels();
+        clientRef.current = null;
+      }
     };
-  }, [user, supabase, refreshLists]);
+  }, [user, refreshLists]);
 
   // Keep local lists in sync if not logged in
   useEffect(() => {
