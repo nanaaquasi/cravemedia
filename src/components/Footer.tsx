@@ -3,7 +3,6 @@ import Link from "next/link";
 const ATTRIBUTIONS = [
   { name: "TMDB", href: "https://www.themoviedb.org/" },
   { name: "Anilist", href: "https://anilist.co/" },
-  { name: "Trending Now", href: "https://www.themoviedb.org/" },
   { name: "Google Books", href: "https://books.google.com/" },
   { name: "Open Library", href: "https://openlibrary.org/" },
 ] as const;
