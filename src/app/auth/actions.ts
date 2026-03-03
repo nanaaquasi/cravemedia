@@ -4,13 +4,28 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeRedirectPath } from "@/lib/auth-utils";
+import { loginSchema, signupSchema } from "@/lib/auth-schema";
 
 export async function login(formData: FormData) {
-  const supabase = await createClient();
+  const parseResult = loginSchema.safeParse({
+    email: formData.get("email") ?? "",
+    password: formData.get("password") ?? "",
+  });
 
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  if (!parseResult.success) {
+    const firstIssue = parseResult.error.issues?.[0];
+    const message =
+      firstIssue && "message" in firstIssue
+        ? String(firstIssue.message)
+        : "Invalid input";
+    return { error: message };
+  }
+
+  const { email, password } = parseResult.data;
   const next = formData.get("next") as string | null;
+
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -22,17 +37,30 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect(next || "/account");
+  redirect(sanitizeRedirectPath(next));
 }
 
 export async function signup(formData: FormData) {
-  const supabase = await createClient();
+  const parseResult = signupSchema.safeParse({
+    email: formData.get("email") ?? "",
+    password: formData.get("password") ?? "",
+    fullName: formData.get("fullName") ?? "",
+    username: formData.get("username") ?? "",
+  });
 
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const fullName = formData.get("fullName") as string;
-  const username = formData.get("username") as string;
+  if (!parseResult.success) {
+    const firstIssue = parseResult.error.issues?.[0];
+    const message =
+      firstIssue && "message" in firstIssue
+        ? String(firstIssue.message)
+        : "Invalid input";
+    return { error: message };
+  }
+
+  const { email, password, fullName, username } = parseResult.data;
   const next = formData.get("next") as string | null;
+
+  const supabase = await createClient();
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -50,7 +78,7 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect(next || "/account");
+  redirect(sanitizeRedirectPath(next));
 }
 
 export async function signInWithGoogle() {

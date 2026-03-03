@@ -10,6 +10,14 @@ export async function createSearchSession(
 ) {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return; // No-op when unauthenticated; search sessions are optional
+  }
+
   // Normalize query to prevent duplicates with trailing spaces or redundant whitespace
   const normalizedQuery = query.trim().replaceAll(/\s+/g, " ");
 
@@ -53,6 +61,14 @@ export async function createSearchSession(
 
 export async function getSearchSession(id: string) {
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
 
   const { data, error } = await supabase
     .from("search_sessions")

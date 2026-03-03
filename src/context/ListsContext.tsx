@@ -11,7 +11,13 @@ import {
 import { EnrichedRecommendation, SavedList, JourneyItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { deleteCollectionItem } from "@/app/actions/collection";
+import {
+  deleteCollectionItem,
+  deleteCollection,
+  createCollectionWithItems,
+  addItemToCollection,
+} from "@/app/actions/collection";
+import { deleteJourney } from "@/app/actions/journey";
 
 export interface CreateListOptions {
   isJourney?: boolean;
@@ -222,7 +228,7 @@ export function ListsProvider({
         return newListLocal;
       }
 
-      // If logged in, save to Supabase
+      // If logged in, save to Supabase via server action
       if (options?.isJourney) {
         // Journeys are typically saved via saveJourneyData action.
         // If we reach here, we might need a server action or API route for creation too.
@@ -230,58 +236,14 @@ export function ListsProvider({
         return null;
       }
 
-      // Create Collection
-      const { data: collection, error } = await supabase
-        .from("collections")
-        .insert({
-          user_id: user.id,
-          name: name,
-          description: description, // Assuming we want to store it if the schema allows, though technically it might not be a column yet
-          is_public: options?.isPublic ?? false,
-          is_explicitly_saved: options?.isExplicitlySaved ?? true,
-        })
-        .select()
-        .single();
-
-      if (error || !collection) return null;
-
-      // Add items - ensure unique (media_id, media_type) per collection to satisfy unique constraint
-      const seen = new Map<string, number>();
-      const itemsToInsert = items.map((item, index) => {
-        const baseId =
-          item.externalId || `${item.type}-fallback-${collection.id}-${index}`;
-        const key = `${baseId}:${item.type}`;
-        const count = (seen.get(key) ?? 0) + 1;
-        seen.set(key, count);
-        const mediaId = count > 1 ? `${baseId}-${count}` : baseId;
-
-        return {
-          collection_id: collection.id,
-          media_id: mediaId,
-          media_type: item.type,
-          title: item.title,
-          image_url: item.posterUrl,
-          metadata: item,
-        };
+      const result = await createCollectionWithItems(name, description, items, {
+        isPublic: options?.isPublic,
+        isExplicitlySaved: options?.isExplicitlySaved,
       });
 
-      if (itemsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from("collection_items")
-          .insert(itemsToInsert);
+      if (result.error || !result.collectionId) return null;
 
-        if (insertError) {
-          console.error("Failed to insert collection items:", {
-            message: insertError.message,
-            code: insertError.code,
-            details: insertError.details,
-          });
-          return null;
-        }
-      }
-
-      // Refetch handled by realtime or simple state update
-      const savedList = { ...newListLocal, id: collection.id };
+      const savedList = { ...newListLocal, id: result.collectionId };
       setLists((prev) => [savedList, ...prev]);
       return savedList;
     },
@@ -295,13 +257,27 @@ export function ListsProvider({
         return;
       }
 
+      const list = lists.find((l) => l.id === id);
+      const isJourney = list?.isJourney ?? false;
+
       // Optimistically delete from UI
       setLists((prev) => prev.filter((l) => l.id !== id));
 
-      await supabase.from("collections").delete().eq("id", id);
-      await supabase.from("journeys").delete().eq("id", id);
+      if (isJourney) {
+        const result = await deleteJourney(id);
+        if (result.error) {
+          console.error("Failed to delete journey:", result.error);
+          refreshLists(); // Rollback optimistic update
+        }
+      } else {
+        const result = await deleteCollection(id);
+        if (result?.error) {
+          console.error("Failed to delete collection:", result.error);
+          refreshLists(); // Rollback optimistic update
+        }
+      }
     },
-    [user, setLocalLists],
+    [user, lists, refreshLists],
   );
 
   const addItemToList = useCallback(
@@ -322,19 +298,12 @@ export function ListsProvider({
         return;
       }
 
-      // Supabase logic - use unique media_id when externalId is null
-      const mediaId =
-        item.externalId ||
-        `${item.type}-fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const result = await addItemToCollection(listId, item);
 
-      await supabase.from("collection_items").insert({
-        collection_id: listId,
-        media_id: mediaId,
-        media_type: item.type,
-        title: item.title,
-        image_url: item.posterUrl,
-        metadata: item,
-      });
+      if (result.error) {
+        console.error("Failed to add item to list:", result.error);
+        return;
+      }
 
       // Update local state
       setLists((prev) =>
@@ -344,7 +313,7 @@ export function ListsProvider({
         }),
       );
     },
-    [user, setLocalLists],
+    [user],
   );
 
   const removeItemFromList = useCallback(

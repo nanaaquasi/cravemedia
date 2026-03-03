@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateRecommendations, generateJourney } from "@/lib/ai";
+import { checkRecommendRateLimit } from "@/lib/ratelimit";
 import { enrichMovieOrTV } from "@/lib/tmdb";
 import { enrichBook } from "@/lib/books";
 import { enrichAnime } from "@/lib/anilist";
@@ -32,6 +33,14 @@ function parseRuntimeMinutes(runtime: string | null): number {
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await checkRecommendRateLimit(request.headers);
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   try {
     const body = await request.json();
     const {

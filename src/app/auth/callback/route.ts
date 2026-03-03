@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { sanitizeRedirectPath } from "@/lib/auth-utils";
 
 const AUTH_NEXT_COOKIE = "auth_next";
 
@@ -11,15 +12,16 @@ export async function GET(request: Request) {
   // Prefer "next" from URL; fallback to cookie (OAuth redirects can drop query params)
   const cookieStore = await cookies();
   let next = searchParams.get("next");
-  const nextFromUrl = next;
   if (!next || next === "/") {
     const stored = cookieStore.get(AUTH_NEXT_COOKIE)?.value;
-    if (stored && stored.startsWith("/")) {
+    if (stored) {
       next = stored;
     } else {
       next = "/account";
     }
   }
+
+  const safeNext = sanitizeRedirectPath(next);
 
   if (code) {
     const supabase = await createClient();
@@ -29,7 +31,7 @@ export async function GET(request: Request) {
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
       const base = isLocalEnv ? origin : forwardedHost ? `https://${forwardedHost}` : origin;
-      const redirectUrl = `${base}${next}`;
+      const redirectUrl = `${base}${safeNext}`;
       const res = NextResponse.redirect(redirectUrl);
       res.cookies.delete(AUTH_NEXT_COOKIE);
       return res;

@@ -3,6 +3,121 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CRAVELIST_LABEL } from "@/config/labels";
+import type { EnrichedRecommendation, JourneyItem } from "@/lib/types";
+
+export async function createCollectionWithItems(
+  name: string,
+  description: string,
+  items: EnrichedRecommendation[] | JourneyItem[],
+  options?: { isPublic?: boolean; isExplicitlySaved?: boolean },
+): Promise<{ collectionId?: string; error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: collection, error: collectionError } = await supabase
+    .from("collections")
+    .insert({
+      user_id: user.id,
+      name: name.trim(),
+      description: description?.trim() || null,
+      is_public: options?.isPublic ?? false,
+      is_explicitly_saved: options?.isExplicitlySaved ?? true,
+    })
+    .select("id")
+    .single();
+
+  if (collectionError || !collection) {
+    return { error: collectionError?.message ?? "Failed to create collection" };
+  }
+
+  const seen = new Map<string, number>();
+  const itemsToInsert = items.map((item, index) => {
+    const baseId =
+      item.externalId || `${item.type}-fallback-${collection.id}-${index}`;
+    const key = `${baseId}:${item.type}`;
+    const count = (seen.get(key) ?? 0) + 1;
+    seen.set(key, count);
+    const mediaId = count > 1 ? `${baseId}-${count}` : baseId;
+
+    return {
+      collection_id: collection.id,
+      media_id: mediaId,
+      media_type: item.type,
+      title: item.title,
+      image_url: item.posterUrl,
+      metadata: item,
+    };
+  });
+
+  if (itemsToInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from("collection_items")
+      .insert(itemsToInsert);
+
+    if (insertError) {
+      console.error("Failed to insert collection items:", insertError);
+      return { error: insertError.message };
+    }
+  }
+
+  revalidatePath("/account");
+  return { collectionId: collection.id };
+}
+
+export async function addItemToCollection(
+  collectionId: string,
+  item: EnrichedRecommendation,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: collection, error: fetchError } = await supabase
+    .from("collections")
+    .select("user_id")
+    .eq("id", collectionId)
+    .single();
+
+  if (fetchError || !collection) {
+    return { error: "Collection not found" };
+  }
+
+  if (collection.user_id !== user.id) {
+    return { error: "You do not have permission to add to this collection." };
+  }
+
+  const mediaId =
+    item.externalId ||
+    `${item.type}-fallback-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const { error } = await supabase.from("collection_items").insert({
+    collection_id: collectionId,
+    media_id: mediaId,
+    media_type: item.type,
+    title: item.title,
+    image_url: item.posterUrl,
+    metadata: item,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/collections/${collectionId}`);
+  revalidatePath("/account");
+  return {};
+}
 
 export async function toggleCollectionVisibility(
   collectionId: string,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeRedirectPath } from "@/lib/auth-utils";
 
 const AUTH_NEXT_COOKIE = "auth_next";
 const AUTH_NEXT_MAX_AGE = 300; // 5 min
@@ -12,7 +13,7 @@ const AUTH_NEXT_MAX_AGE = 300; // 5 min
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const next = searchParams.get("next") || "/account";
+  const next = sanitizeRedirectPath(searchParams.get("next"));
   const origin = request.nextUrl.origin;
   const supabase = await createClient();
   // Use /auth/callback only - no query params. Supabase redirect URL allow list
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const res = NextResponse.redirect(data.url, { status: 302 });
-  res.cookies.set(AUTH_NEXT_COOKIE, next, {
+  res.cookies.set(AUTH_NEXT_COOKIE, next /* already sanitized */, {
     path: "/",
     maxAge: AUTH_NEXT_MAX_AGE,
     httpOnly: true,

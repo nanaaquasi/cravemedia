@@ -133,6 +133,31 @@ export async function beginJourney(
   return {};
 }
 
+export async function deleteJourney(journeyId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in to delete." };
+  }
+
+  const { error } = await supabase
+    .from("journeys")
+    .delete()
+    .eq("id", journeyId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/account");
+  return {};
+}
+
 export async function toggleJourneyVisibility(
   journeyId: string,
   isPublic: boolean,

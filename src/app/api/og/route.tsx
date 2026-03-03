@@ -3,6 +3,28 @@ import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
+const ALLOWED_IMAGE_ORIGINS = [
+  "image.tmdb.org",
+  "books.google.com",
+  "covers.openlibrary.org",
+  "s4.anilist.co",
+  "images.unsplash.com",
+  "lh3.googleusercontent.com",
+];
+
+function isAllowedPosterUrl(urlStr: string): boolean {
+  try {
+    const u = new URL(urlStr.trim());
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    return ALLOWED_IMAGE_ORIGINS.some(
+      (origin) =>
+        u.hostname === origin || u.hostname.endsWith(`.${origin}`),
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
@@ -10,13 +32,12 @@ export async function GET(request: NextRequest) {
     const title = searchParams.get("title") || "Craveo";
     const type = searchParams.get("type") || "Explore";
 
-    // Optional: passed as comma-separated URLs
+    // Optional: passed as comma-separated URLs; restrict to allowed image origins
     const postersParam = searchParams.get("posters");
-    // Ensure we only try to parse valid URLs
     const posters = postersParam
       ? postersParam
           .split(",")
-          .filter((url) => url.startsWith("http"))
+          .filter(isAllowedPosterUrl)
           .slice(0, 3)
       : [];
 
