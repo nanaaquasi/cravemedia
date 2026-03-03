@@ -18,8 +18,60 @@ import {
   JourneyResponse,
   RecommendationResponse,
 } from "@/lib/types";
-import { VALID_CONTENT_TYPES } from "@/config/media-types";
+import { getTypeLabel, VALID_CONTENT_TYPES } from "@/config/media-types";
 import { createSearchSession } from "@/app/actions/search";
+
+/** Parse min year from query (e.g. "2015+", "after 2020", "from 2015") — returns null if none found */
+function parseMinYearFromQuery(query: string): number | null {
+  const q = query.toLowerCase();
+  const plusMatch = /(?:^|\s)(\d{4})\s*\+/i.exec(q);
+  if (plusMatch) return Number.parseInt(plusMatch[1], 10);
+  const afterMatch = /(?:after|from|since|post[- ]?)\s*(\d{4})/i.exec(q);
+  if (afterMatch) return Number.parseInt(afterMatch[1], 10);
+  return null;
+}
+
+/** Filter items by year when query specifies a min year (e.g. 2015+) */
+function filterByYearIfNeeded<T extends { year?: string | number }>(
+  items: T[],
+  query: string,
+): T[] {
+  const minYear = parseMinYearFromQuery(query);
+  if (minYear == null) return items;
+  return items.filter((item) => {
+    const y = item.year;
+    if (y == null || y === "") return false;
+    const yearNum = typeof y === "string" ? Number.parseInt(y.slice(0, 4), 10) : Math.floor(y);
+    return !Number.isNaN(yearNum) && yearNum >= minYear;
+  });
+}
+
+/** Ensure title/description reflect all requested types when multiple are selected */
+function ensureMultiTypeLabel(
+  title: string,
+  description: string,
+  type: ContentType | ContentType[],
+): { title: string; description: string } {
+  const typeArr = Array.isArray(type) ? type : [type];
+  if (typeArr.length < 2 || typeArr.includes("all")) return { title, description };
+
+  const typeLabel = typeArr.map((t) => getTypeLabel(t)).join(" & ");
+  const lower = `${title} ${description}`.toLowerCase();
+  const hasMovie = /\b(movie|movies|film|films)\b/.test(lower);
+  const hasTV = /\b(tv|series|show|shows)\b/.test(lower);
+  const hasBook = /\b(book|books)\b/.test(lower);
+  const hasAnime = /\banime\b/.test(lower);
+
+  const needsMovie = typeArr.includes("movie") && !hasMovie;
+  const needsTV = typeArr.includes("tv") && !hasTV;
+  const needsBook = typeArr.includes("book") && !hasBook;
+  const needsAnime = typeArr.includes("anime") && !hasAnime;
+
+  if (!needsMovie && !needsTV && !needsBook && !needsAnime) return { title, description };
+
+  const suffix = ` (${typeLabel})`;
+  return { title: `${title.trim()}${suffix}`, description };
+}
 
 /** Parse runtime string to minutes for total (e.g. "130 min" -> 130) */
 function parseRuntimeMinutes(runtime: string | null): number {
@@ -87,7 +139,16 @@ export async function POST(request: NextRequest) {
       // Journey mode
       const cached = getCachedJourney(trimmedQuery, type);
       if (cached) {
-        return NextResponse.json(cached);
+        const { title: jt, description: jd } = ensureMultiTypeLabel(
+          cached.journeyTitle,
+          cached.description ?? "",
+          type,
+        );
+        return NextResponse.json({
+          ...cached,
+          journeyTitle: jt,
+          description: jd,
+        });
       }
 
       const aiResponse = await generateJourney(trimmedQuery, type, {
@@ -193,9 +254,10 @@ export async function POST(request: NextRequest) {
       );
 
       const allEnriched = await Promise.all(enrichmentPromises);
-      const withExternalId = allEnriched.filter(
+      let withExternalId = allEnriched.filter(
         (item): item is JourneyItem => item.externalId != null,
       );
+      withExternalId = filterByYearIfNeeded(withExternalId, trimmedQuery);
       // Deduplicate by externalId to avoid same book/movie appearing multiple times
       const seenIds = new Set<string>();
       const enrichedItems = withExternalId.filter((item) => {
@@ -212,9 +274,15 @@ export async function POST(request: NextRequest) {
           0,
         );
 
+      const { title: journeyTitleCorrected, description: descCorrected } =
+        ensureMultiTypeLabel(
+          journeyTitle,
+          aiResponse.description ?? "",
+          type,
+        );
       const response: JourneyResponse = {
-        journeyTitle,
-        description: aiResponse.description,
+        journeyTitle: journeyTitleCorrected,
+        description: descCorrected,
         totalRuntimeMinutes: totalRuntimeMinutes || undefined,
         difficultyProgression,
         items: enrichedItems,
@@ -233,7 +301,16 @@ export async function POST(request: NextRequest) {
     // List mode (default)
     const cached = getCachedRecommendation(trimmedQuery, type);
     if (cached) {
-      return NextResponse.json(cached);
+      const { title: ct, description: cd } = ensureMultiTypeLabel(
+        cached.collectionTitle,
+        cached.collectionDescription,
+        type,
+      );
+      return NextResponse.json({
+        ...cached,
+        collectionTitle: ct,
+        collectionDescription: cd,
+      });
     }
 
     const aiResponse = await generateRecommendations(trimmedQuery, type, {
@@ -324,9 +401,10 @@ export async function POST(request: NextRequest) {
     );
 
     const allEnriched = await Promise.all(enrichmentPromises);
-    const withExternalId = allEnriched.filter(
+    let withExternalId = allEnriched.filter(
       (item): item is EnrichedRecommendation => item.externalId != null,
     );
+    withExternalId = filterByYearIfNeeded(withExternalId, trimmedQuery);
     // Deduplicate by externalId to avoid same book/movie appearing multiple times
     const seenIds = new Set<string>();
     const enrichedItems = withExternalId.filter((item) => {
@@ -336,9 +414,15 @@ export async function POST(request: NextRequest) {
       return true;
     });
 
+    const { title: correctedTitle, description: correctedDesc } =
+      ensureMultiTypeLabel(
+        aiResponse.collectionTitle,
+        aiResponse.collectionDescription,
+        type,
+      );
     const response: RecommendationResponse = {
-      collectionTitle: aiResponse.collectionTitle,
-      collectionDescription: aiResponse.collectionDescription,
+      collectionTitle: correctedTitle,
+      collectionDescription: correctedDesc,
       items: enrichedItems,
       itemCount: enrichedItems.length,
     };

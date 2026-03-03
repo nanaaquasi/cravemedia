@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefineQuestion, RefineAnswer, ContentType } from "@/lib/types";
+import { ensureQueryReflectsTypes } from "@/lib/query-utils";
 import { SearchMode } from "@/components/SearchForm";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 
@@ -151,9 +152,10 @@ function ContextBar({
   selectedMode?: SearchMode;
   previousAnswers?: RefineAnswer[];
 }) {
-  const query = initialQuery?.trim();
-  if (!query) return null;
+  const rawQuery = initialQuery?.trim();
+  if (!rawQuery) return null;
 
+  const query = ensureQueryReflectsTypes(rawQuery, selectedType ?? "all");
   const queryPhrase = normalizeQueryForSentence(query);
   const typeStr = selectedType
     ? formatTypeForSentence(selectedType)
@@ -230,7 +232,9 @@ export default function IntentRefineStep({
     return arr.includes("all") ? ["all"] : arr;
   });
 
+  // Only sync from parent when entering type select; don't reset when leaving
   useEffect(() => {
+    if (!showTypeSelect) return;
     const arr = Array.isArray(initialTypeSelection)
       ? initialTypeSelection
       : [initialTypeSelection];
@@ -363,7 +367,14 @@ export default function IntentRefineStep({
           >
             {initialQuery?.trim() && (
               <div className="mb-4 text-center">
-                <ContextBar initialQuery={initialQuery} />
+                <ContextBar
+                  initialQuery={initialQuery}
+                  selectedType={
+                    typeSelections.length === 1 && typeSelections[0] === "all"
+                      ? "all"
+                      : typeSelections
+                  }
+                />
               </div>
             )}
             <p className="text-sm text-purple-300/70 font-medium mb-3 uppercase tracking-wider">

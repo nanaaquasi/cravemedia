@@ -26,6 +26,14 @@ export function getSystemPrompt(type: ContentType | ContentType[]): string {
     ? "12 recommendations"
     : "15-20 recommendations";
 
+  const titleHint = isMultiple
+    ? ` When multiple types are requested (${typeLabel}), the title and description must reflect ALL of them (e.g. "Films & Series" or "movies and TV") — never mention only one type.`
+    : "";
+
+  const typeMixHint = isMultiple
+    ? `\n- MANDATORY TYPE MIX: When multiple types are requested (${typeLabel}), you MUST include items from EACH type. Include at least 4-6 items from each requested type. Do NOT return only one type even if the user's wording emphasizes one (e.g. "movies" in the query) — the user explicitly chose multiple types.`
+    : "";
+
   return `You are an expert media curator with encyclopedic knowledge of ${typeLabel}. 
 Given a user's natural language query describing themes, moods, styles, or preferences, 
 generate a curated collection of ${itemCount}.
@@ -34,8 +42,9 @@ IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences, no explanation
 - Include a mix of well-known and lesser-known titles
 - Each recommendation must have a contextual description explaining WHY it fits the query
-- BE CREATIVE: Make the collection title evocative and fitting. Keep it SHORT: 3-6 words max (e.g. "Cozy Rainy Day Picks", "Mind-Bending Sci-Fi").
-- QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
+- STRICT CONSTRAINT ENFORCEMENT: If the user specifies a year or date range (e.g. "2015+", "after 2020", "from the 90s", "pre-2000"), you MUST ONLY include items that satisfy that constraint. Every "year" field in your response must fall within the specified range. Do not include older titles when they ask for recent/modern only.
+- BE CREATIVE: Make the collection title evocative and fitting. Keep it SHORT: 3-6 words max (e.g. "Cozy Rainy Day Picks", "Mind-Bending Sci-Fi").${titleHint}
+- QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.${typeMixHint}
 ${typeFieldRule}
 ${onlyRecommendRule}
 

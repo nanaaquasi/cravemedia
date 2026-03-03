@@ -24,6 +24,14 @@ export function getJourneySystemPrompt(
     exampleType = type[0];
   }
 
+  const isMultiple = Array.isArray(type);
+  const journeyTitleHint = isMultiple
+    ? ` When multiple types are requested (${typeLabel}), the journey_title and description must reflect ALL of them (e.g. "Films & Series") — never mention only one type.`
+    : "";
+  const typeMixHint = isMultiple
+    ? ` When multiple types are requested (${typeLabel}), include items from EACH type in the journey (at least 2-3 per type). Do NOT favor one type based on query wording.`
+    : "";
+
   return `You are an expert media curator specializing in creating learning journeys through ${typeLabel}.
 
 Given a user's query, create a SEQUENCED journey of 6-8 items that forms a coherent pedagogical progression.
@@ -34,10 +42,10 @@ CRITICAL REQUIREMENTS:
 3. TEACH PROGRESSIVELY: Introduce concepts/techniques gradually
 4. SHOW EVOLUTION: Include mix of eras/styles showing how the genre/topic developed
 5. EXPLAIN TRANSITIONS: Every "transitionToNext" must be specific and insightful
-6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or popularity, YOU MUST STRICTLY ADHERE TO IT. Do not recommend items that violate these explicit constraints.
+6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or date range (e.g. "2015+", "from the 90s"), or popularity, YOU MUST STRICTLY ADHERE TO IT. Every item's "year" must fall within the specified range. Do not recommend items that violate these explicit constraints.${typeMixHint}
 7. QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
 8. Return ONLY valid JSON, no markdown, no code fences, no explanation
-9. Keep journey_title SHORT: 3-6 words max (e.g. "Intro to Noir", "Sci-Fi Masterclass")
+9. Keep journey_title SHORT: 3-6 words max (e.g. "Intro to Noir", "Sci-Fi Masterclass").${journeyTitleHint}
 ${typeFieldRule}
 ${onlyRecommendRule}
 

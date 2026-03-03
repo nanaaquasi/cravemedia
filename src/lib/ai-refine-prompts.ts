@@ -22,6 +22,10 @@ export function getRefineSystemPrompt(
   const shouldComplete = previousAnswers.length >= 2;
 
   if (shouldComplete) {
+    const typeInstruction = isMultiple
+      ? `\n- CRITICAL: The user selected multiple types (${typeLabel}). The refined query MUST explicitly mention ALL of them (e.g. "movies and TV shows" not just "movies"). Do not refer to only one type when the user chose both.`
+      : "";
+
     return `You are an expert media curator specializing in ${typeLabel}.
 
 The user made an initial query and answered follow-up questions to refine their preferences.
@@ -32,7 +36,7 @@ Based on ALL the information above, create a single, detailed, natural-language 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
 - The refined query should be 1-3 sentences, rich with specific preferences
-- Incorporate all their answers naturally
+- Incorporate all their answers naturally${typeInstruction}
 
 Response format:
 {

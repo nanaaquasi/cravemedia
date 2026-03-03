@@ -11,6 +11,7 @@ import IntentRefineStep from "@/components/IntentRefineStep";
 import SimilarToModal from "@/components/SimilarToModal";
 import { HomeSections } from "@/components/HomeSections";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
+import { ensureQueryReflectsTypes } from "@/lib/query-utils";
 import {
   HERO_POSTERS,
   PLACEHOLDER_PROMPTS,
@@ -114,7 +115,8 @@ export default function Home() {
   useEffect(() => {
     if (refine.step === "complete" && !isNavigating) {
       setIsNavigating(true);
-      const query = refine.refinedQuery || pendingQuery;
+      let query = refine.refinedQuery || pendingQuery;
+      query = ensureQueryReflectsTypes(query, contentType);
 
       const typeStr = Array.isArray(contentType)
         ? contentType.join(",")
@@ -193,10 +195,11 @@ export default function Home() {
     setShowModeSelect(false);
     setIsNavigating(true);
 
+    let query = ensureQueryReflectsTypes(pendingQuery, contentType);
     const typeStr = Array.isArray(contentType)
       ? contentType.join(",")
       : contentType;
-    const params = new URLSearchParams({ q: pendingQuery, type: typeStr });
+    const params = new URLSearchParams({ q: query, type: typeStr });
     if (pendingMode === "journey") params.set("mode", "journey");
     router.push(`/search?${params.toString()}`);
   }, [refine, pendingQuery, contentType, pendingMode, router]);
