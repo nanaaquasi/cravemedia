@@ -306,7 +306,11 @@ export async function POST(request: NextRequest) {
             } else if (effectiveType === "anime") {
               ratingSource = "Anilist";
             } else {
-              ratingSource = "TMDB";
+              ratingSource =
+                (enriched as { ratingSource?: "imdb" | "tmdb" }).ratingSource ===
+                "imdb"
+                  ? "IMDb"
+                  : "TMDB";
             }
 
             return {
@@ -478,7 +482,7 @@ export async function POST(request: NextRequest) {
             return {
               ...item,
               type: effectiveType,
-              ratingSource: "TMDB",
+              ratingSource: enriched.ratingSource === "imdb" ? "IMDb" : "TMDB",
               ...enriched,
               rating: enriched.rating ?? item.ratingScore ?? null,
               aiRating: item.ratingScore,

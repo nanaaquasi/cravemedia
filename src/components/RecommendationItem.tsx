@@ -91,7 +91,7 @@ export default function RecommendationItem({
           </span>
           {item.rating && (
             <div className="flex items-center gap-0.5 text-xs font-medium text-amber-300 whitespace-nowrap">
-              ★ {item.rating}
+              ★ {Number(item.rating).toFixed(1)}
             </div>
           )}
         </div>
@@ -267,7 +267,7 @@ export default function RecommendationItem({
         {/* Rating badge */}
         {item.rating && (
           <div className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
-            ★ {item.rating}
+            ★ {Number(item.rating).toFixed(1)}
           </div>
         )}
       </div>

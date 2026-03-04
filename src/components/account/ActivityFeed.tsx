@@ -76,7 +76,7 @@ function ActivityItem({ activity }: { activity: Activity }) {
           {activity.rating && (
             <div className="flex items-center gap-1 text-yellow-500 text-xs">
               <Star className="w-3 h-3 fill-current" />
-              <span>{activity.rating}</span>
+              <span>{Number(activity.rating).toFixed(1)}</span>
             </div>
           )}
         </div>

@@ -96,6 +96,8 @@ export interface MediaDetails {
   posterUrl: string | null;
   backdropUrl: string | null;
   voteAverage: number;
+  /** "imdb" for movies/TV when from OMDb, "tmdb" fallback */
+  ratingSource?: "imdb" | "tmdb";
   voteCount: number;
   releaseDate: string | null;
   runtime: string | null;
@@ -355,7 +357,14 @@ export default function MediaDetailClient({
     genres: details.genres,
     posterUrl: details.posterUrl,
     rating: details.voteAverage,
-    ratingSource: "tmdb",
+    ratingSource:
+      details.ratingSource === "imdb"
+        ? "imdb"
+        : details.type === "anime"
+          ? "anilist"
+          : details.type === "book"
+            ? "Google Books"
+            : "tmdb",
     runtime: details.runtime,
     externalId: mediaId,
   };
@@ -468,6 +477,12 @@ export default function MediaDetailClient({
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
                     ★ {details.voteAverage.toFixed(1)}
                   </span>
+                  {(details.type === "movie" || details.type === "tv") &&
+                    details.ratingSource && (
+                      <span className="text-xs text-[var(--text-muted)] uppercase">
+                        {details.ratingSource}
+                      </span>
+                    )}
                   {details.voteCount > 0 && (
                     <span className="text-xs text-[var(--text-muted)]">
                       {details.voteCount.toLocaleString()} votes
@@ -751,6 +766,12 @@ export default function MediaDetailClient({
               <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
                 ★ {details.voteAverage.toFixed(1)}
               </span>
+              {(details.type === "movie" || details.type === "tv") &&
+                details.ratingSource && (
+                  <span className="text-xs text-[var(--text-muted)] uppercase">
+                    {details.ratingSource}
+                  </span>
+                )}
               {details.voteCount > 0 && (
                 <span className="text-sm text-[var(--text-muted)]">
                   {details.voteCount.toLocaleString()} votes
@@ -1387,7 +1408,7 @@ export default function MediaDetailClient({
                         </div>
                         {review.rating && (
                           <span className="flex items-center gap-0.5 text-amber-400 text-sm font-semibold shrink-0">
-                            {review.rating}
+                            {Number(review.rating).toFixed(1)}
                             <Star className="w-3.5 h-3.5 fill-amber-400" />
                           </span>
                         )}

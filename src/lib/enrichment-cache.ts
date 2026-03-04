@@ -9,6 +9,7 @@ const REDIS_KEY_PREFIX = "enrich:";
 export interface EnrichmentResult {
   posterUrl: string | null;
   rating: number | null;
+  ratingSource?: "imdb" | "tmdb";
   runtime: string | null;
   externalId: string | null;
 }

@@ -160,6 +160,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
         originalLanguage: details.originalLanguage,
         originCountry: details.originCountry,
         writers: details.writers,
+        ratingSource: details.ratingSource,
       };
     }
 
@@ -437,6 +438,32 @@ export default async function MediaDetailPage({ params }: PageProps) {
         });
     }
 
+    // Override season ratings with IMDb averages from episode quality (when available)
+    const tvSeasonsWithImdb =
+      type === "tv" && episodeQuality.length > 0
+        ? tvSeasons.map((season) => {
+            const episodeRatings = episodeQuality.find(
+              (s) => s[0]?.seasonNumber === season.seasonNumber,
+            );
+            if (
+              episodeRatings &&
+              episodeRatings.length > 0 &&
+              episodeRatings.some((e) => e.voteAverage > 0)
+            ) {
+              const sum = episodeRatings.reduce(
+                (a, e) => a + e.voteAverage,
+                0,
+              );
+              const avg = sum / episodeRatings.length;
+              return {
+                ...season,
+                voteAverage: Math.round(avg * 10) / 10,
+              };
+            }
+            return season;
+          })
+        : tvSeasons;
+
     return (
       <MediaDetailClient
         details={mediaDetails}
@@ -447,7 +474,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
         canReview={!!user}
         episodeQuality={episodeQuality}
         collectionNames={collectionNames}
-        tvSeasons={tvSeasons}
+        tvSeasons={tvSeasonsWithImdb}
         animeRelations={animeRelations}
         watchProviders={watchProviders}
         otherCravelists={otherCravelists}

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { searchMovie, searchTV, getPosterUrl } from "@/lib/tmdb";
+import {
+  searchMovie,
+  searchTV,
+  getPosterUrl,
+  getImdbRatingForTmdbId,
+} from "@/lib/tmdb";
 import { searchAnime } from "@/lib/anilist";
 import { searchBooksForList } from "@/lib/books";
 import { EnrichedRecommendation } from "@/lib/types";
@@ -23,42 +28,52 @@ export async function GET(request: Request) {
 
     const searchPromises = typesToSearch.map(async (t) => {
       switch (t) {
-        case "movie":
+        case "movie": {
           const movies = await searchMovie(q);
-          return movies.slice(0, 10).map(
-            (m) =>
-              ({
+          return Promise.all(
+            movies.slice(0, 10).map(async (m) => {
+              let rating: number | null = m.vote_average
+                ? Math.round(m.vote_average * 10) / 10
+                : null;
+              const imdbRating = await getImdbRatingForTmdbId(m.id, "movie");
+              if (imdbRating != null) rating = imdbRating;
+              return {
                 title: m.title,
-                creator: "Director/Studio", // TMDB search doesn't return director, requires exact item fetch
+                creator: "Director/Studio",
                 description: m.overview,
                 type: "movie",
                 year: m.release_date?.substring(0, 4) || "",
                 whyThis: "",
-                rating: m.vote_average
-                  ? Math.round(m.vote_average * 10) / 10
-                  : null,
+                rating,
                 posterUrl: getPosterUrl(m.poster_path),
                 externalId: m.id.toString(),
-              }) as unknown as EnrichedRecommendation,
+              } as unknown as EnrichedRecommendation;
+            }),
           );
-        case "tv":
+        }
+        case "tv": {
           const shows = await searchTV(q);
-          return shows.slice(0, 10).map(
-            (s) =>
-              ({
+          return Promise.all(
+            shows.slice(0, 10).map(async (s) => {
+              let rating: number | null = s.vote_average
+                ? Math.round(s.vote_average * 10) / 10
+                : null;
+              const imdbRating = await getImdbRatingForTmdbId(s.id, "tv");
+              if (imdbRating != null) rating = imdbRating;
+              return {
                 title: s.name,
                 creator: "Network/Creator",
                 description: s.overview,
                 type: "tv",
                 year: s.first_air_date?.substring(0, 4) || "",
                 whyThis: "",
-                rating: s.vote_average
-                  ? Math.round(s.vote_average * 10) / 10
-                  : null,
+                rating,
                 posterUrl: getPosterUrl(s.poster_path),
                 externalId: s.id.toString(),
-              }) as unknown as EnrichedRecommendation,
+              } as unknown as EnrichedRecommendation;
+            }),
           );
+        }
         case "anime":
           const animes = await searchAnime(q);
           return animes.slice(0, 10).map(

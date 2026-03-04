@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import type { PersonDetails, PersonCredit } from "@/lib/tmdb";
 
 const BIO_TRUNCATE_LENGTH = 280;
@@ -22,6 +24,7 @@ interface Props {
 }
 
 export default function PersonDetailClient({ person, credits }: Props) {
+  const router = useRouter();
   const [bioExpanded, setBioExpanded] = useState(false);
   const bio = person.biography ?? "";
   const isBioLong = bio.length > BIO_TRUNCATE_LENGTH;
@@ -41,8 +44,16 @@ export default function PersonDetailClient({ person, credits }: Props) {
 
   return (
     <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <button
+        onClick={() => router.back()}
+        className="mt-4 mb-2 -mx-1 inline-flex items-center gap-2 px-2 py-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-colors cursor-pointer w-fit"
+        aria-label="Go back"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-sm font-medium">Back</span>
+      </button>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start mt-6">
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start mt-2">
         <div className="shrink-0 w-32 sm:w-40 aspect-square rounded-2xl overflow-hidden bg-zinc-800 border border-white/[0.08]">
           {person.profileUrl ? (
             <Image

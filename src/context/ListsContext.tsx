@@ -345,7 +345,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
     text += `${list.description}\n\n`;
     list.items.forEach((item, i) => {
       text += `${i + 1}. ${item.title} (${item.year}) — ${item.creator}\n`;
-      if (item.rating) text += `   Rating: ${item.rating}/10\n`;
+      if (item.rating) text += `   Rating: ${Number(item.rating).toFixed(1)}/10\n`;
       text += `   ${item.description}\n\n`;
     });
     return text;

@@ -100,7 +100,7 @@ export default function JourneyItemCard({
             </div>
             {item.rating && (
               <div className="px-1.5 py-0.5 rounded bg-black/60 text-xs font-medium text-amber-300">
-                ★ {item.rating}
+                ★ {Number(item.rating).toFixed(1)}
               </div>
             )}
           </div>

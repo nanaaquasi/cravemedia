@@ -963,7 +963,7 @@ export default function CollectionDetailClient({
               ))}
             </div>
             <p className="text-zinc-500 text-xs -mt-2 mb-2">
-              {reviewRating}/10
+              {Number(reviewRating).toFixed(1)}/10
             </p>
             <textarea
               value={reviewText}

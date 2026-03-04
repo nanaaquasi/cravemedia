@@ -96,7 +96,9 @@ export function JourneyShowcase({
 
                 <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-white flex items-center gap-1">
                   <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                  {journey.overall_rating || "-"}
+                  {journey.overall_rating != null
+                  ? Number(journey.overall_rating).toFixed(1)
+                  : "-"}
                 </div>
               </div>
 

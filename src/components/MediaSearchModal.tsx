@@ -165,7 +165,7 @@ export default function MediaSearchModal({
                         </span>
                         {item.rating && (
                           <span className="text-[10px] px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 font-medium flex items-center gap-1 h-fit">
-                            ★ {item.rating}
+                            ★ {Number(item.rating).toFixed(1)}
                           </span>
                         )}
                       </div>

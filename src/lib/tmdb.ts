@@ -1,3 +1,30 @@
+import { getImdbRating, getImdbEpisodeRating } from "./omdb";
+import {
+  getCachedEpisodeRating,
+  setCachedEpisodeRating,
+} from "./episode-rating-cache";
+
+/**
+ * Fetch IMDb rating for a movie/TV by TMDB ID.
+ * Returns null if no OMDb key, no IMDb ID, or error.
+ */
+export async function getImdbRatingForTmdbId(
+  tmdbId: number,
+  type: "movie" | "tv",
+): Promise<number | null> {
+  if (!process.env.OMDB_API_KEY) return null;
+  try {
+    const extData = await tmdbFetch<{ imdb_id?: string | null }>(
+      `/${type}/${tmdbId}/external_ids`,
+    );
+    const imdbId = extData?.imdb_id?.trim();
+    if (!imdbId?.startsWith("tt")) return null;
+    return getImdbRating(imdbId);
+  } catch {
+    return null;
+  }
+}
+
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
@@ -329,38 +356,91 @@ export async function getTVSeasonDetails(
   seriesId: number,
   seasonNumber: number,
 ): Promise<TVSeasonDetails> {
-  const data = await tmdbFetch<TMDBSeasonDetailsResponse>(
-    `/tv/${seriesId}/season/${seasonNumber}`,
+  const [data, extIds] = await Promise.all([
+    tmdbFetch<TMDBSeasonDetailsResponse>(
+      `/tv/${seriesId}/season/${seasonNumber}`,
+    ),
+    tmdbFetch<{ imdb_id?: string | null }>(`/tv/${seriesId}/external_ids`),
+  ]);
+
+  const seriesImdbId = extIds?.imdb_id?.trim();
+  const useImdb =
+    seriesImdbId?.startsWith("tt") && !!process.env.OMDB_API_KEY;
+
+  const episodesRaw = data.episodes ?? [];
+  const episodes: SeasonEpisode[] = await Promise.all(
+    episodesRaw.map(async (ep) => {
+      let voteAverage = ep.vote_average ?? 0;
+
+      if (useImdb && seriesImdbId) {
+        const cached = await getCachedEpisodeRating(
+          seriesImdbId,
+          seasonNumber,
+          ep.episode_number,
+        );
+        if (cached != null) {
+          voteAverage = cached;
+        } else {
+          const imdbRating = await getImdbEpisodeRating(
+            seriesImdbId,
+            seasonNumber,
+            ep.episode_number,
+          );
+          if (imdbRating != null) {
+            voteAverage = imdbRating;
+            await setCachedEpisodeRating(
+              seriesImdbId,
+              seasonNumber,
+              ep.episode_number,
+              imdbRating,
+            );
+          }
+        }
+      }
+
+      return {
+        episodeNumber: ep.episode_number,
+        name: ep.name ?? "",
+        overview: ep.overview ?? null,
+        airDate: ep.air_date ?? null,
+        stillUrl: ep.still_path
+          ? `${TMDB_IMAGE_BASE}/w300${ep.still_path}`
+          : null,
+        voteAverage,
+        voteCount: ep.vote_count ?? 0,
+      };
+    }),
   );
+
+  const voteAverage =
+    episodes.length > 0
+      ? episodes.reduce((s, e) => s + e.voteAverage, 0) / episodes.length
+      : data.vote_average ?? 0;
+
   return {
     seasonNumber: data.season_number ?? seasonNumber,
     overview: data.overview ?? null,
     posterPath: data.poster_path,
     airDate: data.air_date ?? null,
-    voteAverage: data.vote_average ?? 0,
+    voteAverage: Math.round(voteAverage * 100) / 100,
     voteCount: data.vote_count ?? 0,
-    episodes: (data.episodes ?? []).map((ep) => ({
-      episodeNumber: ep.episode_number,
-      name: ep.name ?? "",
-      overview: ep.overview ?? null,
-      airDate: ep.air_date ?? null,
-      stillUrl: ep.still_path
-        ? `${TMDB_IMAGE_BASE}/w300${ep.still_path}`
-        : null,
-      voteAverage: ep.vote_average ?? 0,
-      voteCount: ep.vote_count ?? 0,
-    })),
+    episodes,
   };
 }
 
 export async function getTVEpisodeRatings(
   seriesId: number,
 ): Promise<EpisodeQualityData> {
-  const tvData = await tmdbFetch<{ number_of_seasons?: number }>(
-    `/tv/${seriesId}`,
-  );
+  const [tvData, extIds] = await Promise.all([
+    tmdbFetch<{ number_of_seasons?: number }>(`/tv/${seriesId}`),
+    tmdbFetch<{ imdb_id?: string | null }>(`/tv/${seriesId}/external_ids`),
+  ]);
   const numSeasons = tvData.number_of_seasons ?? 0;
   if (numSeasons < 1) return [];
+
+  const seriesImdbId = extIds?.imdb_id?.trim();
+  const useImdb =
+    seriesImdbId?.startsWith("tt") && !!process.env.OMDB_API_KEY;
 
   const result: EpisodeRating[][] = [];
 
@@ -370,12 +450,45 @@ export async function getTVEpisodeRatings(
         `/tv/${seriesId}/season/${s}`,
       );
       const episodes = seasonData.episodes ?? [];
-      const seasonRatings: EpisodeRating[] = episodes.map((ep) => ({
-        seasonNumber: s,
-        episodeNumber: ep.episode_number,
-        voteAverage: ep.vote_average ?? 0,
-        name: ep.name ?? "",
-      }));
+
+      const seasonRatings: EpisodeRating[] = await Promise.all(
+        episodes.map(async (ep) => {
+          let voteAverage = ep.vote_average ?? 0;
+
+          if (useImdb && seriesImdbId) {
+            const cached = await getCachedEpisodeRating(
+              seriesImdbId,
+              s,
+              ep.episode_number,
+            );
+            if (cached != null) {
+              voteAverage = cached;
+            } else {
+              const imdbRating = await getImdbEpisodeRating(
+                seriesImdbId,
+                s,
+                ep.episode_number,
+              );
+              if (imdbRating != null) {
+                voteAverage = imdbRating;
+                await setCachedEpisodeRating(
+                  seriesImdbId,
+                  s,
+                  ep.episode_number,
+                  imdbRating,
+                );
+              }
+            }
+          }
+
+          return {
+            seasonNumber: s,
+            episodeNumber: ep.episode_number,
+            voteAverage,
+            name: ep.name ?? "",
+          };
+        }),
+      );
       result.push(seasonRatings);
     } catch {
       result.push([]);
@@ -391,6 +504,8 @@ export interface MediaDetailsResponse {
   posterPath: string | null;
   backdropPath: string | null;
   voteAverage: number;
+  /** "imdb" when from OMDb, "tmdb" when fallback */
+  ratingSource?: "imdb" | "tmdb";
   voteCount: number;
   releaseDate: string | null;
   runtime: string | null;
@@ -436,9 +551,10 @@ interface TMDBDetailsWithAppend {
       name?: string;
       poster_path: string | null;
       vote_average: number;
-      media_type?: string;
+      media_type?: "movie" | "tv";
     }[];
   };
+  external_ids?: { imdb_id?: string | null };
 }
 
 export async function getMediaDetails(
@@ -447,7 +563,7 @@ export async function getMediaDetails(
 ): Promise<MediaDetailsResponse> {
   const endpoint = type === "movie" ? `/movie/${id}` : `/tv/${id}`;
   const data = await tmdbFetch<TMDBDetailsWithAppend>(endpoint, {
-    append_to_response: "videos,credits,recommendations",
+    append_to_response: "videos,credits,recommendations,external_ids",
   });
 
   const title = data.title ?? data.name ?? "";
@@ -490,19 +606,25 @@ export async function getMediaDetails(
         : null,
     }));
 
-  const recommendations: RecommendedTitle[] = (
-    data.recommendations?.results ?? []
-  )
-    .slice(0, 10)
-    .map((r) => ({
-      id: r.id,
-      title: r.title ?? r.name ?? "",
-      posterUrl: r.poster_path
-        ? `${TMDB_IMAGE_BASE}/w300${r.poster_path}`
-        : null,
-      voteAverage: r.vote_average ?? 0,
-      type,
-    }));
+  const recResults = (data.recommendations?.results ?? []).slice(0, 10);
+  const recommendations: RecommendedTitle[] = await Promise.all(
+    recResults.map(async (r) => {
+      let voteAverage = r.vote_average ?? 0;
+      const recType = (r.media_type ?? type) as "movie" | "tv";
+      const imdbRating = await getImdbRatingForTmdbId(r.id, recType);
+      if (imdbRating != null) voteAverage = imdbRating;
+
+      return {
+        id: r.id,
+        title: r.title ?? r.name ?? "",
+        posterUrl: r.poster_path
+          ? `${TMDB_IMAGE_BASE}/w300${r.poster_path}`
+          : null,
+        voteAverage,
+        type: recType,
+      };
+    }),
+  );
 
   let runtime: string | null = null;
   let episodeRuntimeMinutes: number | null = null;
@@ -521,12 +643,24 @@ export async function getMediaDetails(
     }
   }
 
+  let voteAverage = data.vote_average ?? 0;
+  let ratingSource: "imdb" | "tmdb" = "tmdb";
+  const imdbId = data.external_ids?.imdb_id?.trim();
+  if (imdbId?.startsWith("tt")) {
+    const imdbRating = await getImdbRating(imdbId);
+    if (imdbRating != null) {
+      voteAverage = imdbRating;
+      ratingSource = "imdb";
+    }
+  }
+
   return {
     title,
     overview: data.overview || null,
     posterPath: data.poster_path,
     backdropPath: data.backdrop_path,
-    voteAverage: data.vote_average ?? 0,
+    voteAverage,
+    ratingSource,
     voteCount: data.vote_count ?? 0,
     releaseDate,
     runtime,
@@ -717,6 +851,7 @@ export async function enrichMovieOrTV(
 ): Promise<{
   posterUrl: string | null;
   rating: number | null;
+  ratingSource: "imdb" | "tmdb";
   runtime: string | null;
   externalId: string | null;
 }> {
@@ -726,6 +861,7 @@ export async function enrichMovieOrTV(
       return {
         posterUrl: null,
         rating: null,
+        ratingSource: "tmdb",
         runtime: null,
         externalId: null,
       };
@@ -742,15 +878,41 @@ export async function enrichMovieOrTV(
           ? `${details.number_of_seasons} season${details.number_of_seasons > 1 ? "s" : ""}`
           : null;
 
+    let rating =
+      Math.round((result.vote_average || details.vote_average) * 10) / 10;
+    let ratingSource: "imdb" | "tmdb" = "tmdb";
+
+    try {
+      const extData = await tmdbFetch<{ imdb_id?: string | null }>(
+        `${type === "movie" ? "/movie" : "/tv"}/${result.id}/external_ids`,
+      );
+      const imdbId = extData?.imdb_id?.trim();
+      if (imdbId?.startsWith("tt")) {
+        const imdbRating = await getImdbRating(imdbId);
+        if (imdbRating != null) {
+          rating = imdbRating;
+          ratingSource = "imdb";
+        }
+      }
+    } catch {
+      // Keep TMDB fallback
+    }
+
     return {
       posterUrl: getPosterUrl(posterPath),
-      rating:
-        Math.round((result.vote_average || details.vote_average) * 10) / 10,
+      rating,
+      ratingSource,
       runtime,
       externalId: result.id.toString(),
     };
   } catch {
-    return { posterUrl: null, rating: null, runtime: null, externalId: null };
+    return {
+      posterUrl: null,
+      rating: null,
+      ratingSource: "tmdb",
+      runtime: null,
+      externalId: null,
+    };
   }
 }
 
@@ -844,25 +1006,34 @@ export async function getPersonCombinedCredits(
     for (const c of data.crew ?? []) {
       if (!byId.has(c.id)) byId.set(c.id, c);
     }
-    const credits: PersonCredit[] = Array.from(byId.values())
+    const sorted = Array.from(byId.values())
       .sort((a, b) => {
         const da = a.release_date ?? a.first_air_date ?? "";
         const db = b.release_date ?? b.first_air_date ?? "";
         return db.localeCompare(da);
       })
-      .slice(0, 20)
-      .map((c) => ({
-        id: c.id,
-        title: c.title ?? c.name ?? "",
-        posterUrl: c.poster_path
-          ? `${TMDB_IMAGE_BASE}/w185${c.poster_path}`
-          : null,
-        voteAverage: c.vote_average ?? 0,
-        releaseDate: c.release_date ?? c.first_air_date ?? null,
-        character: c.character,
-        job: c.job,
-        type: c.media_type,
-      }));
+      .slice(0, 20);
+
+    const credits: PersonCredit[] = await Promise.all(
+      sorted.map(async (c) => {
+        let voteAverage = c.vote_average ?? 0;
+        const imdbRating = await getImdbRatingForTmdbId(c.id, c.media_type);
+        if (imdbRating != null) voteAverage = imdbRating;
+
+        return {
+          id: c.id,
+          title: c.title ?? c.name ?? "",
+          posterUrl: c.poster_path
+            ? `${TMDB_IMAGE_BASE}/w185${c.poster_path}`
+            : null,
+          voteAverage,
+          releaseDate: c.release_date ?? c.first_air_date ?? null,
+          character: c.character,
+          job: c.job,
+          type: c.media_type,
+        };
+      }),
+    );
     return credits;
   } catch {
     return [];

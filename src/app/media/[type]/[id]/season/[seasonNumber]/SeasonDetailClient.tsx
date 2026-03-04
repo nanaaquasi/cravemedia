@@ -196,7 +196,7 @@ export default function SeasonDetailClient({
             <div className="flex items-center gap-2 lg:hidden">
               <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
                 <Star className="w-4 h-4 fill-amber-400" />
-                {voteAverage > 0 ? voteAverage.toFixed(2) : "0.00"}
+                {voteAverage > 0 ? voteAverage.toFixed(1) : "0.0"}
               </span>
               {voteCount > 0 && (
                 <span className="text-xs text-[var(--text-muted)]">
@@ -213,7 +213,7 @@ export default function SeasonDetailClient({
           <div className="hidden lg:flex items-center gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-sm font-medium">
               <Star className="w-4 h-4 fill-amber-400" />
-              {voteAverage > 0 ? voteAverage.toFixed(2) : "0.00"}
+              {voteAverage > 0 ? voteAverage.toFixed(1) : "0.0"}
             </span>
             {voteCount > 0 && (
               <span className="text-sm text-[var(--text-muted)]">
@@ -238,7 +238,7 @@ export default function SeasonDetailClient({
                 <h2 className="text-lg font-bold text-white">Episodes</h2>
                 <span
                   className="text-zinc-500 hover:text-zinc-400 cursor-help"
-                  title="Episode ratings from TMDB"
+                  title="Episode ratings from IMDb when available"
                 >
                   <HelpCircle className="w-4 h-4" />
                 </span>
