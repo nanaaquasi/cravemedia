@@ -46,7 +46,12 @@ function formatUserContextBlock(ctx: UserRecommendContext): string {
 
 export function getSystemPrompt(
   type: ContentType | ContentType[],
-  options?: { excludeTitles?: string[]; userContext?: UserRecommendContext },
+  options?: {
+    excludeTitles?: string[];
+    userContext?: UserRecommendContext;
+    /** When set, ONLY recommend titles available on this streaming service */
+    streamingServiceOnly?: string | null;
+  },
 ): string {
   const isMultiple = Array.isArray(type);
   const typeLabel = Array.isArray(type)
@@ -86,6 +91,11 @@ export function getSystemPrompt(
       ? `\n- DO NOT recommend any of these titles (user already saw them): ${options.excludeTitles.join(", ")}. Suggest different works instead.`
       : "";
 
+  const streamingRule =
+    options?.streamingServiceOnly
+      ? `\n- STREAMING RESTRICTION: The user requested content ONLY from ${options.streamingServiceOnly}. You MUST ONLY recommend titles that are available on ${options.streamingServiceOnly}. Do NOT include any titles from HBO, Disney+, Prime Video, or other services — only ${options.streamingServiceOnly}.`
+      : "";
+
   const userContextBlock = options?.userContext
     ? formatUserContextBlock(options.userContext)
     : "";
@@ -101,7 +111,7 @@ IMPORTANT RULES:
 - STRICT CONSTRAINT ENFORCEMENT: If the user specifies a year or date range (e.g. "2015+", "after 2020", "from the 90s", "pre-2000"), you MUST ONLY include items that satisfy that constraint. Every "year" field in your response must fall within the specified range. Do not include older titles when they ask for recent/modern only.
 - SINGLE-SEASON TV: If the user asks for "single-season", "one-season", "one season", "miniseries", "limited series", or similar, you MUST ONLY recommend TV shows with exactly ONE season. Do not include multi-season series (e.g. Stranger Things, Breaking Bad). Prefer limited series, miniseries, and one-and-done shows.
 - BE CREATIVE: Make the collection title evocative and fitting. Keep it SHORT: 3-6 words max (e.g. "Cozy Rainy Day Picks", "Mind-Bending Sci-Fi").${titleHint}
-- QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.${typeMixHint}${excludeRule}
+- QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.${typeMixHint}${excludeRule}${streamingRule}
 ${typeFieldRule}
 ${onlyRecommendRule}
 

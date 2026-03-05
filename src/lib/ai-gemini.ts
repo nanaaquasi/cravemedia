@@ -17,6 +17,7 @@ export async function generateWithGemini(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -37,6 +38,7 @@ export async function generateWithGemini(
       systemInstruction: getSystemPrompt(type, {
         excludeTitles: options.excludeTitles,
         userContext: options.userContext,
+        streamingServiceOnly: options.streamingServiceOnly,
       }),
       maxOutputTokens: options.maxOutputTokens || 3000,
       temperature: options.temperature ?? 0.4,
@@ -58,6 +60,7 @@ export async function generateJourneyWithGemini(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -78,6 +81,7 @@ export async function generateJourneyWithGemini(
       systemInstruction: getJourneySystemPrompt(type, {
         excludeTitles: options.excludeTitles,
         userContext: options.userContext,
+        streamingServiceOnly: options.streamingServiceOnly,
       }),
       maxOutputTokens: options.maxOutputTokens || 4000,
       temperature: options.temperature ?? 0.4,
@@ -97,7 +101,10 @@ export async function generateRefineWithGemini(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
-  options?: { userContext?: import("./types").UserRecommendContext },
+  options?: {
+    userContext?: import("./types").UserRecommendContext;
+    streamingServiceInQuery?: string | null;
+  },
 ): Promise<RefineResponse> {
   const apiKey = process.env.GOOGLE_AI_API_KEY;
   if (!apiKey) {
@@ -113,6 +120,7 @@ export async function generateRefineWithGemini(
     config: {
       systemInstruction: getRefineSystemPrompt(type, previousAnswers, {
         userContext: options?.userContext,
+        streamingServiceInQuery: options?.streamingServiceInQuery,
       }),
       maxOutputTokens: 2000,
       temperature: 0.8,

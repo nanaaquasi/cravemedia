@@ -17,6 +17,10 @@ export async function generateWithAnthropic(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
   } = {},
 ): Promise<AIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -29,11 +33,12 @@ export async function generateWithAnthropic(
 
   const message = await client.messages.create({
     model,
-    max_tokens: 4500,
-    temperature: 0.7,
+    max_tokens: options.maxOutputTokens || 4500,
+    temperature: options.temperature ?? 0.7,
     system: getSystemPrompt(type, {
       excludeTitles: options.excludeTitles,
       userContext: options.userContext,
+      streamingServiceOnly: options.streamingServiceOnly,
     }),
     messages: [{ role: "user", content: query }],
   });
@@ -52,6 +57,10 @@ export async function generateJourneyWithAnthropic(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
   } = {},
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -64,11 +73,12 @@ export async function generateJourneyWithAnthropic(
 
   const message = await client.messages.create({
     model,
-    max_tokens: 5000,
-    temperature: 0.7,
+    max_tokens: options.maxOutputTokens || 5000,
+    temperature: options.temperature ?? 0.7,
     system: getJourneySystemPrompt(type, {
       excludeTitles: options.excludeTitles,
       userContext: options.userContext,
+      streamingServiceOnly: options.streamingServiceOnly,
     }),
     messages: [{ role: "user", content: query }],
   });
@@ -85,7 +95,10 @@ export async function generateRefineWithAnthropic(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
-  options?: { userContext?: import("./types").UserRecommendContext },
+  options?: {
+    userContext?: import("./types").UserRecommendContext;
+    streamingServiceInQuery?: string | null;
+  },
 ): Promise<RefineResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -101,6 +114,7 @@ export async function generateRefineWithAnthropic(
     temperature: 0.8,
     system: getRefineSystemPrompt(type, previousAnswers, {
       userContext: options?.userContext,
+      streamingServiceInQuery: options?.streamingServiceInQuery,
     }),
     messages: [{ role: "user", content: query }],
   });

@@ -6,6 +6,7 @@ import { checkRefineRateLimit } from "@/lib/ratelimit";
 import { getCachedRefine, setCachedRefine } from "@/lib/refine-cache";
 import { ContentType, RefineAnswer } from "@/lib/types";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
+import { detectStreamingServiceInQuery } from "@/lib/query-utils";
 
 const MAX_ANSWERS = 10;
 
@@ -78,6 +79,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached);
     }
 
+    const streamingServiceInQuery = detectStreamingServiceInQuery(trimmedQuery);
+
     const result = await generateRefineQuestions(
       trimmedQuery,
       type,
@@ -91,6 +94,7 @@ export async function POST(request: NextRequest) {
               recentlyRated: [],
             }
           : undefined,
+        streamingServiceInQuery,
       },
     );
 

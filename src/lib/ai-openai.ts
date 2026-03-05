@@ -17,6 +17,10 @@ export async function generateWithOpenAI(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
   } = {},
 ): Promise<AIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -29,14 +33,15 @@ export async function generateWithOpenAI(
 
   const completion = await client.chat.completions.create({
     model,
-    max_tokens: 3000,
-    temperature: 0.7,
+    max_tokens: options.maxOutputTokens || 3000,
+    temperature: options.temperature ?? 0.7,
     messages: [
       {
         role: "system",
         content: getSystemPrompt(type, {
           excludeTitles: options.excludeTitles,
           userContext: options.userContext,
+          streamingServiceOnly: options.streamingServiceOnly,
         }),
       },
       { role: "user", content: query },
@@ -58,6 +63,10 @@ export async function generateJourneyWithOpenAI(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
   } = {},
 ): Promise<JourneyAIResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -70,14 +79,15 @@ export async function generateJourneyWithOpenAI(
 
   const completion = await client.chat.completions.create({
     model,
-    max_tokens: 4000,
-    temperature: 0.7,
+    max_tokens: options.maxOutputTokens || 4000,
+    temperature: options.temperature ?? 0.7,
     messages: [
       {
         role: "system",
         content: getJourneySystemPrompt(type, {
           excludeTitles: options.excludeTitles,
           userContext: options.userContext,
+          streamingServiceOnly: options.streamingServiceOnly,
         }),
       },
       { role: "user", content: query },
@@ -97,7 +107,10 @@ export async function generateRefineWithOpenAI(
   query: string,
   type: ContentType | ContentType[],
   previousAnswers: RefineAnswer[],
-  options?: { userContext?: import("./types").UserRecommendContext },
+  options?: {
+    userContext?: import("./types").UserRecommendContext;
+    streamingServiceInQuery?: string | null;
+  },
 ): Promise<RefineResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -116,6 +129,7 @@ export async function generateRefineWithOpenAI(
         role: "system",
         content: getRefineSystemPrompt(type, previousAnswers, {
           userContext: options?.userContext,
+          streamingServiceInQuery: options?.streamingServiceInQuery,
         }),
       },
       { role: "user", content: query },

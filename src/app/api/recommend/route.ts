@@ -24,6 +24,7 @@ import {
 } from "@/lib/types";
 import { getTypeLabel, VALID_CONTENT_TYPES } from "@/config/media-types";
 import { createSearchSession } from "@/app/actions/search";
+import { queryRequestsStreamingOnly } from "@/lib/query-utils";
 
 /** Parse min year from query (e.g. "2015+", "after 2020", "from 2015") — returns null if none found */
 function parseMinYearFromQuery(query: string): number | null {
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedQuery = query.trim();
+    const streamingServiceOnly = queryRequestsStreamingOnly(trimmedQuery);
 
     // Fetch user context for personalization (logged-in only)
     let userContext: Awaited<ReturnType<typeof getUserRecommendContext>> = null;
@@ -226,8 +228,13 @@ export async function POST(request: NextRequest) {
           cached.description ?? "",
           type,
         );
+        const filteredItems = (cached.items ?? []).filter(
+          (item) => item.externalId != null,
+        );
         return NextResponse.json({
           ...cached,
+          items: filteredItems,
+          itemCount: filteredItems.length,
           journeyTitle: jt,
           description: jd,
         });
@@ -236,6 +243,7 @@ export async function POST(request: NextRequest) {
       const aiResponse = await generateJourney(trimmedQuery, type, {
         excludeTitles: sanitizedExcludeTitles,
         userContext: userContext ?? undefined,
+        streamingServiceOnly: streamingServiceOnly ?? undefined,
         maxOutputTokens,
         temperature,
         responseMimeType,
@@ -349,13 +357,12 @@ export async function POST(request: NextRequest) {
       const allEnriched = await Promise.all(enrichmentPromises);
       let enrichedItems = filterByYearIfNeeded(allEnriched, trimmedQuery);
       enrichedItems = filterBySingleSeasonIfNeeded(enrichedItems, trimmedQuery);
-      // Deduplicate by externalId when present; for items without externalId, use title+creator+year
+      // Filter out items without externalId (no match in DB)
+      enrichedItems = enrichedItems.filter((item) => item.externalId != null);
+      // Deduplicate by externalId
       const seenKeys = new Set<string>();
       enrichedItems = enrichedItems.filter((item) => {
-        const key =
-          item.externalId != null
-            ? String(item.externalId)
-            : `${item.title}|${item.creator}|${item.year}`;
+        const key = String(item.externalId);
         if (seenKeys.has(key)) return false;
         seenKeys.add(key);
         return true;
@@ -404,8 +411,16 @@ export async function POST(request: NextRequest) {
         cached.collectionDescription,
         type,
       );
+      const filteredItems = (cached.items ?? []).filter(
+        (item) => item.externalId != null,
+      );
+      const sortedItems = filteredItems.sort(
+        (a, b) => (b.rating ?? -1) - (a.rating ?? -1),
+      );
       return NextResponse.json({
         ...cached,
+        items: sortedItems,
+        itemCount: sortedItems.length,
         collectionTitle: ct,
         collectionDescription: cd,
       });
@@ -414,6 +429,7 @@ export async function POST(request: NextRequest) {
     const aiResponse = await generateRecommendations(trimmedQuery, type, {
       excludeTitles: sanitizedExcludeTitles,
       userContext: userContext ?? undefined,
+      streamingServiceOnly: streamingServiceOnly ?? undefined,
       maxOutputTokens,
       temperature,
       responseMimeType,
@@ -508,17 +524,20 @@ export async function POST(request: NextRequest) {
     const allEnriched = await Promise.all(enrichmentPromises);
     let enrichedItems = filterByYearIfNeeded(allEnriched, trimmedQuery);
     enrichedItems = filterBySingleSeasonIfNeeded(enrichedItems, trimmedQuery);
-    // Deduplicate by externalId when present; for items without externalId, use title+creator+year
+    // Filter out items without externalId (no match in DB)
+    enrichedItems = enrichedItems.filter((item) => item.externalId != null);
+
+    // Deduplicate by externalId
     const seenKeys = new Set<string>();
     enrichedItems = enrichedItems.filter((item) => {
-      const key =
-        item.externalId != null
-          ? String(item.externalId)
-          : `${item.title}|${item.creator}|${item.year}`;
+      const key = String(item.externalId);
       if (seenKeys.has(key)) return false;
       seenKeys.add(key);
       return true;
     });
+
+    // Sort by highest rating first (items without rating go to the end)
+    enrichedItems.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1));
 
     const { title: correctedTitle, description: correctedDesc } =
       ensureMultiTypeLabel(

@@ -38,6 +38,7 @@ export async function generateRecommendations(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -74,6 +75,7 @@ export async function generateJourney(
   options: {
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceOnly?: string | null;
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -109,6 +111,7 @@ export async function generateRefineQuestions(
   previousAnswers: RefineAnswer[],
   options?: {
     userContext?: import("./types").UserRecommendContext;
+    streamingServiceInQuery?: string | null;
   },
 ): Promise<RefineResponse> {
   const provider = process.env.AI_PROVIDER || "gemini";

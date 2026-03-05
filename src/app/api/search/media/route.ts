@@ -100,9 +100,11 @@ export async function GET(request: Request) {
     });
 
     const nestedResults = await Promise.all(searchPromises);
-    results = nestedResults.flat();
+    results = nestedResults
+      .flat()
+      .filter((item) => item.externalId != null);
 
-    // Optional: Sort by rating to surface better results first
+    // Sort by rating to surface better results first
     results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   } catch (error) {
     console.error("Manual search error:", error);

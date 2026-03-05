@@ -91,7 +91,12 @@ function formatUserContextBlock(ctx: UserRecommendContext): string {
 
 export function getJourneySystemPrompt(
   type: ContentType | ContentType[],
-  options?: { excludeTitles?: string[]; userContext?: UserRecommendContext },
+  options?: {
+    excludeTitles?: string[];
+    userContext?: UserRecommendContext;
+    /** When set, ONLY include titles available on this streaming service */
+    streamingServiceOnly?: string | null;
+  },
 ): string {
   const typeLabel = Array.isArray(type)
     ? type.map((t) => getTypeLabel(t)).join(", ")
@@ -119,6 +124,10 @@ export function getJourneySystemPrompt(
   const excludeRule =
     options?.excludeTitles && options.excludeTitles.length > 0
       ? `\n7. EXCLUSIONS: DO NOT include any of these (user already saw them): ${options.excludeTitles.join(", ")}. Suggest different works instead.`
+      : "";
+  const streamingRule =
+    options?.streamingServiceOnly
+      ? `\nSTREAMING RESTRICTION: The user requested content ONLY from ${options.streamingServiceOnly}. You MUST ONLY include titles available on ${options.streamingServiceOnly}. Do NOT include any titles from HBO, Disney+, Prime Video, or other services — only ${options.streamingServiceOnly}.`
       : "";
   const excludeOffset = excludeRule ? 1 : 0;
 
@@ -148,7 +157,7 @@ CRITICAL REQUIREMENTS:
 3. EMOTIONAL ARC: Early items hook and intrigue; middle items deepen; final item(s) deliver payoff or revelation
 4. SHOW EVOLUTION: Include mix of eras/styles showing how the genre/topic developed. Include roughly 60% recognizable titles and 40% hidden gems
 5. TRANSITIONS CREATE ANTICIPATION: Every "transitionToNext" must be specific, insightful, and create curiosity for what comes next
-6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or date range (e.g. "2015+", "from the 90s"), popularity, or single-season/one-season/miniseries/limited series for TV, YOU MUST STRICTLY ADHERE TO IT. For single-season requests: ONLY include TV shows with exactly ONE season — no multi-season series. Every item's "year" must fall within any specified range.${typeMixHint}${excludeRule}
+6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or date range (e.g. "2015+", "from the 90s"), popularity, or single-season/one-season/miniseries/limited series for TV, YOU MUST STRICTLY ADHERE TO IT. For single-season requests: ONLY include TV shows with exactly ONE season — no multi-season series. Every item's "year" must fall within any specified range.${typeMixHint}${streamingRule}${excludeRule}
 ${7 + excludeOffset}. QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
 ${8 + excludeOffset}. Return ONLY valid JSON, no markdown, no code fences, no explanation
 ${9 + excludeOffset}. Keep journey_title SHORT: 3-6 words max (e.g. "Intro to Noir", "Sci-Fi Masterclass").${journeyTitleHint}
