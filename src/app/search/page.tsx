@@ -45,7 +45,7 @@ function SearchContent() {
     null,
   );
   const [showImmersiveLoader, setShowImmersiveLoader] = useState(false);
-  const { user } = useSession();
+  const { user, isLoading: isSessionLoading } = useSession();
 
   const { results, journeyResults, isLoading, error, fetchRecommendations } =
     useRecommendations();
@@ -118,6 +118,27 @@ function SearchContent() {
     [searchParams, router, pathname],
   );
 
+  // After login redirect: open save modal if intent param is present
+  useEffect(() => {
+    if (!user || isSessionLoading) return;
+    const openSaveModal = searchParams.get("openSaveModal");
+    const openSaveJourneyModal = searchParams.get("openSaveJourneyModal");
+    if (openSaveModal === "1" && results) {
+      setIsSaveCollectionModalOpen(true);
+      updateSearchParams({ openSaveModal: null });
+    } else if (openSaveJourneyModal === "1" && journeyResults) {
+      setIsSaveModalOpen(true);
+      updateSearchParams({ openSaveJourneyModal: null });
+    }
+  }, [
+    user,
+    isSessionLoading,
+    searchParams,
+    results,
+    journeyResults,
+    updateSearchParams,
+  ]);
+
   const handleContentTypeChange = useCallback(
     (newType: ContentType | ContentType[]) => {
       const typeStr = Array.isArray(newType) ? newType.join(",") : newType;
@@ -126,14 +147,21 @@ function SearchContent() {
     [updateSearchParams],
   );
 
-  const handleAuthGuard = useCallback(() => {
-    if (!user) {
-      const currentUrl = `${pathname}?${searchParams.toString()}`;
-      router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
-      return false;
-    }
-    return true;
-  }, [user, pathname, searchParams, router]);
+  const handleAuthGuard = useCallback(
+    (intent?: "saveCollection" | "saveJourney") => {
+      if (isSessionLoading) return false;
+      if (!user) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (intent === "saveCollection") params.set("openSaveModal", "1");
+        if (intent === "saveJourney") params.set("openSaveJourneyModal", "1");
+        const currentUrl = `${pathname}?${params.toString()}`;
+        router.push(`/login?next=${encodeURIComponent(currentUrl)}`);
+        return false;
+      }
+      return true;
+    },
+    [user, isSessionLoading, pathname, searchParams, router],
+  );
 
   const handleAddToList = useCallback(
     (item: EnrichedRecommendation | JourneyItem) => {
@@ -144,7 +172,7 @@ function SearchContent() {
   );
 
   const handleSaveAll = useCallback(() => {
-    if (!handleAuthGuard()) return;
+    if (!handleAuthGuard("saveCollection")) return;
     setIsSaveCollectionModalOpen(true);
   }, [handleAuthGuard]);
 
@@ -175,7 +203,7 @@ function SearchContent() {
   );
 
   const handleSaveJourney = useCallback(() => {
-    if (!handleAuthGuard()) return;
+    if (!handleAuthGuard("saveJourney")) return;
     setIsSaveModalOpen(true);
   }, [handleAuthGuard]);
 
@@ -553,7 +581,7 @@ function SearchContent() {
       </div>
 
       <FloatingSearchButton
-        onClick={() => router.push("/")}
+        onClick={() => router.push("/ask")}
         isLoading={isLoading}
         showSpinner={!showImmersiveLoader}
       />

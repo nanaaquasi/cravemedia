@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     if (stored) {
       next = stored;
     } else {
-      next = "/account";
+      next = "/profile";
     }
   }
 

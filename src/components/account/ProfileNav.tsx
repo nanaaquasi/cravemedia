@@ -9,6 +9,7 @@ import {
   Map,
   Activity,
   BarChart,
+  Heart,
 } from "lucide-react";
 
 interface ProfileNavProps {
@@ -19,9 +20,10 @@ interface ProfileNavProps {
 export function ProfileNav({ activeTab, onTabChange }: ProfileNavProps) {
   const tabs = [
     { id: "Overview", label: "Overview", icon: LayoutGrid },
+    { id: "Favorites", label: "Favorites", icon: Heart },
     { id: "Journeys", label: "Journeys", icon: Map },
     { id: "Collections", label: "Cravelists", icon: BookOpen },
-    // { id: "Activity", label: "Activity", icon: Activity },
+    { id: "Activity", label: "Activity", icon: Activity },
     // { id: "WatchList", label: "WatchList", icon: Clock },
     // { id: "Stats", label: "Stats", icon: BarChart },
   ];

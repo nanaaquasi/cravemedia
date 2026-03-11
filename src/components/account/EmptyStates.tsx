@@ -19,7 +19,7 @@ export function NoJourneysEmptyState() {
 
       <div className="flex gap-3 justify-center">
         <Link
-          href="/search"
+          href="/ask"
           className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
         >
           <Play className="w-4 h-4 fill-current" />

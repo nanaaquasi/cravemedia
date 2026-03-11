@@ -2,6 +2,7 @@ import { Profile } from "@/lib/supabase/types";
 import Image from "next/image";
 import { Settings } from "lucide-react";
 import { SignOutButton } from "@/components/SignOutButton";
+import { FollowButton } from "@/components/FollowButton";
 
 interface ProfileHeaderProps {
   profile: Profile | null;
@@ -11,9 +12,21 @@ interface ProfileHeaderProps {
     following: number;
   };
   isNewUser?: boolean;
+  /** When set, show Follow button instead of SignOut (public profile view) */
+  isPublicProfile?: boolean;
+  isFollowing?: boolean;
+  onFollowChange?: (isFollowing: boolean, newCount: number) => void;
 }
 
-export function ProfileHeader({ profile, email, stats, isNewUser }: ProfileHeaderProps) {
+export function ProfileHeader({
+  profile,
+  email,
+  stats,
+  isNewUser,
+  isPublicProfile,
+  isFollowing = false,
+  onFollowChange,
+}: ProfileHeaderProps) {
   return (
     <div className="relative min-h-[200px] md:h-[160px] w-full bg-zinc-900/20 rounded-3xl overflow-hidden group mb-10 bg-center bg-[url('https://media.themoviedb.org/t/p/w1920_and_h800_multi_faces/zo8CIjJ2nfNOevqNajwMRO6Hwka.jpg')]">
       {/* Background Image with Overlay */}
@@ -74,12 +87,23 @@ export function ProfileHeader({ profile, email, stats, isNewUser }: ProfileHeade
           </div>
         </div>
 
-        {/* Settings & Logout Actions (pushed to right on desktop) */}
+        {/* Actions (pushed to right on desktop) */}
         <div className="mt-2 md:mt-0 md:ml-auto flex items-center justify-center md:justify-end gap-2">
-          <button className="hidden p-2 rounded-full bg-black/20 hover:bg-black/40 border border-white/5 text-zinc-400 hover:text-white transition-all">
-            <Settings className="w-5 h-5" />
-          </button>
-          <SignOutButton />
+          {isPublicProfile && profile ? (
+            <FollowButton
+              userId={profile.id}
+              initialIsFollowing={isFollowing}
+              initialFollowersCount={stats.followers}
+              onFollowChange={onFollowChange}
+            />
+          ) : (
+            <>
+              <button className="hidden p-2 rounded-full bg-black/20 hover:bg-black/40 border border-white/5 text-zinc-400 hover:text-white transition-all">
+                <Settings className="w-5 h-5" />
+              </button>
+              <SignOutButton />
+            </>
+          )}
         </div>
       </div>
     </div>

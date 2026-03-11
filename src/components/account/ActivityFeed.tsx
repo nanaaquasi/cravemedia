@@ -7,20 +7,41 @@ import Image from "next/image";
 interface ActivityFeedProps {
   activities: Activity[];
   friendsActivity?: Activity[];
+  /** When set, show only this many items (e.g. 5 for preview) and add View All */
+  limit?: number;
+  /** Called when View All is clicked - e.g. to switch to Activity tab */
+  onViewAll?: () => void;
 }
 
-export function ActivityFeed({ activities }: ActivityFeedProps) {
+export function ActivityFeed({
+  activities,
+  limit,
+  onViewAll,
+}: ActivityFeedProps) {
   if (activities.length === 0) return null;
+
+  const displayed = limit ? activities.slice(0, limit) : activities;
+  const hasMore = limit != null && activities.length > limit;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-white flex items-center gap-2">
-        <ActivityIcon className="w-5 h-5 text-blue-400" />
-        Recent Activity
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <ActivityIcon className="w-5 h-5 text-blue-400" />
+          Recent Activity
+        </h2>
+        {hasMore && onViewAll && (
+          <button
+            onClick={onViewAll}
+            className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
+            View All
+          </button>
+        )}
+      </div>
 
       <div className="space-y-4">
-        {activities.map((activity) => (
+        {displayed.map((activity) => (
           <ActivityItem key={activity.id} activity={activity} />
         ))}
       </div>

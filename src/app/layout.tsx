@@ -5,6 +5,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
+import { createClient } from "@/lib/supabase/server";
+import { toSessionUser } from "@/app/api/auth/session/route";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -74,11 +76,17 @@ export const metadata: Metadata = {
 import { ListsProvider } from "@/context/ListsContext";
 import { SessionProvider } from "@/context/SessionContext";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const initialUser = toSessionUser(user);
+
   return (
     <html lang="en" className={dmSans.variable}>
       <body className="bg-gradient-mesh min-h-screen overflow-x-clip">
@@ -88,7 +96,7 @@ export default function RootLayout({
           showSpinner={false}
           crawlSpeed={200}
         />
-        <SessionProvider>
+        <SessionProvider initialUser={initialUser}>
           <ListsProvider>
             <GlobalLayout>{children}</GlobalLayout>
           </ListsProvider>

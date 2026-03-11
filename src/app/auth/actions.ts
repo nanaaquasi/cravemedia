@@ -81,10 +81,11 @@ export async function signup(formData: FormData) {
   redirect(sanitizeRedirectPath(next));
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string) {
   const supabase = await createClient();
   const origin = (await headers()).get("origin") || "http://localhost:3000";
-  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent("/account")}`;
+  const safeNext = next ? sanitizeRedirectPath(next) : "/profile";
+  const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -106,7 +107,10 @@ export async function signInWithGoogle() {
 
 export async function signout() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    return { error: error.message };
+  }
   revalidatePath("/", "layout");
-  redirect("/");
+  return { success: true };
 }

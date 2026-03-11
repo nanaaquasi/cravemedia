@@ -1,0 +1,22 @@
+---
+description: Always add cursor-pointer to interactive buttons and links
+globs: **/*.tsx
+alwaysApply: true
+---
+
+# Button Cursor Pointer
+
+Always add `cursor-pointer` to interactive elements:
+
+- `<button>` elements
+- Elements styled as buttons (e.g. `role="button"` or clickable divs)
+- Custom link-like elements that trigger actions on click
+
+```tsx
+// ✅ GOOD
+<button className="... cursor-pointer">Click me</button>
+<a className="... cursor-pointer" onClick={...}>Action</a>
+
+// ❌ BAD
+<button className="...">Click me</button>
+```

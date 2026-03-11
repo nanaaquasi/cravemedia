@@ -1,7 +1,13 @@
+"use client";
+
 import { Collection } from "@/lib/supabase/types";
 import Image from "next/image";
-
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Bookmark, Eye, Heart } from "lucide-react";
+
+/** Set to true when engagement data is meaningful */
+const SHOW_ENGAGEMENT_STATS = false;
 
 const FEATURED_CARD_GRADIENTS = [
   "radial-gradient(ellipse 80% 70% at 30% 70%, #3d2a1a 0%, #2c1f14 40%, #1a1510 100%)",
@@ -19,6 +25,10 @@ interface CollectionCardProps {
     items?: { image_url: string | null }[];
     item_count?: number;
     curator_first_name?: string | null;
+    curator_username?: string | null;
+    favorites_count?: number;
+    views_count?: number;
+    saves_count?: number;
   };
   variant?: "default" | "featured";
   gradientIndex?: number;
@@ -29,6 +39,7 @@ export function CollectionCard({
   variant = "default",
   gradientIndex = 0,
 }: CollectionCardProps) {
+  const router = useRouter();
   const maxImages = variant === "featured" ? 6 : 3;
   const images =
     collection.items
@@ -36,6 +47,9 @@ export function CollectionCard({
       .filter(Boolean)
       .slice(0, maxImages) || [];
   const itemCount = collection.item_count || collection.items?.length || 0;
+  const favoritesCount = collection.favorites_count ?? 0;
+  const viewsCount = collection.views_count ?? 0;
+  const savesCount = collection.saves_count ?? 0;
 
   const createdAt = collection.created_at
     ? new Date(collection.created_at).toLocaleDateString()
@@ -97,10 +111,26 @@ export function CollectionCard({
         {/* Content */}
         <div className="relative z-10 flex justify-between items-end">
           <div>
-            {isFeatured && collection.curator_first_name && (
-              <span className="text-sm font-medium lowercase block mb-1 bg-linear-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">
-                @{collection.curator_first_name}
-              </span>
+            {isFeatured && (collection.curator_first_name || collection.curator_username) && (
+              <div className="block mb-1">
+                {collection.curator_username ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push(`/user/${collection.curator_username}`);
+                    }}
+                    className="text-sm font-medium lowercase bg-linear-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent hover:underline text-left"
+                  >
+                    @{collection.curator_username}
+                  </button>
+                ) : (
+                  <span className="text-sm font-medium lowercase bg-linear-to-r from-blue-400 to-pink-400 bg-clip-text text-transparent">
+                    @{collection.curator_first_name}
+                  </span>
+                )}
+              </div>
             )}
             <h3
               className={`font-bold text-white leading-tight mb-1 group-hover/card:text-purple-400 transition-colors ${isFeatured ? "text-xl sm:text-xl line-clamp-1" : "text-lg"}`}
@@ -126,6 +156,22 @@ export function CollectionCard({
           >
             {createdAt}
           </span>
+          {isFeatured && SHOW_ENGAGEMENT_STATS && (
+            <>
+              <span className="px-2.5 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5 inline-flex items-center gap-1">
+                <Heart className="w-3.5 h-3.5 text-rose-400/80" />
+                {favoritesCount}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5 inline-flex items-center gap-1">
+                <Eye className="w-3.5 h-3.5 text-blue-400/80" />
+                {viewsCount}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-black/40 text-xs font-medium text-zinc-400 border border-white/5 inline-flex items-center gap-1">
+                <Bookmark className="w-3.5 h-3.5 text-emerald-400/80" />
+                {savesCount}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </Link>

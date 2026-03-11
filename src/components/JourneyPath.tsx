@@ -14,6 +14,7 @@ import {
   updateJourneyReview,
 } from "@/app/actions/journey";
 import Toast from "@/components/Toast";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import Modal from "@/components/Modal";
 import { Star, Check, Loader2 } from "lucide-react";
 
@@ -43,6 +44,10 @@ interface JourneyPathProps {
   } | null;
   /** Journey status: wishlist | in_progress | completed | abandoned */
   journeyStatus?: string | null;
+  /** Number of times this journey has been forked */
+  forkedCount?: number;
+  /** Content stats for popularity display */
+  contentStats?: { favorites_count: number; views_count: number };
   /** Journey review data when completed */
   journeyReviewData?: {
     overallRating: number | null;
@@ -77,6 +82,8 @@ export default function JourneyPath({
   isPublic,
   initialProgress,
   journeyStatus,
+  forkedCount = 0,
+  contentStats,
   journeyReviewData,
 }: JourneyPathProps) {
   const router = useRouter();
@@ -237,7 +244,7 @@ export default function JourneyPath({
       setBeginError(result.error);
       setIsBeginning(false);
     } else {
-      router.push("/account");
+      router.push("/profile");
     }
   }, [showBeginCTA, journeyId, router]);
 
@@ -325,6 +332,30 @@ export default function JourneyPath({
             <span className="text-sm text-purple-400">
               {completedCount}/{journey.itemCount} completed
             </span>
+            {((contentStats?.favorites_count ?? 0) > 0 ||
+              (contentStats?.views_count ?? 0) > 0 ||
+              forkedCount > 0) && (
+              <span className="text-sm text-zinc-500">
+                {(contentStats?.favorites_count ?? 0) > 0 && (
+                  <span>{(contentStats?.favorites_count ?? 0)} ♥</span>
+                )}
+                {(contentStats?.favorites_count ?? 0) > 0 &&
+                  ((contentStats?.views_count ?? 0) > 0 || forkedCount > 0) && (
+                    <span className="mx-1">·</span>
+                  )}
+                {(contentStats?.views_count ?? 0) > 0 && (
+                  <span>
+                    {(contentStats?.views_count ?? 0).toLocaleString()} views
+                  </span>
+                )}
+                {(contentStats?.views_count ?? 0) > 0 && forkedCount > 0 && (
+                  <span className="mx-1">·</span>
+                )}
+                {forkedCount > 0 && (
+                  <span>{forkedCount} saved</span>
+                )}
+              </span>
+            )}
           </div>
           {(onToggleVisibility || onShare) && (
             <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -360,6 +391,14 @@ export default function JourneyPath({
                   <span>Share</span>
                 </button>
               )}
+              <FavoriteButton
+                targetType="journey"
+                targetId={journeyId}
+                title={journey.journeyTitle}
+                imageUrl={journey.items?.[0]?.posterUrl ?? null}
+                metadata={{ item_count: journey.itemCount }}
+                size="sm"
+              />
             </div>
           )}
           {showBeginCTA && (

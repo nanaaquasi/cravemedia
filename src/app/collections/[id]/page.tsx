@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { toSessionUser } from "@/app/api/auth/session/route";
 import CollectionDetailClient from "./CollectionDetailClient";
+import { ViewTracker } from "@/components/ViewTracker";
 import { CRAVELIST_LABEL } from "@/config/labels";
 import type { Metadata } from "next";
 
@@ -118,8 +119,8 @@ export default async function CollectionDetailPage({
     existingCloneId = clone?.id ?? null;
   }
 
-  // Fetch items and owner profile in parallel
-  const [itemsResult, ownerProfileResult] = await Promise.all([
+  // Fetch items, owner profile, content stats, and clone count in parallel
+  const [itemsResult, ownerProfileResult, contentStatsResult, cloneCountResult] = await Promise.all([
     supabase
       .from("collection_items")
       .select("*")
@@ -133,14 +134,32 @@ export default async function CollectionDetailPage({
           .eq("id", collection.user_id)
           .single()
       : Promise.resolve({ data: null }),
+    supabase
+      .from("content_stats")
+      .select("favorites_count, views_count")
+      .eq("target_type", "collection")
+      .eq("target_id", id)
+      .maybeSingle(),
+    supabase
+      .from("collections")
+      .select("*", { count: "exact", head: true })
+      .eq("cloned_from", id),
   ]);
 
   if (itemsResult.error) {
     console.error("Error fetching collection items:", itemsResult.error);
   }
 
+  const contentStats = contentStatsResult.data ?? {
+    favorites_count: 0,
+    views_count: 0,
+  };
+  const savesCount = cloneCountResult.count ?? 0;
+
   return (
-    <CollectionDetailClient
+    <>
+      <ViewTracker targetType="collection" targetId={id} />
+      <CollectionDetailClient
       collection={collection}
       items={itemsResult.data || []}
       isOwner={isOwner}
@@ -158,6 +177,9 @@ export default async function CollectionDetailPage({
             }
           : undefined
       }
+      contentStats={contentStats}
+      savesCount={savesCount}
     />
+    </>
   );
 }

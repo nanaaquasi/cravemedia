@@ -32,6 +32,8 @@ interface JourneyDetailClientProps {
     >;
   } | null;
   journeyStatus?: string | null;
+  forkedCount?: number;
+  contentStats?: { favorites_count: number; views_count: number };
   journeyReviewData?: {
     overallRating: number | null;
     sequenceRating: number | null;
@@ -50,6 +52,8 @@ export default function JourneyDetailClient({
   existingCloneId = null,
   initialProgress,
   journeyStatus,
+  forkedCount = 0,
+  contentStats,
   journeyReviewData,
 }: JourneyDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
@@ -109,7 +113,7 @@ export default function JourneyDetailClient({
     <div className="flex flex-col min-h-screen">
       <div className="mb-8">
         <Link
-          href={isOwner ? "/account" : "/"}
+          href={isOwner ? "/profile" : "/"}
           className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
         >
           <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
@@ -193,6 +197,8 @@ export default function JourneyDetailClient({
         initialProgress={initialProgress}
         journeyStatus={journeyStatus}
         journeyReviewData={journeyReviewData}
+        forkedCount={forkedCount}
+        contentStats={contentStats}
       />
 
       <ShareModal

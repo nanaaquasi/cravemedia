@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import type { PersonDetails, PersonCredit } from "@/lib/tmdb";
 
 const BIO_TRUNCATE_LENGTH = 280;
@@ -70,20 +71,29 @@ export default function PersonDetailClient({ person, credits }: Props) {
             </div>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            {person.name}
-          </h1>
-          {person.knownForDepartment && (
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              {person.knownForDepartment}
-            </p>
-          )}
-          {birthInfo && (
-            <p className="text-sm text-[var(--text-secondary)] mt-2">
-              {birthInfo}
-            </p>
-          )}
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              {person.name}
+            </h1>
+            {person.knownForDepartment && (
+              <p className="text-sm text-[var(--text-muted)] mt-1">
+                {person.knownForDepartment}
+              </p>
+            )}
+            {birthInfo && (
+              <p className="text-sm text-[var(--text-secondary)] mt-2">
+                {birthInfo}
+              </p>
+            )}
+          </div>
+          <FavoriteButton
+            targetType="person"
+            targetId={String(person.id)}
+            title={person.name}
+            imageUrl={person.profileUrl ?? null}
+            metadata={{ known_for: person.knownForDepartment ?? undefined }}
+          />
         </div>
       </div>
 

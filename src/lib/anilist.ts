@@ -157,6 +157,29 @@ async function anilistFetch<T>(
   });
 }
 
+const DISCOVER_ANIME_QUERY = `
+  query {
+    trending: Page(page: 1, perPage: 20) {
+      media(type: ANIME, sort: [TRENDING_DESC]) {
+        id
+        title { romaji english native }
+        coverImage { large medium }
+        startDate { year month day }
+        averageScore
+      }
+    }
+    popular: Page(page: 1, perPage: 20) {
+      media(type: ANIME, sort: [POPULARITY_DESC]) {
+        id
+        title { romaji english native }
+        coverImage { large medium }
+        startDate { year month day }
+        averageScore
+      }
+    }
+  }
+`;
+
 const SEARCH_QUERY = `
   query ($search: String) {
     Page(page: 1, perPage: 50) {
@@ -452,6 +475,55 @@ function isSameFranchise(
   const moviePattern = /(?:movie|film|two heroes|world heroes|heroes rising|world heroes' mission)/i;
   if (moviePattern.test(resultTitle)) return false;
   return true;
+}
+
+export interface DiscoverAnimeItem {
+  id: string;
+  type: "anime";
+  title: string;
+  posterUrl: string | null;
+  rating: number | null;
+  releaseDate: string | null;
+  overview: string | null;
+}
+
+export async function getDiscoverAnime(): Promise<{
+  trending: DiscoverAnimeItem[];
+  popular: DiscoverAnimeItem[];
+}> {
+  try {
+    const data = await anilistFetch<{
+      trending: { media: AnilistMedia[] };
+      popular: { media: AnilistMedia[] };
+    }>(DISCOVER_ANIME_QUERY, {});
+
+    const toItem = (media: AnilistMedia): DiscoverAnimeItem => {
+      const sd = media.startDate;
+      const releaseDate =
+        sd?.year && sd?.month && sd?.day
+          ? `${sd.year}-${String(sd.month).padStart(2, "0")}-${String(sd.day).padStart(2, "0")}`
+          : sd?.year
+            ? `${sd.year}-01-01`
+            : null;
+      return {
+        id: String(media.id),
+        type: "anime",
+        title: getTitle(media),
+        posterUrl: media.coverImage?.large ?? media.coverImage?.medium ?? null,
+        rating: media.averageScore ?? null,
+        releaseDate,
+        overview: null,
+      };
+    };
+
+    return {
+      trending: (data.trending?.media ?? []).map(toItem),
+      popular: (data.popular?.media ?? []).map(toItem),
+    };
+  } catch (error) {
+    console.error("Error fetching discover anime:", error);
+    return { trending: [], popular: [] };
+  }
 }
 
 export async function searchAnime(query: string): Promise<AnimeSearchResult[]> {

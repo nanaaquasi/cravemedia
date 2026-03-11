@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import TruncatedTitle from "@/components/TruncatedTitle";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { EnrichedRecommendation } from "@/lib/types";
 import { useState } from "react";
 
@@ -119,7 +120,20 @@ export default function RecommendationItem({
         className={`absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 transition-opacity duration-200 ${
           showActions ? "opacity-100" : "opacity-0 md:opacity-0 opacity-100"
         }`}
+        onClick={(e) => e.stopPropagation()}
       >
+        {detailHref && item.externalId && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <FavoriteButton
+              targetType={item.type}
+              targetId={String(item.externalId)}
+              title={item.title}
+              imageUrl={item.posterUrl}
+              metadata={{ year: item.year, media_type: item.type }}
+              size="sm"
+            />
+          </div>
+        )}
         {onAddToList && (
           <button
             onClick={(e) => {
@@ -208,6 +222,18 @@ export default function RecommendationItem({
             {typeBadge}
           </span>
           <div className="flex items-center gap-1">
+            {detailHref && item.externalId && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <FavoriteButton
+                  targetType={item.type}
+                  targetId={String(item.externalId)}
+                  title={item.title}
+                  imageUrl={item.posterUrl}
+                  metadata={{ year: item.year, media_type: item.type }}
+                  size="sm"
+                />
+              </div>
+            )}
             {onAddToList && (
               <button
                 onClick={(e) => {

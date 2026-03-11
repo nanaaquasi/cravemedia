@@ -80,6 +80,7 @@ export function getDefaultStats(userId: string): UserStats {
     longest_streak_days: 0,
     journey_completion_rate: 0,
     total_badges_unlocked: 0,
+    total_favorites: 0,
     average_journey_rating: 0,
     average_item_rating: 0,
     top_genres: [],

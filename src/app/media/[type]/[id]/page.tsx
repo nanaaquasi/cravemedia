@@ -14,6 +14,7 @@ import { getAnimeDetails } from "@/lib/anilist";
 import { getBookDetails } from "@/lib/books";
 import { createClient } from "@/lib/supabase/server";
 import MediaDetailClient, { MediaDetails } from "./MediaDetailClient";
+import { ViewTracker } from "@/components/ViewTracker";
 import type { WatchStatus } from "@/app/actions/collection";
 
 interface PageProps {
@@ -190,6 +191,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
       tvSeasons,
       watchProviders,
       otherCravelistsResult,
+      contentStatsResult,
     ] = await Promise.all([
         supabase.auth.getUser(),
         supabase
@@ -235,6 +237,12 @@ export default async function MediaDetailPage({ params }: PageProps) {
           .eq("media_id", id)
           .eq("media_type", type)
           .eq("collections.is_public", true),
+        supabase
+          .from("content_stats")
+          .select("favorites_count, views_count")
+          .eq("target_type", type)
+          .eq("target_id", id)
+          .maybeSingle(),
       ]);
 
     const user = authResult.data?.user;
@@ -464,21 +472,30 @@ export default async function MediaDetailPage({ params }: PageProps) {
           })
         : tvSeasons;
 
+    const contentStats = contentStatsResult.data ?? {
+      favorites_count: 0,
+      views_count: 0,
+    };
+
     return (
-      <MediaDetailClient
-        details={mediaDetails}
-        mediaId={id}
-        currentStatus={currentStatus}
-        communityStats={communityStats}
-        reviews={reviews}
-        canReview={!!user}
-        episodeQuality={episodeQuality}
-        collectionNames={collectionNames}
-        tvSeasons={tvSeasonsWithImdb}
-        animeRelations={animeRelations}
-        watchProviders={watchProviders}
-        otherCravelists={otherCravelists}
-      />
+      <>
+        <ViewTracker targetType={type} targetId={id} />
+        <MediaDetailClient
+          details={mediaDetails}
+          mediaId={id}
+          currentStatus={currentStatus}
+          communityStats={communityStats}
+          reviews={reviews}
+          canReview={!!user}
+          episodeQuality={episodeQuality}
+          collectionNames={collectionNames}
+          tvSeasons={tvSeasonsWithImdb}
+          animeRelations={animeRelations}
+          watchProviders={watchProviders}
+          otherCravelists={otherCravelists}
+          contentStats={contentStats}
+        />
+      </>
     );
   } catch (e) {
     console.error("Error fetching details:", e);

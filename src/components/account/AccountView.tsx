@@ -15,6 +15,10 @@ import { ProfileDashboardData, subscribeToUserActivity } from "./queries";
 import type { Journey } from "./queries";
 import { Profile, Collection, CollectionItem } from "@/lib/supabase/types";
 import { InProgressMedia } from "./InProgressMedia";
+import { FavoriteHighlights } from "./FavoriteHighlights";
+import { RecentlyFinished } from "./RecentlyFinished";
+import { RecentlyReviewed } from "./RecentlyReviewed";
+import { FavoritesTab } from "./FavoritesTab";
 import Link from "next/link";
 import { Clock, Plus, LayoutGrid, Loader2, Play, Sparkles } from "lucide-react";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
@@ -35,6 +39,24 @@ interface AccountViewProps {
     curator_first_name?: string | null;
   })[];
   isNewUser?: boolean;
+  recentlyFinished?: Array<{
+    id: string;
+    media_id: string;
+    media_type: string;
+    title: string | null;
+    image_url: string | null;
+    finished_at: string | null;
+    item_rating: number | null;
+  }>;
+  recentlyReviewed?: Array<{
+    id: string;
+    media_id: string;
+    media_type: string;
+    title: string | null;
+    image_url: string | null;
+    item_rating: number | null;
+    created_at: string | null;
+  }>;
 }
 
 export function AccountView({
@@ -46,6 +68,8 @@ export function AccountView({
   featuredJourneys = [],
   featuredCollections = [],
   isNewUser = false,
+  recentlyFinished = [],
+  recentlyReviewed = [],
 }: AccountViewProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("Overview");
@@ -134,121 +158,113 @@ export function AccountView({
           {/* Overview Tab */}
           {activeTab === "Overview" && dashboardData && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Stats span full width */}
               <StatsBar stats={dashboardData.stats} />
 
-              <InProgressMedia items={inProgressItems} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left: Overview content (scrolls) */}
+                <div className="lg:col-span-2 space-y-8">
+                  <InProgressMedia items={inProgressItems} />
 
-              {dashboardData.currentJourney ? (
-                <CurrentJourney journey={dashboardData.currentJourney} />
-              ) : null}
+                  {dashboardData.currentJourney ? (
+                    <CurrentJourney journey={dashboardData.currentJourney} />
+                  ) : null}
 
-              {/* Your Journeys (Wishlist) */}
-              {dashboardData.wishlistJourneys.length > 0 && (
-                <JourneyShowcase
-                  journeys={dashboardData.wishlistJourneys}
-                  title="Your Journeys"
-                  onViewAll={() => setActiveTab("Journeys")}
-                />
-              )}
+                  {profile?.id && <FavoriteHighlights userId={profile.id} />}
+                  <RecentlyFinished items={recentlyFinished} />
+                  <RecentlyReviewed items={recentlyReviewed} />
 
-              {/* Your Cravelists Preview */}
-              {initialCollections.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                      <LayoutGrid className="w-5 h-5 text-purple-400" />
-                      Your {CRAVELIST_LABEL_PLURAL}
-                    </h2>
-                    <button
-                      onClick={() => setActiveTab("Collections")}
-                      className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                    >
-                      View All
-                    </button>
-                  </div>
-                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
-                    {initialCollections.slice(0, 3).map((col) => (
-                      <div
-                        key={col.id}
-                        className="shrink-0 w-72 md:shrink md:w-auto"
-                      >
-                        <CollectionCard collection={col} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* If no current and no saved, show Get Started or empty state */}
-              {!dashboardData.currentJourney &&
-                dashboardData.wishlistJourneys.length === 0 &&
-                (featuredJourneys.length > 0 ||
-                featuredCollections.length > 0 ? (
-                  <div className="space-y-8">
-                    <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
-                      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
-                        <Sparkles className="w-8 h-8 text-purple-400" />
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-2">
-                        Get Started
-                      </h3>
-                      <p className="text-zinc-400 mb-6 max-w-md mx-auto">
-                        Explore popular journeys and cravings to get inspired
-                      </p>
-                      {featuredJourneys.length > 0 && (
-                        <JourneyShowcase
-                          journeys={featuredJourneys}
-                          title="Popular Journeys"
-                        />
-                      )}
-                      {featuredCollections.length > 0 && (
-                        <div className="mt-8 space-y-4">
-                          <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
-                            <LayoutGrid className="w-5 h-5 text-purple-400" />
-                            Featured {CRAVELIST_LABEL_PLURAL}
-                          </h2>
-                          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide justify-center md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:max-w-4xl md:mx-auto">
-                            {featuredCollections.map((col, i) => (
-                              <div
-                                key={col.id}
-                                className="shrink-0 w-72 md:shrink md:w-auto"
-                              >
-                                <CollectionCard
-                                  collection={col}
-                                  variant="featured"
-                                  gradientIndex={i}
-                                />
-                              </div>
-                            ))}
-                          </div>
+                {/* If no current and no saved, show Get Started or empty state */}
+                {!dashboardData.currentJourney &&
+                  dashboardData.wishlistJourneys.length === 0 &&
+                  (featuredJourneys.length > 0 ||
+                  featuredCollections.length > 0 ? (
+                    <div className="space-y-8">
+                      <div className="text-center py-8 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-full flex items-center justify-center border border-white/5">
+                          <Sparkles className="w-8 h-8 text-purple-400" />
                         </div>
-                      )}
-                      <div className="mt-8 flex justify-center">
-                        <Link
-                          href="/search"
-                          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
-                        >
-                          <Play className="w-4 h-4 fill-current" />
-                          Create a Journey
-                        </Link>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          Get Started
+                        </h3>
+                        <p className="text-zinc-400 mb-6 max-w-md mx-auto">
+                          Explore popular journeys and cravings to get inspired
+                        </p>
+                        {featuredJourneys.length > 0 && (
+                          <JourneyShowcase
+                            journeys={featuredJourneys}
+                            title="Popular Journeys"
+                          />
+                        )}
+                        {featuredCollections.length > 0 && (
+                          <div className="mt-8 space-y-4">
+                            <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+                              <LayoutGrid className="w-5 h-5 text-purple-400" />
+                              Featured {CRAVELIST_LABEL_PLURAL}
+                            </h2>
+                            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide justify-center md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:max-w-4xl md:mx-auto">
+                              {featuredCollections.map((col, i) => (
+                                <div
+                                  key={col.id}
+                                  className="shrink-0 w-72 md:shrink md:w-auto"
+                                >
+                                  <CollectionCard
+                                    collection={col}
+                                    variant="featured"
+                                    gradientIndex={i}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="mt-8 flex justify-center">
+                          <Link
+                            href="/ask"
+                            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
+                          >
+                            <Play className="w-4 h-4 fill-current" />
+                            Create a Journey
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <NoJourneysEmptyState />
-                ))}
+                  ) : (
+                    <NoJourneysEmptyState />
+                  ))}
+                </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <JourneyShowcase
-                    journeys={dashboardData.completedJourneys}
-                    onViewAll={() => setActiveTab("Journeys")}
+                {/* Right: Recent activity (sticky) */}
+                <div className="lg:col-span-1 lg:sticky lg:top-24 lg:self-start">
+                  <ActivityFeed
+                    activities={dashboardData.recentActivity}
+                    limit={5}
+                    onViewAll={() => setActiveTab("Activity")}
                   />
                 </div>
-                <div className="hidden">
-                  <ActivityFeed activities={dashboardData.recentActivity} />
-                </div>
               </div>
+            </div>
+          )}
+
+          {/* Activity Tab */}
+          {activeTab === "Activity" && dashboardData && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <ActivityFeed activities={dashboardData.recentActivity} />
+              {dashboardData.recentActivity.length === 0 && (
+                <div className="text-center py-16 px-4 bg-zinc-900/20 rounded-3xl border border-white/5">
+                  <p className="text-zinc-500">No activity yet</p>
+                  <p className="text-sm text-zinc-600 mt-1">
+                    Complete journeys and mark items as watched to see your activity here.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Favorites Tab */}
+          {activeTab === "Favorites" && profile?.id && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <FavoritesTab userId={profile.id} />
             </div>
           )}
 
@@ -320,7 +336,7 @@ export function AccountView({
                       )}
                       <div className="mt-8 flex justify-center">
                         <Link
-                          href="/search"
+                          href="/ask"
                           className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2"
                         >
                           <Play className="w-4 h-4 fill-current" />

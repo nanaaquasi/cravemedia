@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefineQuestion, RefineAnswer, ContentType } from "@/lib/types";
 import { ensureQueryReflectsTypes } from "@/lib/query-utils";
@@ -85,6 +85,9 @@ interface IntentRefineStepProps {
   isLoading: boolean;
   onSubmitAnswers: (answers: RefineAnswer[]) => void;
   onSkip: () => void;
+  onCancel: () => void;
+  onBackToTypeSelect?: () => void;
+  onBackToModeSelect?: () => void;
   onModeSelected: (mode: SearchMode) => void;
   onTypeSelected: (type: ContentType | ContentType[]) => void;
   showTypeSelect: boolean;
@@ -233,6 +236,9 @@ export default function IntentRefineStep({
   isLoading,
   onSubmitAnswers,
   onSkip,
+  onCancel,
+  onBackToTypeSelect,
+  onBackToModeSelect,
   onModeSelected,
   onTypeSelected,
   showTypeSelect,
@@ -246,6 +252,7 @@ export default function IntentRefineStep({
   const prefersReducedMotion = usePrefersReducedMotion();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
+  const userJustSelectedSingleOptionRef = useRef(false);
 
   const [typeSelections, setTypeSelections] = useState<ContentType[]>(() => {
     const arr = Array.isArray(initialTypeSelection)
@@ -253,6 +260,9 @@ export default function IntentRefineStep({
       : [initialTypeSelection];
     return arr.includes("all") ? ["all"] : arr;
   });
+  const [modeSelection, setModeSelection] = useState<SearchMode>(
+    selectedMode ?? "list",
+  );
 
   // Only sync from parent when entering type select; don't reset when leaving
   useEffect(() => {
@@ -262,6 +272,11 @@ export default function IntentRefineStep({
       : [initialTypeSelection];
     setTypeSelections(arr.includes("all") ? ["all"] : arr);
   }, [initialTypeSelection, showTypeSelect]);
+
+  useEffect(() => {
+    if (!showModeSelect) return;
+    setModeSelection(selectedMode ?? "list");
+  }, [showModeSelect, selectedMode]);
 
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -280,6 +295,10 @@ export default function IntentRefineStep({
               : [...current, option],
           };
         } else {
+          const isSelecting = !current.includes(option);
+          if (isSelecting) {
+            userJustSelectedSingleOptionRef.current = true;
+          }
           return {
             ...prev,
             [questionId]: current.includes(option) ? [] : [option],
@@ -318,10 +337,56 @@ export default function IntentRefineStep({
     onSkip();
   }, [isLastQuestion, onSkip]);
 
+  const handleBackQuestion = useCallback(() => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((i) => i - 1);
+      return;
+    }
+    onBackToModeSelect?.();
+  }, [currentQuestionIndex, onBackToModeSelect]);
+
   const currentSelections = currentQuestion
     ? selections[currentQuestion.id] || []
     : [];
   const hasSelection = currentSelections.length > 0;
+
+  // Auto-advance when user selects an option in a single-choice question
+  useEffect(() => {
+    if (
+      currentQuestion &&
+      !currentQuestion.multiSelect &&
+      currentSelections.length === 1 &&
+      userJustSelectedSingleOptionRef.current
+    ) {
+      userJustSelectedSingleOptionRef.current = false;
+      if (!isLastQuestion) {
+        setCurrentQuestionIndex((i) => i + 1);
+      } else {
+        const answers: RefineAnswer[] = questions
+          .filter((q) => (selections[q.id] || []).length > 0)
+          .map((q) => ({
+            questionId: q.id,
+            questionText: q.text,
+            selected: selections[q.id] || [],
+          }));
+        onSubmitAnswers(answers);
+        setCurrentQuestionIndex(0);
+        setSelections({});
+      }
+    }
+  }, [
+    currentQuestion,
+    currentSelections,
+    isLastQuestion,
+    questions,
+    selections,
+    onSubmitAnswers,
+  ]);
+
+  // Reset the ref when changing questions (e.g. navigating back)
+  useEffect(() => {
+    userJustSelectedSingleOptionRef.current = false;
+  }, [currentQuestionIndex]);
 
   const toggleType = useCallback((value: ContentType) => {
     setTypeSelections((prev) => {
@@ -369,17 +434,6 @@ export default function IntentRefineStep({
       >
         <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
-        <div className="relative z-10 flex items-center justify-end py-5 px-2">
-          <button
-            onClick={() => {
-              onTypeSelected("all");
-            }}
-            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-          >
-            Skip
-          </button>
-        </div>
-
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -388,7 +442,7 @@ export default function IntentRefineStep({
             className="w-full text-center"
           >
             {initialQuery?.trim() && (
-              <div className="mb-4 text-center">
+              <div className="mb-4 flex justify-center">
                 <ContextBar
                   initialQuery={initialQuery}
                   selectedType={
@@ -438,17 +492,42 @@ export default function IntentRefineStep({
               })}
             </div>
 
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleTypeContinue}
-              className="px-8 py-3.5 rounded-full font-semibold text-base bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110 transition-all cursor-pointer"
-            >
-              Continue
-            </motion.button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={onCancel}
+                className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+                aria-label="Back"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Back
+              </button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={handleTypeContinue}
+                className="px-8 py-3.5 rounded-full font-semibold text-base bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110 transition-all cursor-pointer"
+              >
+                Continue
+              </motion.button>
+              <button
+                onClick={() => onTypeSelected("all")}
+                className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                Skip
+              </button>
+            </div>
           </motion.div>
         </div>
 
-        <div className="relative z-10 pb-8 sm:pb-12" />
+        <div className="relative z-10 flex items-center justify-center py-6 pb-8 sm:pb-12">
+          <button
+            onClick={onCancel}
+            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+            aria-label="Cancel"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Cancel
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -468,16 +547,6 @@ export default function IntentRefineStep({
       >
         <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
-        {/* Skip in top-right */}
-        <div className="relative z-10 flex items-center justify-end py-5 px-2">
-          <button
-            onClick={onSkip}
-            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
-          >
-            Skip
-          </button>
-        </div>
-
         {/* Mode cards — centered */}
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
           <motion.div
@@ -487,7 +556,7 @@ export default function IntentRefineStep({
             className="w-full text-center"
           >
             {(initialQuery?.trim() || selectedType) && (
-              <div className="mb-4 text-center">
+              <div className="mb-4 flex justify-center">
                 <ContextBar initialQuery={initialQuery} selectedType={selectedType} />
               </div>
             )}
@@ -502,9 +571,18 @@ export default function IntentRefineStep({
               {/* List card */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => onModeSelected("list")}
-                className="group liquid-glass p-6 rounded-2xl hover:border-purple-500/40 transition-all duration-300 cursor-pointer text-left"
+                onClick={() => setModeSelection("list")}
+                className={`group liquid-glass p-6 rounded-2xl border transition-all duration-300 cursor-pointer text-left relative ${
+                  modeSelection === "list"
+                    ? "border-purple-500/70! ring-2! ring-purple-500/50! bg-purple-500/20!"
+                    : "border-white/10 hover:border-purple-500/40"
+                }`}
               >
+                {modeSelection === "list" && (
+                  <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 text-[10px] font-semibold tracking-wide">
+                    Selected
+                  </span>
+                )}
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
                     <svg
@@ -551,9 +629,18 @@ export default function IntentRefineStep({
               {/* Journey card */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => onModeSelected("journey")}
-                className="group liquid-glass p-6 rounded-2xl hover:border-pink-500/40 transition-all duration-300 cursor-pointer text-left"
+                onClick={() => setModeSelection("journey")}
+                className={`group liquid-glass p-6 rounded-2xl border transition-all duration-300 cursor-pointer text-left relative ${
+                  modeSelection === "journey"
+                    ? "border-pink-500/70! ring-2! ring-pink-500/50! bg-pink-500/20!"
+                    : "border-white/10 hover:border-pink-500/40"
+                }`}
               >
+                {modeSelection === "journey" && (
+                  <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-pink-500/30 text-pink-200 text-[10px] font-semibold tracking-wide">
+                    Selected
+                  </span>
+                )}
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
                     <svg
@@ -594,11 +681,45 @@ export default function IntentRefineStep({
                 </div>
               </motion.button>
             </div>
+
+            <div className="mt-8 flex items-center justify-center gap-6">
+              {onBackToTypeSelect && (
+                <button
+                  onClick={onBackToTypeSelect}
+                  className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+                  aria-label="Back"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  Back
+                </button>
+              )}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => onModeSelected(modeSelection)}
+                className="px-8 py-3.5 rounded-full font-semibold text-base bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110 transition-all cursor-pointer"
+              >
+                Continue
+              </motion.button>
+              <button
+                onClick={() => onModeSelected("list")}
+                className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                Skip
+              </button>
+            </div>
           </motion.div>
         </div>
 
-        {/* Spacer */}
-        <div className="relative z-10 pb-8 sm:pb-12" />
+        <div className="relative z-10 flex items-center justify-center py-6 pb-8 sm:pb-12">
+          <button
+            onClick={onCancel}
+            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+            aria-label="Cancel"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Cancel
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -610,7 +731,7 @@ export default function IntentRefineStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+        className="fixed inset-0 z-50 flex flex-col px-6"
         style={{
           background:
             "linear-gradient(135deg, #020205 0%, #050508 50%, #08080c 100%)",
@@ -618,9 +739,9 @@ export default function IntentRefineStep({
       >
         <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
-        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center">
           {(initialQuery?.trim() || selectedType || selectedMode || (previousAnswers && previousAnswers.length > 0)) && (
-            <div className="mb-6">
+            <div className="mb-6 flex justify-center">
               <ContextBar
                 initialQuery={initialQuery}
                 selectedType={selectedType}
@@ -639,6 +760,17 @@ export default function IntentRefineStep({
               ? "Analyzing your taste..."
               : "Digging deeper into your preferences..."}
           </p>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-center py-6 pb-8 sm:pb-12">
+          <button
+            onClick={onCancel}
+            className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+            aria-label="Cancel"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Cancel
+          </button>
         </div>
       </motion.div>
     );
@@ -680,7 +812,7 @@ export default function IntentRefineStep({
       {/* Question content — vertically centered */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
         {(initialQuery?.trim() || selectedType || selectedMode || allAnswersForDisplay.length > 0) && (
-          <div className="mb-6 text-center">
+          <div className="mb-6 flex justify-center">
             <ContextBar
               initialQuery={initialQuery}
               selectedType={selectedType}
@@ -768,13 +900,23 @@ export default function IntentRefineStep({
               })}
             </div>
 
-            {/* Actions: Continue & Skip */}
+            {/* Actions: Back, Continue & Skip */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              {(currentQuestionIndex > 0 || onBackToModeSelect) && (
+                <button
+                  onClick={handleBackQuestion}
+                  className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+                  aria-label="Back"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  Back
+                </button>
+              )}
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleContinue}
                 disabled={!hasSelection}
-                className={`order-1 sm:order-2 px-8 py-3.5 rounded-full font-semibold text-base transition-all duration-300 cursor-pointer ${
+                className={`px-8 py-3.5 rounded-full font-semibold text-base transition-all duration-300 cursor-pointer ${
                   hasSelection
                     ? "bg-linear-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30 hover:brightness-110"
                     : "bg-white/6 text-white/30 cursor-not-allowed"
@@ -785,7 +927,7 @@ export default function IntentRefineStep({
 
               <button
                 onClick={handleSkipQuestion}
-                className="order-2 sm:order-1 text-sm text-white/30 hover:text-white/60 transition-colors cursor-pointer px-4 py-2"
+                className="text-sm text-white/30 hover:text-white/60 transition-colors cursor-pointer px-4 py-2"
               >
                 Skip
               </button>
@@ -794,8 +936,16 @@ export default function IntentRefineStep({
         </AnimatePresence>
       </div>
 
-      {/* Spacer to balance vertical alignment */}
-      <div className="h-12" />
+      <div className="relative z-10 flex items-center justify-center py-6 pb-8 sm:pb-12">
+        <button
+          onClick={onCancel}
+          className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
+          aria-label="Cancel"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          Cancel
+        </button>
+      </div>
     </motion.div>
   );
 }

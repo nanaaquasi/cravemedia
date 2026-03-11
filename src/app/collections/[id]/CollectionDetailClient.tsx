@@ -35,6 +35,7 @@ import ShareModal from "@/components/ShareModal";
 import MediaSearchModal from "@/components/MediaSearchModal";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import Modal from "@/components/Modal";
 import {
   toggleCollectionVisibility,
@@ -91,6 +92,8 @@ interface CollectionDetailClientProps {
   savedToast?: boolean;
   /** User's clone of this collection (already saved) - show "View" instead of "Save" */
   existingCloneId?: string | null;
+  contentStats?: { favorites_count: number; views_count: number };
+  savesCount?: number;
 }
 
 export default function CollectionDetailClient({
@@ -103,6 +106,8 @@ export default function CollectionDetailClient({
   saveOnLoad = false,
   savedToast = false,
   existingCloneId = null,
+  contentStats,
+  savesCount = 0,
 }: CollectionDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -249,7 +254,7 @@ export default function CollectionDetailClient({
     if (result.error) {
       setToastMessage(result.error);
     } else {
-      router.push("/account");
+      router.push("/profile");
     }
   };
 
@@ -421,7 +426,7 @@ export default function CollectionDetailClient({
       {/* Header / Navigation */}
       <div className="mb-6 sm:mb-8 flex flex-col justify-start">
         <Link
-          href={isOwner ? "/account" : "/"}
+          href={isOwner ? "/profile" : "/"}
           className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group self-start"
         >
           <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
@@ -577,6 +582,14 @@ export default function CollectionDetailClient({
                 <span>Share</span>
               </button>
             )}
+            <FavoriteButton
+              targetType="collection"
+              targetId={collection.id}
+              title={collection.name}
+              imageUrl={items[0]?.image_url ?? null}
+              metadata={{ item_count: items.length }}
+              size="sm"
+            />
           </div>
 
           <div className="mb-4">
@@ -641,6 +654,21 @@ export default function CollectionDetailClient({
                     </button>
                   )}
                 </div>
+                {(contentStats?.favorites_count ?? 0) > 0 ||
+                (contentStats?.views_count ?? 0) > 0 ||
+                savesCount > 0 ? (
+                  <p className="text-zinc-500 text-sm mt-1 flex items-center gap-3">
+                    {contentStats?.favorites_count ? (
+                      <span>{contentStats.favorites_count} ♥</span>
+                    ) : null}
+                    {contentStats?.views_count ? (
+                      <span>{contentStats.views_count.toLocaleString()} views</span>
+                    ) : null}
+                    {savesCount > 0 ? (
+                      <span>{savesCount} saved</span>
+                    ) : null}
+                  </p>
+                ) : null}
                 {collection.description ? (
                   <p className="text-zinc-400 text-lg max-w-2xl leading-relaxed mt-1">
                     {collection.description}

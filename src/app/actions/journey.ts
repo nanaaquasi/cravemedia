@@ -98,7 +98,7 @@ export async function saveJourneyData(data: {
     }
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true, journeyId: newJourney.id };
 }
 
@@ -129,7 +129,7 @@ export async function beginJourney(
   }
 
   revalidatePath(`/journey/${journeyId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return {};
 }
 
@@ -154,7 +154,7 @@ export async function deleteJourney(journeyId: string): Promise<{ error?: string
     return { error: error.message };
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return {};
 }
 
@@ -183,7 +183,7 @@ export async function toggleJourneyVisibility(
   }
 
   revalidatePath(`/journey/${journeyId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -224,7 +224,7 @@ export async function cloneJourney(journeyId: string) {
     .maybeSingle();
 
   if (existingFork) {
-    revalidatePath("/account");
+    revalidatePath("/profile");
     return { success: true, newJourneyId: existingFork.id };
   }
 
@@ -274,7 +274,7 @@ export async function cloneJourney(journeyId: string) {
     await supabase.from("journey_progress").insert(progressRows);
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true, newJourneyId: newJourney.id };
 }
 
@@ -351,7 +351,7 @@ export async function markJourneyItemWatched(
   }
 
   revalidatePath(`/journey/${journeyId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return {};
 }
 
@@ -424,6 +424,6 @@ export async function updateJourneyReview(
   if (error) return { error: error.message };
 
   revalidatePath(`/journey/${journeyId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return {};
 }

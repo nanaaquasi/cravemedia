@@ -255,6 +255,74 @@ export type Database = {
           },
         ];
       };
+      favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          target_type: string;
+          target_id: string;
+          title: string | null;
+          image_url: string | null;
+          metadata: Json;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          target_type: string;
+          target_id: string;
+          title?: string | null;
+          image_url?: string | null;
+          metadata?: Json;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          target_type?: string;
+          target_id?: string;
+          title?: string | null;
+          image_url?: string | null;
+          metadata?: Json;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "favorites_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      content_stats: {
+        Row: {
+          target_type: string;
+          target_id: string;
+          favorites_count: number;
+          views_count: number;
+          saves_count: number;
+          updated_at: string | null;
+        };
+        Insert: {
+          target_type: string;
+          target_id: string;
+          favorites_count?: number;
+          views_count?: number;
+          saves_count?: number;
+          updated_at?: string | null;
+        };
+        Update: {
+          target_type?: string;
+          target_id?: string;
+          favorites_count?: number;
+          views_count?: number;
+          saves_count?: number;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
       interactions: {
         Row: {
           comment_text: string | null;
@@ -581,6 +649,7 @@ export type Database = {
           longest_streak_days: number | null;
           top_genres: Json | null;
           total_badges_unlocked: number | null;
+          total_favorites: number | null;
           total_hours_watched: number | null;
           total_items_watched: number | null;
           total_journeys_completed: number | null;
@@ -597,6 +666,7 @@ export type Database = {
           longest_streak_days?: number | null;
           top_genres?: Json | null;
           total_badges_unlocked?: number | null;
+          total_favorites?: number | null;
           total_hours_watched?: number | null;
           total_items_watched?: number | null;
           total_journeys_completed?: number | null;
@@ -613,6 +683,7 @@ export type Database = {
           longest_streak_days?: number | null;
           top_genres?: Json | null;
           total_badges_unlocked?: number | null;
+          total_favorites?: number | null;
           total_hours_watched?: number | null;
           total_items_watched?: number | null;
           total_journeys_completed?: number | null;

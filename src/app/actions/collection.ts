@@ -67,7 +67,7 @@ export async function createCollectionWithItems(
     }
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { collectionId: collection.id };
 }
 
@@ -115,7 +115,7 @@ export async function addItemToCollection(
   if (error) return { error: error.message };
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return {};
 }
 
@@ -144,7 +144,7 @@ export async function toggleCollectionVisibility(
   }
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -181,7 +181,7 @@ export async function updateCollection(
   }
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -222,7 +222,7 @@ export async function cloneCollection(collectionId: string) {
     .maybeSingle();
 
   if (existingClone) {
-    revalidatePath("/account");
+    revalidatePath("/profile");
     return { success: true, newCollectionId: existingClone.id };
   }
 
@@ -269,7 +269,7 @@ export async function cloneCollection(collectionId: string) {
     }
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true, newCollectionId: newCollection.id };
 }
 
@@ -355,7 +355,7 @@ export async function deleteCollection(collectionId: string) {
     return { error: error.message };
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -400,7 +400,7 @@ export async function deleteCollectionItem(
   }
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -514,7 +514,7 @@ export async function updateCollectionItemStatus(
   }
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -569,7 +569,7 @@ export async function updateMediaStatusAcrossCollections(
   for (const cid of collectionIds) {
     revalidatePath(`/collections/${cid}`);
   }
-  revalidatePath("/account");
+  revalidatePath("/profile");
   revalidatePath(`/media/${mediaType}/${mediaId}`);
   return { success: true };
 }
@@ -630,7 +630,7 @@ export async function reviewCollectionItem(
   }
 
   revalidatePath(`/collections/${collectionId}`);
-  revalidatePath("/account");
+  revalidatePath("/profile");
   return { success: true };
 }
 
@@ -721,7 +721,7 @@ export async function reviewMediaAcrossCollections(
     }
   }
 
-  revalidatePath("/account");
+  revalidatePath("/profile");
   revalidatePath(`/media/${mediaType}/${mediaId}`);
   return { success: true };
 }

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { toSessionUser } from "@/app/api/auth/session/route";
 import JourneyDetailClient from "./JourneyDetailClient";
+import { ViewTracker } from "@/components/ViewTracker";
 import { JourneyResponse, JourneyItem } from "@/lib/types";
 import type { Metadata } from "next";
 
@@ -143,6 +144,13 @@ export default async function JourneyDetailPage({
     existingCloneId = fork?.id ?? null;
   }
 
+  const { data: contentStats } = await supabase
+    .from("content_stats")
+    .select("favorites_count, views_count")
+    .eq("target_type", "journey")
+    .eq("target_id", id)
+    .maybeSingle();
+
   // Ensure user owns the journey or it is public
   if (!isOwner && !isPublic) {
     if (!user) {
@@ -174,7 +182,9 @@ export default async function JourneyDetailPage({
       : null;
 
   return (
-    <JourneyDetailClient
+    <>
+      <ViewTracker targetType="journey" targetId={id} />
+      <JourneyDetailClient
       journey={journeyResponse}
       journeyId={id}
       isOwner={isOwner}
@@ -186,6 +196,9 @@ export default async function JourneyDetailPage({
       initialProgress={initialProgress}
       journeyStatus={journey.status}
       journeyReviewData={journeyReviewData}
+      forkedCount={journey.forked_count ?? 0}
+      contentStats={contentStats ?? { favorites_count: 0, views_count: 0 }}
     />
+    </>
   );
 }

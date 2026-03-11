@@ -3,7 +3,7 @@
 import { SavedList, EnrichedRecommendation } from "@/lib/types";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { Share2, Copy, Trash2, Check, ChevronRight } from "lucide-react";
+import { Share2, Copy, Trash2, Check, ChevronRight, FolderPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
@@ -11,6 +11,9 @@ import ShareModal from "./ShareModal";
 import type { SessionUser } from "@/app/api/auth/session/route";
 import { toggleCollectionVisibility } from "@/app/actions/collection";
 import { toggleJourneyVisibility } from "@/app/actions/journey";
+import { useLists } from "@/hooks/useLists";
+import CreateCollectionModal from "./CreateCollectionModal";
+import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 
 const ITEMS_PER_LIST = 5;
 
@@ -35,8 +38,10 @@ export default function SavedListsPanel({
   user,
 }: SavedListsPanelProps) {
   const router = useRouter();
+  const { createList, refreshLists } = useLists();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [listToDelete, setListToDelete] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [shareConfig, setShareConfig] = useState<{
     url: string;
     title: string;
@@ -96,6 +101,27 @@ export default function SavedListsPanel({
     }
   };
 
+  const handleCreateCollection = async ({
+    name,
+    description,
+  }: {
+    name: string;
+    description: string;
+  }) => {
+    const result = await createList(name, description, [], {
+      isPublic: false,
+      isExplicitlySaved: true,
+    });
+    if (result) {
+      await refreshLists();
+      setIsCreateModalOpen(false);
+      router.push(`/collections/${result.id}`);
+      onClose();
+    }
+  };
+
+  const emptyStateTooltip = "Create a new cravelist";
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
@@ -135,16 +161,49 @@ export default function SavedListsPanel({
 
           {/* Lists - Quick Look: 5 items per list + View all */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 space-y-4">
-            {lists.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-4xl mb-3">📋</p>
-                <p className="text-[var(--text-secondary)] text-sm">
-                  No saved cravings yet
+            {!user ? (
+              /* Guest: Sign-in / Sign-up prompt with folder+plus (like ChatGPT Health) */
+              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                <div className="w-16 h-16 mb-6 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                  <FolderPlus className="w-8 h-8 text-purple-400" strokeWidth={1.5} />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Organize your cravings
+                </h3>
+                <p className="text-zinc-400 text-sm mb-8 max-w-xs">
+                  Log in to create {CRAVELIST_LABEL_PLURAL.toLowerCase()}, save items, and track your journey.
                 </p>
-                <p className="text-[var(--text-muted)] text-xs mt-1">
-                  Add items from recommendations to create a list
-                </p>
+                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+                  <Link
+                    href={`/login?next=${encodeURIComponent("/?openSavedLists=1")}`}
+                    className="flex-1 py-3 px-4 rounded-xl bg-white text-black font-semibold text-sm hover:bg-zinc-200 transition-colors text-center"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href={`/login?next=${encodeURIComponent("/?openSavedLists=1")}`}
+                    className="flex-1 py-3 px-4 rounded-xl border border-white/20 bg-white/5 font-semibold text-sm hover:bg-white/10 transition-colors text-center"
+                  >
+                    Sign up for free
+                  </Link>
+                </div>
               </div>
+            ) : lists.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(true)}
+                title={emptyStateTooltip}
+                aria-label={emptyStateTooltip}
+                className="flex flex-col items-center justify-center py-16 px-6 w-full rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer group"
+              >
+                <FolderPlus className="w-16 h-16 text-white/40 group-hover:text-purple-400/80 mb-4 transition-colors" strokeWidth={1.5} />
+                <p className="text-[var(--text-secondary)] text-sm font-medium">
+                  Create your first {CRAVELIST_LABEL.toLowerCase()}
+                </p>
+                <p className="text-[var(--text-muted)] text-xs mt-1" title={emptyStateTooltip}>
+                  Click to create a new list
+                </p>
+              </button>
             ) : (
               lists.map((list) => {
                 const displayItems = list.items.slice(0, ITEMS_PER_LIST);
@@ -307,6 +366,12 @@ export default function SavedListsPanel({
         onConfirm={() => listToDelete && onDeleteList(listToDelete)}
         title="Delete List?"
         description={`Are you sure you want to delete "${getListName(listToDelete)}"? This cannot be undone.`}
+      />
+
+      <CreateCollectionModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onConfirm={handleCreateCollection}
       />
 
       {shareConfig && (

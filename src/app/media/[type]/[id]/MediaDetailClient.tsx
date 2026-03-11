@@ -24,6 +24,7 @@ import {
   type WatchStatus,
 } from "@/app/actions/collection";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import TruncatedTitle from "@/components/TruncatedTitle";
 import { getCravelistLabel } from "@/config/labels";
 import EpisodeQualityGrid from "@/components/EpisodeQualityGrid";
@@ -239,6 +240,7 @@ interface MediaDetailClientProps {
   tvSeasons?: TVSeasonSummary[];
   animeRelations?: AnimeRelationItem[];
   watchProviders?: WatchProvider[];
+  contentStats?: { favorites_count: number; views_count: number };
   otherCravelists?: {
     id: string;
     name: string;
@@ -260,6 +262,7 @@ export default function MediaDetailClient({
   tvSeasons = [],
   animeRelations = [],
   watchProviders = [],
+  contentStats,
   otherCravelists = [],
 }: MediaDetailClientProps) {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
@@ -424,7 +427,7 @@ export default function MediaDetailClient({
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg">
             {details.title}
           </h1>
-          <div className="flex items-center gap-2 mt-1 text-sm text-white/80">
+          <div className="flex items-center gap-2 mt-1 text-sm text-white/80 flex-wrap">
             {year && <span>{year}</span>}
             {(details.runtime || details.episodes) && (
               <>
@@ -433,6 +436,22 @@ export default function MediaDetailClient({
                   {details.episodes
                     ? `${details.episodes} eps`
                     : details.runtime}
+                </span>
+              </>
+            )}
+            {contentStats && (contentStats.favorites_count > 0 || contentStats.views_count > 0) && (
+              <>
+                <span className="text-white/50">·</span>
+                <span className="text-white/70">
+                  {contentStats.favorites_count > 0 && (
+                    <span>{contentStats.favorites_count} ♥</span>
+                  )}
+                  {contentStats.favorites_count > 0 && contentStats.views_count > 0 && (
+                    <span className="text-white/50 mx-1">·</span>
+                  )}
+                  {contentStats.views_count > 0 && (
+                    <span>{contentStats.views_count.toLocaleString()} views</span>
+                  )}
                 </span>
               </>
             )}
@@ -562,6 +581,17 @@ export default function MediaDetailClient({
                     Add to {getCravelistLabel(1)}
                   </button>
                 )}
+                <FavoriteButton
+                  targetType={details.type}
+                  targetId={mediaId}
+                  title={details.title}
+                  imageUrl={details.posterUrl}
+                  metadata={{
+                    year: year ? parseInt(year, 10) : null,
+                    media_type: details.type,
+                  }}
+                  size="sm"
+                />
               </div>
             </div>
           </div>
@@ -855,6 +885,17 @@ export default function MediaDetailClient({
                 Add to {getCravelistLabel(1)}
               </button>
             )}
+
+            <FavoriteButton
+              targetType={details.type}
+              targetId={mediaId}
+              title={details.title}
+              imageUrl={details.posterUrl}
+              metadata={{
+                year: year ? parseInt(year, 10) : null,
+                media_type: details.type,
+              }}
+            />
           </div>
 
           {/* Overview (hidden on mobile - shown in left column) */}

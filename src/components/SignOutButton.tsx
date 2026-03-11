@@ -1,10 +1,29 @@
 "use client";
 import { signout } from "@/app/auth/actions";
 import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/context/SessionContext";
+import { useLists } from "@/hooks/useLists";
 
 export function SignOutButton() {
+  const router = useRouter();
+  const { refreshSession } = useSession();
+  const { refreshLists } = useLists();
+
   const handleSignOut = async () => {
-    await signout();
+    const result = await signout();
+    if (result?.error) {
+      console.error("Sign out failed:", result.error);
+      return;
+    }
+    router.replace("/");
+    router.refresh();
+    refreshSession().catch((error) => {
+      console.error("Post-signout session refresh failed:", error);
+    });
+    refreshLists().catch((error) => {
+      console.error("Post-signout lists refresh failed:", error);
+    });
   };
 
   return (

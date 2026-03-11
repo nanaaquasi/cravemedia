@@ -18,16 +18,16 @@ import {
 import { useIsWebView } from "@/hooks/useIsWebView";
 
 function LoginFormInner() {
-  const [isLogin, setIsLogin] = useState(true);
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const mode = searchParams.get("mode");
+  const [isLogin, setIsLogin] = useState(mode !== "signup");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [isGooglePending, setIsGooglePending] = useState(false);
   const [copied, setCopied] = useState(false);
   const isWebView = useIsWebView();
-
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next");
   const [loginUrl, setLoginUrl] = useState("");
 
   useEffect(() => {
@@ -188,7 +188,7 @@ function LoginFormInner() {
             onClick={async () => {
               setIsGooglePending(true);
               setError(null);
-              const result = await signInWithGoogle();
+              const result = await signInWithGoogle(next ?? undefined);
               if (result?.error) {
                 setError(result.error);
                 setIsGooglePending(false);

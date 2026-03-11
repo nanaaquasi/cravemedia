@@ -34,19 +34,21 @@ function getStatusStyles(status: string | null): string {
 interface JourneyShowcaseProps {
   journeys: Tables<"journeys">[];
   title?: string;
+  description?: string;
   onViewAll?: () => void;
 }
 
 export function JourneyShowcase({
   journeys,
   title = "Journey History",
+  description,
   onViewAll,
 }: JourneyShowcaseProps) {
   if (journeys.length === 0) return null;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <Play className="w-5 h-5 text-purple-400 fill-current" />
           {title}
@@ -61,7 +63,11 @@ export function JourneyShowcase({
         )}
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3">
+      {description && (
+        <p className="text-sm text-zinc-400 mb-4">{description}</p>
+      )}
+
+      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:snap-none">
         {journeys.map((journey) => {
           const items = (journey.items as any[]) || [];
           const currentPos = journey.current_position || 1;
@@ -73,7 +79,7 @@ export function JourneyShowcase({
             <Link
               key={journey.id}
               href={`/journey/${journey.id}`}
-              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10 shrink-0 w-72 md:shrink md:w-auto"
+              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10 shrink-0 w-64 snap-start md:shrink md:w-auto"
             >
               <div className="aspect-video relative bg-zinc-800">
                 {thumbnailUrl ? (
