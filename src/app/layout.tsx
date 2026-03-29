@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
 import { createClient } from "@/lib/supabase/server";
-import { toSessionUser } from "@/app/api/auth/session/route";
+import { resolveSessionUser } from "@/app/api/auth/session/route";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -82,10 +82,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const initialUser = toSessionUser(user);
+  const initialUser = await resolveSessionUser(supabase);
 
   return (
     <html lang="en" className={dmSans.variable}>

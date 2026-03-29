@@ -6,12 +6,15 @@ interface ToastProps {
   message: string | null;
   onClose: () => void;
   duration?: number;
+  /** Merged onto the fixed wrapper (e.g. z-index above modals). */
+  wrapperClassName?: string;
 }
 
 export default function Toast({
   message,
   onClose,
   duration = 2500,
+  wrapperClassName = "",
 }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -36,7 +39,7 @@ export default function Toast({
     <div
       className={`fixed z-50 left-1/2 -translate-x-1/2 bottom-32 sm:bottom-24 w-auto max-w-[90vw] transition-all duration-300 transform ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-      }`}
+      } ${wrapperClassName}`}
     >
       <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
         <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500/20 text-green-400">

@@ -1,41 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Plus, Check } from "lucide-react";
 import { EnrichedRecommendation } from "@/lib/types";
 import { useLists } from "@/hooks/useLists";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 import CreateCollectionModal from "./CreateCollectionModal";
+import Toast from "./Toast";
+import { itemIsInSavedList } from "@/lib/list-membership";
 
 interface AddToCollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: EnrichedRecommendation | null;
+  /** Called after the item is saved to a list (so parent can refresh server props). */
+  onItemAdded?: () => void;
 }
 
 export default function AddToCollectionModal({
   isOpen,
   onClose,
   item,
+  onItemAdded,
 }: AddToCollectionModalProps) {
-  const { lists, addItemToList, createList } = useLists();
+  const { lists, addItemToList, createList, refreshLists } = useLists();
   const collections = lists.filter((l) => !l.isJourney);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [addingToListId, setAddingToListId] = useState<string | null>(null);
   const [addedToLists, setAddedToLists] = useState<Set<string>>(new Set());
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  if (!isOpen || !item) return null;
+  useEffect(() => {
+    if (isOpen && item) {
+      void refreshLists();
+      setAddedToLists(new Set());
+    }
+  }, [isOpen, item?.externalId, item?.type, refreshLists]);
+
+  useEffect(() => {
+    if (!isOpen) setIsCreateModalOpen(false);
+  }, [isOpen]);
 
   const handleAdd = async (listId: string) => {
+    if (!item) return;
+    const col = collections.find((c) => c.id === listId);
+    if (!col) return;
+    if (itemIsInSavedList(col, item)) return;
     if (addedToLists.has(listId)) return;
+
     setAddingToListId(listId);
 
     try {
       await addItemToList(listId, item);
       setAddedToLists((prev) => new Set(prev).add(listId));
+      setToastMessage(`Added “${item.title}” to “${col.name}”`);
+      onClose();
+      onItemAdded?.();
     } catch (e) {
       console.error(e);
+      setToastMessage("Couldn’t add to that list. Try again.");
     } finally {
       setAddingToListId(null);
     }
@@ -48,6 +72,7 @@ export default function AddToCollectionModal({
     name: string;
     description: string;
   }) => {
+    if (!item) return;
     try {
       const newList = await createList(name, description, [item], {
         isPublic: false,
@@ -55,14 +80,21 @@ export default function AddToCollectionModal({
       });
       if (newList) {
         setAddedToLists((prev) => new Set(prev).add(newList.id));
+        setToastMessage(`Added “${item.title}” to “${newList.name}”`);
+        onClose();
+        onItemAdded?.();
       }
     } catch (e) {
       console.error("Failed to create and add", e);
+      setToastMessage("Couldn’t create that list. Try again.");
     }
   };
 
+  const showMainModal = isOpen && item;
+
   return (
     <>
+      {showMainModal && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
         {/* Backdrop */}
         <div
@@ -77,8 +109,9 @@ export default function AddToCollectionModal({
               Save to {CRAVELIST_LABEL}
             </h2>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+              className="p-1.5 -mr-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -86,10 +119,11 @@ export default function AddToCollectionModal({
 
           <div className="p-2 max-h-[60vh] overflow-y-auto min-h-[150px]">
             <button
+              type="button"
               onClick={() => setIsCreateModalOpen(true)}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left text-zinc-300 hover:text-white cursor-pointer group"
             >
-              <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all">
+              <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all shrink-0">
                 <Plus size={18} />
               </div>
               <span className="font-medium text-sm">New {CRAVELIST_LABEL}</span>
@@ -99,36 +133,58 @@ export default function AddToCollectionModal({
 
             {collections.length === 0 ? (
               <div className="p-4 text-center text-zinc-500 text-sm">
-                You don't have any {CRAVELIST_LABEL_PLURAL.toLowerCase()} yet.
+                You don&apos;t have any {CRAVELIST_LABEL_PLURAL.toLowerCase()}{" "}
+                yet.
               </div>
             ) : (
               <div className="space-y-1">
                 {collections.map((col) => {
-                  const isAdded = addedToLists.has(col.id);
+                  const alreadyInList = itemIsInSavedList(col, item);
+                  const sessionAdded = addedToLists.has(col.id);
                   const isAdding = addingToListId === col.id;
+                  const done = alreadyInList || sessionAdded;
 
                   return (
                     <button
                       key={col.id}
+                      type="button"
                       onClick={() => handleAdd(col.id)}
-                      disabled={isAdded || isAdding}
-                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={alreadyInList || isAdding}
+                      title={col.name}
+                      className={`w-full flex items-center justify-between gap-2 p-3 rounded-xl text-left transition-colors min-h-[3.25rem] ${
+                        alreadyInList
+                          ? "bg-white/[0.04] cursor-not-allowed opacity-90"
+                          : "hover:bg-white/5 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      }`}
                     >
-                      <div className="flex items-center gap-3 truncate pr-4">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-10 h-10 rounded-lg bg-zinc-800 border border-white/5 flex items-center justify-center overflow-hidden shrink-0">
                           <span className="text-sm font-bold text-zinc-500">
                             {col.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <span className="font-medium text-sm text-zinc-300 group-hover:text-white truncate">
-                          {col.name}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-sm text-zinc-300 group-hover:text-white line-clamp-2 leading-snug">
+                            {col.name}
+                          </span>
+                          {alreadyInList && (
+                            <span className="block text-[11px] text-zinc-500 mt-0.5">
+                              Already in this list
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="shrink-0 flex items-center">
+                      <div className="shrink-0 flex items-center self-center">
                         {isAdding ? (
                           <div className="w-5 h-5 border-2 border-zinc-500 border-t-white rounded-full animate-spin" />
-                        ) : isAdded ? (
-                          <div className="w-6 h-6 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center">
+                        ) : done ? (
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                              alreadyInList
+                                ? "bg-zinc-500/25 text-zinc-400"
+                                : "bg-green-500/20 text-green-400"
+                            }`}
+                          >
                             <Check size={14} />
                           </div>
                         ) : (
@@ -145,11 +201,18 @@ export default function AddToCollectionModal({
           </div>
         </div>
       </div>
+      )}
 
       <CreateCollectionModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onConfirm={handleCreateAndAdd}
+      />
+
+      <Toast
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
+        wrapperClassName="!z-[120]"
       />
     </>
   );

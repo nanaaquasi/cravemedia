@@ -64,10 +64,12 @@ export function ListsProvider({ children }: { children: ReactNode }) {
 
   // Local storage fallback for non-auth users
   const [localLists, setLocalLists] = useState<SavedList[]>([]);
+  const localListsRef = useRef(localLists);
+  localListsRef.current = localLists;
 
   const refreshLists = useCallback(async () => {
     if (!user) {
-      setLists(localLists);
+      setLists(localListsRef.current);
       setIsLoading(false);
       return;
     }
@@ -85,7 +87,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user, localLists]);
+  }, [user]);
 
   // Fetch data when user changes (AbortController prevents duplicate fetches in React Strict Mode)
   useEffect(() => {
@@ -115,6 +117,9 @@ export function ListsProvider({ children }: { children: ReactNode }) {
 
   // Set up realtime subscriptions for automatic updates (token-based, no browser refresh)
   const clientRef = useRef<Awaited<ReturnType<typeof createAuthenticatedClient>>>(null);
+  const refreshListsRef = useRef(refreshLists);
+  refreshListsRef.current = refreshLists;
+
   useEffect(() => {
     if (!user) return;
 
@@ -125,7 +130,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
       clientRef.current = client;
       const supabase = client;
 
-      const collectionsChannel = supabase
+      supabase
         .channel("collections-realtime")
         .on(
           "postgres_changes",
@@ -135,11 +140,11 @@ export function ListsProvider({ children }: { children: ReactNode }) {
             table: "collections",
             filter: `user_id=eq.${user.id}`,
           },
-          () => refreshLists(),
+          () => refreshListsRef.current(),
         )
         .subscribe();
 
-      const itemsChannel = supabase
+      supabase
         .channel("collection-items-realtime")
         .on(
           "postgres_changes",
@@ -148,11 +153,11 @@ export function ListsProvider({ children }: { children: ReactNode }) {
             schema: "public",
             table: "collection_items",
           },
-          () => refreshLists(),
+          () => refreshListsRef.current(),
         )
         .subscribe();
 
-      const journeysChannel = supabase
+      supabase
         .channel("journeys-realtime")
         .on(
           "postgres_changes",
@@ -162,7 +167,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
             table: "journeys",
             filter: `user_id=eq.${user.id}`,
           },
-          () => refreshLists(),
+          () => refreshListsRef.current(),
         )
         .subscribe();
     });
@@ -175,7 +180,7 @@ export function ListsProvider({ children }: { children: ReactNode }) {
         clientRef.current = null;
       }
     };
-  }, [user, refreshLists]);
+  }, [user?.id]);
 
   // Keep local lists in sync if not logged in
   useEffect(() => {

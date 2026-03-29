@@ -1,5 +1,7 @@
 import { getDiscoverCollections, getDiscoverJourneys } from "@/lib/discover";
 import { getTrendingMedia } from "@/lib/discover-trending";
+import { getDiscoverWatchStatusesForItems } from "@/lib/discover-watched";
+import { createClient } from "@/lib/supabase/server";
 import { DiscoverHeader } from "@/components/discover/DiscoverHeader";
 import { TrendingMedia } from "@/components/discover/TrendingMedia";
 import { TrendingSection } from "@/components/discover/TrendingSection";
@@ -28,6 +30,30 @@ export default async function DiscoverPage() {
 
   const formattedJourneys = journeys as unknown as Journey[];
 
+  const discoverItems = [
+    ...trendingData.trending,
+    ...trendingData.popular,
+    ...trendingData.trendingAnime,
+    ...trendingData.popularAnime,
+  ].map((i) => ({ type: i.type, id: i.id }));
+
+  let initialWatchedKeys: string[] = [];
+  let initialWatchingKeys: string[] = [];
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user && discoverItems.length > 0) {
+    const { watchedKeys, watchingKeys } =
+      await getDiscoverWatchStatusesForItems(
+        supabase,
+        user.id,
+        discoverItems,
+      );
+    initialWatchedKeys = watchedKeys;
+    initialWatchingKeys = watchingKeys;
+  }
+
   return (
     <main className="flex-1 flex flex-col pb-16">
       <DiscoverHeader />
@@ -37,6 +63,8 @@ export default async function DiscoverPage() {
         popular={trendingData.popular}
         trendingAnime={trendingData.trendingAnime}
         popularAnime={trendingData.popularAnime}
+        initialWatchedKeys={initialWatchedKeys}
+        initialWatchingKeys={initialWatchingKeys}
       />
 
       <TrendingSection collections={formattedCollections} />

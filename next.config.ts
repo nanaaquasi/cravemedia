@@ -1,5 +1,28 @@
 import type { NextConfig } from "next";
 
+/** Allow next/image for Supabase Storage (profile avatars, etc.) */
+function supabaseImagePattern(): {
+  protocol: "https";
+  hostname: string;
+  pathname: string;
+} | null {
+  const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!raw) return null;
+  try {
+    const host = new URL(raw).hostname;
+    if (!host) return null;
+    return {
+      protocol: "https",
+      hostname: host,
+      pathname: "/storage/v1/object/**",
+    };
+  } catch {
+    return null;
+  }
+}
+
+const supabaseStorageImagePattern = supabaseImagePattern();
+
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -22,6 +45,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      ...(supabaseStorageImagePattern ? [supabaseStorageImagePattern] : []),
       {
         protocol: "https",
         hostname: "image.tmdb.org",

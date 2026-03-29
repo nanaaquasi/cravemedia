@@ -17,6 +17,12 @@ import MediaDetailClient, { MediaDetails } from "./MediaDetailClient";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { WatchStatus } from "@/app/actions/collection";
 
+/** Supabase nested embeds sometimes return an object, sometimes a single-element array */
+function pickEmbeddedProfile<T>(p: T | T[] | null | undefined): T | null {
+  if (p == null) return null;
+  return Array.isArray(p) ? (p[0] as T) ?? null : p;
+}
+
 interface PageProps {
   params: Promise<{ type: string; id: string }>;
 }
@@ -276,7 +282,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
     const collectionReviews = rawCollectionReviews
       .map((r: any) => {
         const col = r.collections;
-        const profile = col?.profiles;
+        const profile = pickEmbeddedProfile(col?.profiles);
         const userId = col?.user_id as string;
         if (!userId || seenUserIds.has(userId)) return null;
         seenUserIds.add(userId);
@@ -287,7 +293,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
     const standaloneReviews = rawStandaloneReviews
       .map((r: any) => {
         const userId = r.user_id as string;
-        const profile = r.profiles;
+        const profile = pickEmbeddedProfile(r.profiles);
         if (!userId || seenUserIds.has(userId)) return null;
         seenUserIds.add(userId);
         return toReview(r, userId, profile);
@@ -419,7 +425,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
       const profileByUserId = new Map<string, { username: string | null; avatarUrl: string | null }>();
       for (const c of collectionsData.data ?? []) {
-        const profile = c.profiles as { username?: string; avatar_url?: string } | null;
+        const profile = pickEmbeddedProfile(
+          c.profiles as { username?: string; avatar_url?: string } | null,
+        );
         if (c.user_id) {
           profileByUserId.set(c.user_id, {
             username: profile?.username ?? null,

@@ -1,5 +1,33 @@
 const ANILIST_API_URL = "https://graphql.anilist.co";
 
+/** Identifies app traffic per AniList guidance; override via env if needed. */
+const ANILIST_USER_AGENT =
+  process.env.ANILIST_USER_AGENT?.trim() ||
+  "media-recommender/0.1 (+https://docs.anilist.co/guide/considerations)";
+
+/** HTTP 403 + GraphQL errors when the API is globally throttled or disabled (see AniList docs). */
+function isAnilistGlobalOutageMessage(message: string): boolean {
+  return (
+    message.includes("temporarily disabled") ||
+    message.includes("severe stability") ||
+    message.includes("AniList Discord")
+  );
+}
+
+export function isAnilistGlobalOutageError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return isAnilistGlobalOutageMessage(msg);
+}
+
+function logAnilistFailure(context: string, error: unknown): void {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (isAnilistGlobalOutageMessage(msg)) {
+    console.warn(`${context}: AniList API is temporarily unavailable.`);
+  } else {
+    console.error(`${context}:`, error);
+  }
+}
+
 /** Anilist rate limit: ~30 req/min when degraded. Serialize requests to avoid 429. */
 const ANILIST_MIN_INTERVAL_MS = 2100; // ~28 req/min
 let lastRequestTime = 0;
@@ -127,6 +155,7 @@ async function anilistFetch<T>(
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          "User-Agent": ANILIST_USER_AGENT,
         },
         body: JSON.stringify({ query, variables }),
       });
@@ -140,14 +169,29 @@ async function anilistFetch<T>(
         return doFetch(retriesLeft - 1);
       }
 
-      if (!res.ok) {
-        throw new Error(`Anilist API error: ${res.status}`);
+      const text = await res.text();
+      let json: AnilistResponse<T>;
+      try {
+        json = JSON.parse(text) as AnilistResponse<T>;
+      } catch {
+        if (!res.ok) {
+          const hint = text.trim() ? ` — ${text.slice(0, 200)}` : "";
+          throw new Error(`Anilist API error: ${res.status}${hint}`);
+        }
+        throw new Error("Anilist API error: invalid JSON response");
       }
 
-      const json = (await res.json()) as AnilistResponse<T>;
-      if (json.errors) {
-        console.error("Anilist GraphQL Errors:", json.errors);
-        throw new Error("Anilist GraphQL Error");
+      if (json.errors?.length) {
+        const first = json.errors[0] as { message?: string };
+        const msg = first?.message ?? "GraphQL error";
+        if (!isAnilistGlobalOutageMessage(msg)) {
+          console.error("Anilist GraphQL Errors:", json.errors);
+        }
+        throw new Error(`Anilist: ${msg}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(`Anilist API error: ${res.status}`);
       }
 
       return json.data;
@@ -521,7 +565,7 @@ export async function getDiscoverAnime(): Promise<{
       popular: (data.popular?.media ?? []).map(toItem),
     };
   } catch (error) {
-    console.error("Error fetching discover anime:", error);
+    logAnilistFailure("Error fetching discover anime", error);
     return { trending: [], popular: [] };
   }
 }
@@ -545,7 +589,7 @@ export async function searchAnime(query: string): Promise<AnimeSearchResult[]> {
       format: media.format,
     }));
   } catch (error) {
-    console.error("Error searching anime:", error);
+    logAnilistFailure("Error searching anime", error);
     return [];
   }
 }
@@ -740,7 +784,7 @@ export async function getAnimeDetails(
       relations,
     };
   } catch (error) {
-    console.error("Error fetching anime details:", error);
+    logAnilistFailure("Error fetching anime details", error);
     return null;
   }
 }
@@ -880,7 +924,7 @@ export async function enrichAnime(
       externalId: best.id.toString(),
     };
   } catch (error) {
-    console.error("Error enriching anime:", error);
+    logAnilistFailure("Error enriching anime", error);
     return { posterUrl: null, rating: null, runtime: null, externalId: null };
   }
 }

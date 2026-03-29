@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { getPosterUrl } from "@/lib/tmdb";
-import { getDiscoverAnime } from "@/lib/anilist";
+import { getDiscoverAnime, isAnilistGlobalOutageError } from "@/lib/anilist";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_ANIME_GENRE_ID = 16;
@@ -161,7 +161,11 @@ async function fetchTrendingData(): Promise<{
       overview: a.overview,
     }));
   } catch (err) {
-    console.error("Discover anime fetch error:", err);
+    if (isAnilistGlobalOutageError(err)) {
+      console.warn("Discover anime: AniList API temporarily unavailable.");
+    } else {
+      console.error("Discover anime fetch error:", err);
+    }
   }
 
   return { trending, popular, trendingAnime, popularAnime };

@@ -28,6 +28,7 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import TruncatedTitle from "@/components/TruncatedTitle";
 import { getCravelistLabel } from "@/config/labels";
 import EpisodeQualityGrid from "@/components/EpisodeQualityGrid";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import type { EnrichedRecommendation } from "@/lib/types";
 import {
   getPosterUrl,
@@ -316,6 +317,10 @@ export default function MediaDetailClient({
     };
   }, [statusOpen]);
 
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
+
   const handleStatusChange = async (newStatus: WatchStatus) => {
     const prev = status;
     setStatus(newStatus);
@@ -382,6 +387,8 @@ export default function MediaDetailClient({
     ? `https://www.youtube.com/embed/${trailerKey}?autoplay=1`
     : null;
 
+  const router = useRouter();
+
   const typeLabel =
     details.type === "movie"
       ? "Movie"
@@ -390,8 +397,6 @@ export default function MediaDetailClient({
         : details.type === "book"
           ? "Book"
           : (details.format ?? "Anime");
-
-  const router = useRouter();
 
   return (
     <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
@@ -762,20 +767,16 @@ export default function MediaDetailClient({
                         {c.itemCount} titles
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        {c.curator.avatarUrl ? (
-                          <Image
-                            src={c.curator.avatarUrl}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="rounded-full object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
-                            {(c.curator.username ?? "?")[0]?.toUpperCase()}
-                          </div>
-                        )}
+                        <ProfileAvatar
+                          src={c.curator.avatarUrl}
+                          alt=""
+                          className="w-5 h-5 rounded-full object-cover"
+                          fallback={
+                            <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
+                              {(c.curator.username ?? "?")[0]?.toUpperCase()}
+                            </div>
+                          }
+                        />
                         <span className="text-xs text-[var(--text-muted)] truncate">
                           {c.curator.username ?? "Anonymous"}
                         </span>
@@ -1357,20 +1358,16 @@ export default function MediaDetailClient({
                         {c.itemCount} titles
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        {c.curator.avatarUrl ? (
-                          <Image
-                            src={c.curator.avatarUrl}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="rounded-full object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
-                            {(c.curator.username ?? "?")[0]?.toUpperCase()}
-                          </div>
-                        )}
+                        <ProfileAvatar
+                          src={c.curator.avatarUrl}
+                          alt=""
+                          className="w-5 h-5 rounded-full object-cover"
+                          fallback={
+                            <div className="w-5 h-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px] font-medium text-purple-300">
+                              {(c.curator.username ?? "?")[0]?.toUpperCase()}
+                            </div>
+                          }
+                        />
                         <span className="text-xs text-[var(--text-muted)] truncate">
                           {c.curator.username ?? "Anonymous"}
                         </span>
@@ -1426,20 +1423,16 @@ export default function MediaDetailClient({
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex items-center gap-3">
-                          {review.user.avatarUrl ? (
-                            <Image
-                              src={review.user.avatarUrl}
-                              alt={displayName}
-                              width={36}
-                              height={36}
-                              className="rounded-full object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-xs font-bold text-white">
-                              {initials}
-                            </div>
-                          )}
+                          <ProfileAvatar
+                            src={review.user.avatarUrl}
+                            alt={displayName}
+                            className="w-9 h-9 rounded-full object-cover shrink-0"
+                            fallback={
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-xs font-bold text-white">
+                                {initials}
+                              </div>
+                            }
+                          />
                           <div>
                             <p className="text-sm font-semibold text-white">
                               {displayName}
@@ -1617,6 +1610,9 @@ export default function MediaDetailClient({
         isOpen={showAddToCollection}
         onClose={() => setShowAddToCollection(false)}
         item={collectionItem}
+        onItemAdded={() => {
+          router.refresh();
+        }}
       />
     </main>
   );

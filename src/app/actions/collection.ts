@@ -67,6 +67,19 @@ export async function createCollectionWithItems(
     }
   }
 
+  for (const item of items) {
+    if (
+      item &&
+      typeof item === "object" &&
+      "type" in item &&
+      "externalId" in item &&
+      item.externalId != null &&
+      String(item.externalId).length > 0
+    ) {
+      revalidatePath(`/media/${item.type}/${item.externalId}`);
+    }
+  }
+
   revalidatePath("/profile");
   return { collectionId: collection.id };
 }
@@ -114,6 +127,7 @@ export async function addItemToCollection(
 
   if (error) return { error: error.message };
 
+  revalidatePath(`/media/${item.type}/${mediaId}`);
   revalidatePath(`/collections/${collectionId}`);
   revalidatePath("/profile");
   return {};
@@ -570,6 +584,7 @@ export async function updateMediaStatusAcrossCollections(
     revalidatePath(`/collections/${cid}`);
   }
   revalidatePath("/profile");
+  revalidatePath("/discover");
   revalidatePath(`/media/${mediaType}/${mediaId}`);
   return { success: true };
 }

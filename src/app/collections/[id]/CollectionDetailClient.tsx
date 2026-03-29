@@ -48,6 +48,10 @@ import {
   type WatchStatus,
   reviewCollectionItem,
 } from "@/app/actions/collection";
+import {
+  normalizeCollectionItemStatus,
+  sortCollectionItemsByWatchStatus,
+} from "@/lib/collection-item-sort";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
 import {
@@ -133,7 +137,9 @@ export default function CollectionDetailClient({
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
-  const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(items);
+  const [orderedItems, setOrderedItems] = useState<CollectionItem[]>(() =>
+    sortCollectionItemsByWatchStatus(items),
+  );
   const [prevItems, setPrevItems] = useState(items);
 
   const router = useRouter();
@@ -196,10 +202,14 @@ export default function CollectionDetailClient({
       [...prevIds].some((id) => !nextIds.has(id));
 
     if (idsChanged) {
-      setOrderedItems(items);
+      setOrderedItems(sortCollectionItemsByWatchStatus(items));
     } else {
       const freshById = new Map(items.map((i) => [i.id, i]));
-      setOrderedItems(orderedItems.map((i) => freshById.get(i.id) ?? i));
+      setOrderedItems(
+        sortCollectionItemsByWatchStatus(
+          orderedItems.map((i) => freshById.get(i.id) ?? i),
+        ),
+      );
     }
   }
 
@@ -295,15 +305,17 @@ export default function CollectionDetailClient({
 
   const handleStatusChange = async (itemId: string, newStatus: WatchStatus) => {
     setOrderedItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              status: newStatus,
-              finished_at:
-                newStatus === "watched" ? new Date().toISOString() : null,
-            }
-          : item,
+      sortCollectionItemsByWatchStatus(
+        prev.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                status: newStatus,
+                finished_at:
+                  newStatus === "watched" ? new Date().toISOString() : null,
+              }
+            : item,
+        ),
       ),
     );
 
@@ -314,7 +326,7 @@ export default function CollectionDetailClient({
     );
     if (result.error) {
       setToastMessage(result.error);
-      setOrderedItems(items);
+      setOrderedItems(sortCollectionItemsByWatchStatus(items));
     }
   };
 
@@ -392,20 +404,8 @@ export default function CollectionDetailClient({
       ? `${window.location.origin}/collections/${collection.id}`
       : "";
 
-  const getItemStatus = (item: CollectionItem): WatchStatus => {
-    const raw = item.status as string | undefined;
-    if (raw === "finished") return "watched";
-    if (raw === "unfinished") return "not_seen";
-    const valid: WatchStatus[] = [
-      "watched",
-      "dropped",
-      "watching",
-      "on_hold",
-      "not_seen",
-      "not_interested",
-    ];
-    return (valid.includes(raw as WatchStatus) ? raw : "not_seen") as WatchStatus;
-  };
+  const getItemStatus = (item: CollectionItem): WatchStatus =>
+    normalizeCollectionItemStatus(item);
 
   const filteredItems =
     statusFilter === "all"
@@ -1200,8 +1200,12 @@ function SortableItemWrapper({
           : "not_seen";
   const isBook = dbItem.media_type === "book";
   const isWatched = currentStatus === "watched";
-  const isCompleted =
-    currentStatus === "watched" || currentStatus === "dropped";
+  const watchHighlight =
+    currentStatus === "watched"
+      ? ("watched" as const)
+      : currentStatus === "watching"
+        ? ("watching" as const)
+        : undefined;
 
   const currentConfig =
     WATCH_STATUSES.find((s) => s.value === currentStatus) ?? WATCH_STATUSES[4];
@@ -1229,15 +1233,112 @@ function SortableItemWrapper({
 
   const StatusIcon = currentConfig.icon;
 
+  function renderOwnerToolbar() {
+    return (
+      <div
+        ref={dropdownRef}
+        className="relative flex items-center gap-1"
+      >
+        {isWatched && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenReview(dbItem);
+            }}
+            className="p-2 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 backdrop-blur-sm transition-colors cursor-pointer"
+            title="Rate & review"
+            aria-label="Rate and review"
+          >
+            <Star className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDropdownOpen((prev) => !prev);
+          }}
+          className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 cursor-pointer ${getStatusColorClasses(
+            "green",
+            currentStatus !== "not_seen",
+          )}`}
+          title="Watch status"
+          aria-label="Change watch status"
+          aria-expanded={dropdownOpen}
+        >
+          <StatusIcon className="w-4 h-4" />
+        </button>
+        {dropdownOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {WATCH_STATUSES.map((opt) => {
+              const Icon = opt.icon;
+              const label = isBook ? opt.bookLabel : opt.label;
+              const isSelected = opt.value === currentStatus;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onStatusChange(dbItem.id, opt.value);
+                    setDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-white/10 text-white"
+                      : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {label}
+                </button>
+              );
+            })}
+            <div className="my-1 border-t border-white/10" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemoveItem(dbItem.id, dbItem.title ?? item.title);
+                setDropdownOpen(false);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 shrink-0" />
+              Remove from list
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isEditMode ? "animate-pulse-slow" : ""} ${
-        isCompleted ? "ring-1 ring-green-500/30 rounded-2xl" : ""
-      }`}
+      className={`relative group ${isEditMode ? "animate-pulse-slow" : ""}`}
     >
-      <RecommendationItem item={item} index={index} viewMode={viewMode} />
+      <RecommendationItem
+        item={item}
+        index={index}
+        viewMode={viewMode}
+        watchHighlight={watchHighlight}
+        posterGridToolbarRight={
+          isOwner && viewMode === "grid" ? renderOwnerToolbar() : undefined
+        }
+      />
       {isOwner && (
         <>
           {isEditMode && (
@@ -1251,93 +1352,11 @@ function SortableItemWrapper({
               <GripVertical className="w-5 h-5" />
             </button>
           )}
-          {/* Bottom-right of poster: status + review, visible on hover alongside the Movie tag */}
-          <div
-            ref={dropdownRef}
-            className={`absolute z-20 flex items-center gap-1 ${
-              viewMode === "grid"
-                ? "bottom-[4.5rem] right-3"
-                : "right-3 top-1/2 -translate-y-1/2"
-            } opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200`}
-          >
-            {isWatched && (
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onOpenReview(dbItem);
-                }}
-                className="p-2 rounded-full bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 backdrop-blur-sm transition-colors cursor-pointer"
-                title="Rate & review"
-                aria-label="Rate and review"
-              >
-                <Star className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setDropdownOpen((prev) => !prev);
-              }}
-              className={`p-2 rounded-full backdrop-blur-sm transition-all duration-200 cursor-pointer ${getStatusColorClasses(
-                "green",
-                currentStatus !== "not_seen",
-              )}`}
-              title="Watch status"
-              aria-label="Change watch status"
-              aria-expanded={dropdownOpen}
-            >
-              <StatusIcon className="w-4 h-4" />
-            </button>
-            {dropdownOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {WATCH_STATUSES.map((opt) => {
-                  const Icon = opt.icon;
-                  const label = isBook ? opt.bookLabel : opt.label;
-                  const isSelected = opt.value === currentStatus;
-                  return (
-                    <button
-                      key={opt.value}
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onStatusChange(dbItem.id, opt.value);
-                        setDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
-                        isSelected
-                          ? "bg-white/10 text-white"
-                          : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {label}
-                    </button>
-                  );
-                })}
-                <div className="my-1 border-t border-white/10" />
-                <button
-                  role="menuitem"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onRemoveItem(dbItem.id, dbItem.title ?? item.title);
-                    setDropdownOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4 shrink-0" />
-                  Remove from list
-                </button>
-              </div>
-            )}
-          </div>
+          {viewMode === "list" && (
+            <div className="absolute right-3 top-1/2 z-20 -translate-y-1/2 opacity-100 transition-opacity duration-200">
+              {renderOwnerToolbar()}
+            </div>
+          )}
         </>
       )}
     </div>

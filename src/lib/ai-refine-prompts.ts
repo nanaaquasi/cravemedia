@@ -43,7 +43,7 @@ export function getRefineSystemPrompt(
       );
       const wantsAny = previousAnswers.some((a) =>
         a.selected.some((s) =>
-          /^no\b|any\s+(streaming\s+)?service|any\s+platform/i.test(s),
+          /^(?:no\b|any\s+(?:streaming\s+)?service|any\s+platform)/i.test(s),
         ),
       );
 
@@ -67,6 +67,7 @@ IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
 - The refined query should be 1-3 sentences, rich with specific preferences
 - The refined query must be CONCRETE and ACTIONABLE: include specific adjectives, eras, tones, and subgenres the user chose — no vague phrases like "something good"
+- Always state an explicit release timeframe or era for recommendations when the user gave any timing preference (e.g. "released in the last 5 years", "1990s–2000s", "classic pre-1970") — infer reasonably from their query and answers if they implied timing without naming years
 - Incorporate all their answers naturally${typeInstruction}${streamingInstruction}
 
 Response format:
@@ -87,8 +88,25 @@ Response format:
 
   const streamingHint =
     round === 1 && options?.streamingServiceInQuery
-      ? `\n\nSTREAMING SERVICE: The user's query mentions "${options.streamingServiceInQuery}". You MUST include exactly ONE question asking if they want to restrict results to that service only. Example: "Want only ${options.streamingServiceInQuery} content?" with options ["Yes, ${options.streamingServiceInQuery} only", "No, any streaming service"]. Use id "streaming_restrict" for this question. The other 2 questions should cover different aspects (era, tone, length, etc.).`
+      ? `\n\nSTREAMING SERVICE: The user's query mentions "${options.streamingServiceInQuery}". You MUST include exactly ONE question asking if they want to restrict results to that service only. Example: "Want only ${options.streamingServiceInQuery} content?" with options ["Yes, ${options.streamingServiceInQuery} only", "No, any streaming service"]. Use id "streaming_restrict" for this question. The other 2 questions should cover different aspects (tone, length, etc.) — one of them MUST still be the release window question below.`
       : "";
+
+  const dateRangeAnswered = previousAnswers.some(
+    (a) =>
+      /^release_window/i.test(a.questionId) ||
+      /release|date range|when\b|era|decade|year|newer|older|classic|recent|modern|last \d|last few/i.test(
+        a.questionText,
+      ),
+  );
+
+  let dateRangeHint = "";
+  if (round === 1) {
+    dateRangeHint = `\n\nRELEASE DATE RANGE (REQUIRED): You MUST include exactly ONE question about when they want recommendations from — release window, era, or publication period — phrased from their actual query. Examples: if they asked for "recent" or "new", offer tight vs loose recency; if "90s" or "classics", offer adjacent eras or sub-ranges; if vague, offer options like "Last 2–3 years", "Last decade", "2000s–now", "Any era". Use id "release_window" for this question. It must be distinct from mood/tone/length questions.`;
+  } else if (dateRangeAnswered) {
+    dateRangeHint = `\n\nRELEASE DATE RANGE: The user already answered a timing/era question. Do NOT ask the same thing again. You may ask a narrow follow-up about timing only if their answer was vague (e.g. narrow "2010s" to early vs late). Otherwise use the 3 questions for other dimensions they have not covered.`;
+  } else {
+    dateRangeHint = `\n\nRELEASE DATE RANGE (REQUIRED): They have not yet locked in a release timeframe. Include exactly ONE question about release date range or era tailored to their query. Use id "release_window".`;
+  }
 
   return `You are an expert media curator specializing in ${typeLabel}.
 
@@ -97,14 +115,14 @@ ${answersContext}
 
 This is round ${round} of follow-up questions.${
     round === 1
-      ? " Ask questions directly relevant to their query. If they mentioned a genre or theme, ask about sub-preferences within that (era, tone, length). If their query is vague, ask about mood and pacing first."
+      ? " Ask questions directly relevant to their query. If they mentioned a genre or theme, ask about sub-preferences within that (tone, length, etc.). The release-window question (see below) covers timing; keep the other two questions on mood, pacing, format, or subgenre."
       : " Build on their previous answers to drill deeper into their taste. NEVER ask about something they already answered. Each round must explore a DIFFERENT dimension (e.g., if round 1 covered mood, round 2 should cover era, length, or style — not the same axis)."
-  }${userContextHint}${streamingHint}
+  }${userContextHint}${streamingHint}${dateRangeHint}
 
 IMPORTANT RULES:
 - Return ONLY valid JSON, no markdown, no code fences
 - Generate exactly 3 questions
-- Each question must cover a DIFFERENT aspect — not 3 variations of the same question (e.g., one about era, one about tone, one about length/format)
+- Each question must cover a DIFFERENT aspect — not 3 variations of the same question (e.g., one about release window, one about tone, one about length/format)
 - NEVER repeat themes from previous questions. Do not ask about something the user already answered
 - Each question should have 3-5 concise options (1-4 words each)
 - Questions should feel conversational and fun, not clinical

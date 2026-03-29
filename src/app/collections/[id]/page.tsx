@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { sortCollectionItemsByWatchStatus } from "@/lib/collection-item-sort";
 import { notFound, redirect } from "next/navigation";
 import { toSessionUser } from "@/app/api/auth/session/route";
 import CollectionDetailClient from "./CollectionDetailClient";
@@ -161,7 +162,7 @@ export default async function CollectionDetailPage({
       <ViewTracker targetType="collection" targetId={id} />
       <CollectionDetailClient
       collection={collection}
-      items={itemsResult.data || []}
+      items={sortCollectionItemsByWatchStatus(itemsResult.data || [])}
       isOwner={isOwner}
       isPublic={isPublic}
       user={toSessionUser(user)}

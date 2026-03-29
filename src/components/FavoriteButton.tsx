@@ -21,6 +21,8 @@ interface FavoriteButtonProps {
   metadata?: Record<string, unknown>;
   className?: string;
   size?: "sm" | "md";
+  /** Dark translucent controls on media posters (matches add/more buttons) */
+  variant?: "default" | "poster";
 }
 
 export function FavoriteButton({
@@ -31,6 +33,7 @@ export function FavoriteButton({
   metadata = {},
   className = "",
   size = "md",
+  variant = "default",
 }: FavoriteButtonProps) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,11 +105,29 @@ export function FavoriteButton({
   const iconSize = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
   const buttonSize = size === "sm" ? "p-2" : "p-2.5";
 
+  /** Match cravelist watch-status controls: dark glass (see getStatusColorClasses inactive) */
+  const posterLoadingCls =
+    "rounded-full bg-black/50 backdrop-blur-sm text-white/60";
+  const defaultLoadingCls =
+    "rounded-xl bg-white/[0.06] border border-white/10 text-[var(--text-muted)]";
+
+  const posterActiveCls =
+    "rounded-full bg-black/50 backdrop-blur-sm text-rose-300 border border-rose-400/40 hover:bg-black/60 hover:text-rose-200";
+  const defaultActiveCls =
+    "rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border-rose-500/30";
+
+  const posterIdleCls =
+    "rounded-full bg-black/50 backdrop-blur-sm text-white/80 hover:bg-black/60 hover:text-white";
+  const defaultIdleCls =
+    "rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] hover:text-white border-white/10";
+
   if (isLoading) {
     return (
       <button
         disabled
-        className={`inline-flex items-center justify-center rounded-xl bg-white/[0.06] border border-white/10 text-[var(--text-muted)] cursor-not-allowed ${buttonSize} ${className}`}
+        className={`inline-flex items-center justify-center cursor-not-allowed ${buttonSize} ${
+          variant === "poster" ? posterLoadingCls : defaultLoadingCls
+        } ${className}`}
         aria-label="Favorite"
       >
         <Heart className={`${iconSize} animate-pulse`} />
@@ -119,10 +140,14 @@ export function FavoriteButton({
       type="button"
       onClick={handleClick}
       disabled={isToggling}
-      className={`inline-flex items-center justify-center rounded-xl border transition-colors cursor-pointer ${buttonSize} ${
+      className={`inline-flex items-center justify-center border transition-colors cursor-pointer ${buttonSize} ${
         isFavorited
-          ? "bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border-rose-500/30"
-          : "bg-white/[0.06] hover:bg-white/[0.1] text-[var(--text-secondary)] hover:text-white border-white/10"
+          ? variant === "poster"
+            ? posterActiveCls
+            : defaultActiveCls
+          : variant === "poster"
+            ? posterIdleCls
+            : defaultIdleCls
       } ${className}`}
       aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
       whileTap={{ scale: 0.95 }}
