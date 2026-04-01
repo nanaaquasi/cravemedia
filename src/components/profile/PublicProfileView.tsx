@@ -95,7 +95,7 @@ export function PublicProfileView({
   };
 
   return (
-    <div className="min-h-screen pb-20 font-sans">
+    <div className="min-h-screen pb-20">
       <div className="max-w-7xl mx-auto mt-6">
         <ProfileHeader
           profile={profile}

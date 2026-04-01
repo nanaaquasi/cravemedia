@@ -1274,7 +1274,7 @@ function SortableItemWrapper({
         {dropdownOpen && (
           <div
             role="menu"
-            className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
+            className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-[60]"
             onClick={(e) => e.stopPropagation()}
           >
             {WATCH_STATUSES.map((opt) => {

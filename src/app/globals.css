@@ -48,8 +48,7 @@ html {
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family:
-    var(--font-dm-sans), "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-syne), "Syne", ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -538,4 +537,15 @@ body {
   .mood-pill-glow {
     animation: none !important;
   }
+}
+
+/*
+ * Tailwind’s `font-sans` utility sets font-family via @layer utilities; a custom
+ * @theme --font-sans is not reliably merged under Turbopack, so profile views
+ * that use `font-sans` kept the default ui-sans stack. Unlayered rule wins over
+ * layered utilities and matches body (layout.tsx --font-syne on <html>).
+ */
+.font-sans {
+  font-family: var(--font-syne), "Syne", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { Syne } from "next/font/google";
 import NextTopLoader from "nextjs-toploader";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -8,10 +8,10 @@ import GlobalLayout from "@/components/GlobalLayout";
 import { createClient } from "@/lib/supabase/server";
 import { resolveSessionUser } from "@/app/api/auth/session/route";
 
-const dmSans = DM_Sans({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-syne",
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -85,7 +85,7 @@ export default async function RootLayout({
   const initialUser = await resolveSessionUser(supabase);
 
   return (
-    <html lang="en" className={dmSans.variable}>
+    <html lang="en" className={`${syne.variable}`}>
       <body className="bg-gradient-mesh min-h-screen overflow-x-clip">
         <NextTopLoader
           color="#a855f7"

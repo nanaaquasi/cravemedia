@@ -49,6 +49,25 @@ export default function RecommendationItem({
           ? "Book"
           : "Anime";
 
+  const renderGridPosterMedia = (posterToneHighlight: boolean) =>
+    item.posterUrl && !imgError ? (
+      <Image
+        src={item.posterUrl}
+        alt={item.title}
+        fill
+        unoptimized
+        className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
+          posterToneHighlight ? "brightness-[0.88] saturate-[0.92]" : ""
+        }`}
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
+        onError={() => setImgError(true)}
+      />
+    ) : (
+      <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
+        {typeIcon}
+      </div>
+    );
+
   const detailHref =
     (item.type === "movie" ||
       item.type === "tv" ||
@@ -74,7 +93,11 @@ export default function RecommendationItem({
         ? ""
         : "liquid-glass";
   const cardProps = {
-    className: `group stagger-item rounded-xl overflow-hidden transition-all duration-300 block ${cardShellClass} ${isClickable ? "cursor-pointer" : "cursor-default"}`,
+    className: `group stagger-item rounded-xl ${
+      hasGridOwnerToolbar ? "!overflow-visible" : "overflow-hidden"
+    } transition-all duration-300 block ${cardShellClass} ${
+      isClickable ? "cursor-pointer" : "cursor-default"
+    }`,
     style: { animationDelay: `${index * 50}ms` } as React.CSSProperties,
   };
 
@@ -234,26 +257,22 @@ export default function RecommendationItem({
     </div>
   ) : hasWatchHighlight ? (
     <div
-      className={`liquid-glass rounded-xl border-2 overflow-hidden flex flex-col box-border ${highlightBorderClass}`}
+      className={`liquid-glass rounded-xl border-2 ${
+        hasGridOwnerToolbar ? "!overflow-visible" : "overflow-hidden"
+      } flex flex-col box-border ${highlightBorderClass}`}
     >
-      {/* Poster / Cover - prominent card style */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden">
-        {item.posterUrl && !imgError ? (
-          <Image
-            src={item.posterUrl}
-            alt={item.title}
-            fill
-            unoptimized
-            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
-              hasWatchHighlight ? "brightness-[0.88] saturate-[0.92]" : ""
-            }`}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
-            {typeIcon}
+      {/* Poster / Cover — overflow only on image layer when status menu opens upward */}
+      <div
+        className={`relative aspect-[2/3] w-full ${
+          hasGridOwnerToolbar ? "" : "overflow-hidden"
+        }`}
+      >
+        {hasGridOwnerToolbar ? (
+          <div className="absolute inset-0 overflow-hidden rounded-t-xl z-0">
+            {renderGridPosterMedia(true)}
           </div>
+        ) : (
+          renderGridPosterMedia(true)
         )}
 
         {watchHighlight === "watched" && (
@@ -387,22 +406,18 @@ export default function RecommendationItem({
     </div>
   ) : (
     <>
-      {/* Poster / Cover - prominent card style */}
-      <div className="relative aspect-[2/3] w-full overflow-hidden">
-        {item.posterUrl && !imgError ? (
-          <Image
-            src={item.posterUrl}
-            alt={item.title}
-            fill
-            unoptimized
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 200px"
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
-            {typeIcon}
+      {/* Poster / Cover — overflow only on image layer when cravelist status menu opens upward */}
+      <div
+        className={`relative aspect-[2/3] w-full ${
+          hasGridOwnerToolbar ? "" : "overflow-hidden"
+        }`}
+      >
+        {hasGridOwnerToolbar ? (
+          <div className="absolute inset-0 overflow-hidden rounded-t-xl z-0">
+            {renderGridPosterMedia(false)}
           </div>
+        ) : (
+          renderGridPosterMedia(false)
         )}
 
         {/* Gradient overlay for text readability */}
