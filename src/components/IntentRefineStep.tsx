@@ -104,7 +104,11 @@ interface IntentRefineStepProps {
 }
 
 /* ─── shared background ────────────────────────────────────────────────── */
-function AnimatedBackground({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
+function AnimatedBackground({
+  prefersReducedMotion,
+}: {
+  prefersReducedMotion: boolean;
+}) {
   if (prefersReducedMotion) {
     return (
       <div className="absolute inset-0 overflow-hidden" aria-hidden>
@@ -185,7 +189,11 @@ function ContextBar({
     ? formatTypeForSentence(selectedType)
     : "recommendations";
   const modeStr =
-    selectedMode === "journey" ? "journey" : selectedMode === "list" ? "list" : null;
+    selectedMode === "journey"
+      ? "journey"
+      : selectedMode === "list"
+        ? "list"
+        : null;
 
   let sentence: string;
   if (modeStr && selectedType) {
@@ -198,9 +206,7 @@ function ContextBar({
 
   const answerSuffix =
     previousAnswers && previousAnswers.length > 0
-      ? previousAnswers
-          .map((a) => a.selected.join(", "))
-          .join(" • ")
+      ? previousAnswers.map((a) => a.selected.join(", ")).join(" • ")
       : null;
 
   return (
@@ -498,7 +504,18 @@ export default function IntentRefineStep({
                 className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
                 aria-label="Back"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
                 Back
               </button>
               <motion.button
@@ -524,7 +541,19 @@ export default function IntentRefineStep({
             className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
             aria-label="Cancel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
             Cancel
           </button>
         </div>
@@ -557,7 +586,10 @@ export default function IntentRefineStep({
           >
             {(initialQuery?.trim() || selectedType) && (
               <div className="mb-4 flex justify-center">
-                <ContextBar initialQuery={initialQuery} selectedType={selectedType} />
+                <ContextBar
+                  initialQuery={initialQuery}
+                  selectedType={selectedType}
+                />
               </div>
             )}
             <p className="text-sm text-purple-300/70 font-medium mb-3 uppercase tracking-wider">
@@ -689,7 +721,18 @@ export default function IntentRefineStep({
                   className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
                   aria-label="Back"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
                   Back
                 </button>
               )}
@@ -716,7 +759,19 @@ export default function IntentRefineStep({
             className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
             aria-label="Cancel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
             Cancel
           </button>
         </div>
@@ -740,7 +795,10 @@ export default function IntentRefineStep({
         <AnimatedBackground prefersReducedMotion={prefersReducedMotion} />
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center text-center">
-          {(initialQuery?.trim() || selectedType || selectedMode || (previousAnswers && previousAnswers.length > 0)) && (
+          {(initialQuery?.trim() ||
+            selectedType ||
+            selectedMode ||
+            (previousAnswers && previousAnswers.length > 0)) && (
             <div className="mb-6 flex justify-center">
               <ContextBar
                 initialQuery={initialQuery}
@@ -768,7 +826,19 @@ export default function IntentRefineStep({
             className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
             aria-label="Cancel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
             Cancel
           </button>
         </div>
@@ -811,7 +881,10 @@ export default function IntentRefineStep({
 
       {/* Question content — vertically centered */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full px-4">
-        {(initialQuery?.trim() || selectedType || selectedMode || allAnswersForDisplay.length > 0) && (
+        {(initialQuery?.trim() ||
+          selectedType ||
+          selectedMode ||
+          allAnswersForDisplay.length > 0) && (
           <div className="mb-6 flex justify-center">
             <ContextBar
               initialQuery={initialQuery}
@@ -850,7 +923,7 @@ export default function IntentRefineStep({
               {round <= 1 ? "Let\u2019s refine your taste" : "Almost there"}
             </p>
 
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 leading-tight">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2 leading-tight">
               {currentQuestion.text}
             </h2>
 
@@ -908,7 +981,18 @@ export default function IntentRefineStep({
                   className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
                   aria-label="Back"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m15 18-6-6 6-6" />
+                  </svg>
                   Back
                 </button>
               )}
@@ -942,7 +1026,19 @@ export default function IntentRefineStep({
           className="text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer flex items-center gap-1.5"
           aria-label="Cancel"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
           Cancel
         </button>
       </div>
