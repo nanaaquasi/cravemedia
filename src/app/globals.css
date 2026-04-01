@@ -476,6 +476,38 @@ body {
     0 12px 40px -4px rgba(0, 0, 0, 0.6);
 }
 
+/* Poster / grid cards — stronger rim on very dark backgrounds */
+.liquid-glass.recommendation-card-frame {
+  border-color: rgba(255, 255, 255, 0.44);
+  box-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 36px -6px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.liquid-glass.recommendation-card-frame:hover {
+  border-color: rgba(255, 255, 255, 0.52);
+  box-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.26),
+    0 14px 44px -6px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* Watched / watching cards — keep Tailwind border color; add depth + outer hairline */
+.liquid-glass.recommendation-card-accent {
+  box-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2),
+    0 10px 36px -6px rgba(0, 0, 0, 0.58),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.liquid-glass.recommendation-card-accent:hover {
+  box-shadow:
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.24),
+    0 14px 44px -6px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
 /* Stronger variant — for floating panels, input areas */
 .liquid-glass-strong {
   background: linear-gradient(

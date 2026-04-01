@@ -40,13 +40,16 @@ function GlobalLayoutContent({ children }: { children: React.ReactNode }) {
         listsCount={lists.length}
       />
       <main className="min-h-screen pb-20 md:pb-0 md:ml-[240px]">
-        <div className="w-full max-w-7xl mx-auto px-6 md:px-10 lg:px-14 xl:px-16">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-5 md:px-10 lg:px-14 xl:px-16">
           <div className="flex-1 flex flex-col min-h-0 pt-6 md:pt-8">
             {children}
           </div>
         </div>
       </main>
-      <MobileTabBar />
+      <MobileTabBar
+        onOpenSavedLists={() => setShowSavedLists(true)}
+        listsCount={lists.length}
+      />
       <SavedListsPanel
         lists={lists}
         isOpen={showSavedLists}

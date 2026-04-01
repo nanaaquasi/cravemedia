@@ -15,7 +15,7 @@ import { useLists } from "@/hooks/useLists";
 import CreateCollectionModal from "./CreateCollectionModal";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 
-const ITEMS_PER_LIST = 5;
+const ITEMS_PER_LIST = 3;
 
 interface SavedListsPanelProps {
   lists: SavedList[];
@@ -159,7 +159,7 @@ export default function SavedListsPanel({
             </div>
           </div>
 
-          {/* Lists - Quick Look: 5 items per list + View all */}
+          {/* Lists - Quick Look: 3 items per list + View all */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8 space-y-4">
             {!user ? (
               /* Guest: Sign-in / Sign-up prompt with folder+plus (like ChatGPT Health) */
@@ -212,13 +212,18 @@ export default function SavedListsPanel({
                   : `/collections/${list.id}`;
 
                 return (
-                  <div key={list.id} className="glass rounded-xl overflow-hidden">
+                  <div
+                    key={list.id}
+                    className="liquid-glass rounded-xl overflow-hidden"
+                  >
                     {/* List header */}
                     <div className="px-4 py-3 border-b border-white/5">
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-medium">{list.name}</h3>
+                            <h3 className="text-lg font-semibold text-white tracking-tight">
+                              {list.name}
+                            </h3>
                             {list.isJourney && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-300 border border-purple-500/30">
                                 Journey
@@ -232,7 +237,7 @@ export default function SavedListsPanel({
                       </div>
                     </div>
 
-                    {/* Quick Look items (5 max) */}
+                    {/* Quick Look items (3 max) */}
                     <div className="divide-y divide-white/5">
                       {displayItems.map((item, idx) => {
                         const href = getItemHref(item);
@@ -313,7 +318,7 @@ export default function SavedListsPanel({
                       <Link
                         href={listHref}
                         onClick={onClose}
-                        className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors"
+                        className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors cursor-pointer"
                       >
                         View all
                         <ChevronRight size={16} />

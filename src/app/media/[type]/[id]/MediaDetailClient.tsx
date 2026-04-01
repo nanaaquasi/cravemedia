@@ -382,7 +382,7 @@ export default function MediaDetailClient({
   };
 
   const statusConfig = status
-    ? STATUS_OPTIONS.find((s) => s.value === status) ?? STATUS_OPTIONS[4]
+    ? (STATUS_OPTIONS.find((s) => s.value === status) ?? STATUS_OPTIONS[4])
     : null;
 
   const year = details.releaseDate?.slice(0, 4) ?? null;
@@ -403,7 +403,7 @@ export default function MediaDetailClient({
           : (details.format ?? "Anime");
 
   return (
-    <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto pb-20">
       {/* Hero */}
       <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
         {/* Back button - inline on banner */}
@@ -448,22 +448,27 @@ export default function MediaDetailClient({
                 </span>
               </>
             )}
-            {contentStats && (contentStats.favorites_count > 0 || contentStats.views_count > 0) && (
-              <>
-                <span className="text-white/50">·</span>
-                <span className="text-white/70">
-                  {contentStats.favorites_count > 0 && (
-                    <span>{contentStats.favorites_count} ♥</span>
-                  )}
-                  {contentStats.favorites_count > 0 && contentStats.views_count > 0 && (
-                    <span className="text-white/50 mx-1">·</span>
-                  )}
-                  {contentStats.views_count > 0 && (
-                    <span>{contentStats.views_count.toLocaleString()} views</span>
-                  )}
-                </span>
-              </>
-            )}
+            {contentStats &&
+              (contentStats.favorites_count > 0 ||
+                contentStats.views_count > 0) && (
+                <>
+                  <span className="text-white/50">·</span>
+                  <span className="text-white/70">
+                    {contentStats.favorites_count > 0 && (
+                      <span>{contentStats.favorites_count} ♥</span>
+                    )}
+                    {contentStats.favorites_count > 0 &&
+                      contentStats.views_count > 0 && (
+                        <span className="text-white/50 mx-1">·</span>
+                      )}
+                    {contentStats.views_count > 0 && (
+                      <span>
+                        {contentStats.views_count.toLocaleString()} views
+                      </span>
+                    )}
+                  </span>
+                </>
+              )}
           </div>
         </div>
       </div>
@@ -633,7 +638,10 @@ export default function MediaDetailClient({
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3">
               {details.runtime && (
-                <InfoRow label={isBook ? "Pages" : "Runtime"} value={details.runtime} />
+                <InfoRow
+                  label={isBook ? "Pages" : "Runtime"}
+                  value={details.runtime}
+                />
               )}
               {isBook && details.authors && details.authors.length > 0 && (
                 <InfoRow
@@ -647,94 +655,95 @@ export default function MediaDetailClient({
                   value={details.directors.join(", ")}
                 />
               )}
-            {details.writers && details.writers.length > 0 && (
-              <InfoRow
-                label={`Writer${details.writers.length > 1 ? "s" : ""}`}
-                value={details.writers.join(", ")}
-              />
-            )}
-            {details.studios && details.studios.length > 0 && (
-              <InfoRow
-                label={`Studio${details.studios.length > 1 ? "s" : ""}`}
-                value={details.studios.join(", ")}
-              />
-            )}
-            {details.source && (
-              <InfoRow label="Source" value={details.source} />
-            )}
+              {details.writers && details.writers.length > 0 && (
+                <InfoRow
+                  label={`Writer${details.writers.length > 1 ? "s" : ""}`}
+                  value={details.writers.join(", ")}
+                />
+              )}
+              {details.studios && details.studios.length > 0 && (
+                <InfoRow
+                  label={`Studio${details.studios.length > 1 ? "s" : ""}`}
+                  value={details.studios.join(", ")}
+                />
+              )}
+              {details.source && (
+                <InfoRow label="Source" value={details.source} />
+              )}
 
-            <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
-              {details.releaseStatus && (
-                <InfoRow label="Release Status" value={details.releaseStatus} />
-              )}
-              {details.releaseDate && (
-                <InfoRow
-                  label="Release Date"
-                  value={formatDate(details.releaseDate)}
-                />
-              )}
-              {details.originalLanguage && (
-                <InfoRow
-                  label="Original Language"
-                  value={details.originalLanguage}
-                />
-              )}
-              {details.originCountry && details.originCountry.length > 0 && (
-                <InfoRow
-                  label={`Origin Country`}
-                  value={details.originCountry.join(", ")}
-                />
-              )}
-            </div>
-
-            {communityStats && Object.keys(communityStats).length > 0 && (
               <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
-                {(communityStats.watching ?? 0) > 0 && (
+                {details.releaseStatus && (
                   <InfoRow
-                    label={isBook ? "People Reading" : "People Watching"}
-                    value={String(communityStats.watching)}
+                    label="Release Status"
+                    value={details.releaseStatus}
                   />
                 )}
-                {(communityStats.watched ?? 0) > 0 && (
+                {details.releaseDate && (
                   <InfoRow
-                    label={isBook ? "People Read" : "People Finished"}
-                    value={String(communityStats.watched)}
+                    label="Release Date"
+                    value={formatDate(details.releaseDate)}
                   />
                 )}
-                {(communityStats.on_hold ?? 0) > 0 && (
+                {details.originalLanguage && (
                   <InfoRow
-                    label="People On Hold"
-                    value={String(communityStats.on_hold)}
+                    label="Original Language"
+                    value={details.originalLanguage}
                   />
                 )}
-                {(communityStats.dropped ?? 0) > 0 && (
+                {details.originCountry && details.originCountry.length > 0 && (
                   <InfoRow
-                    label="People Dropped"
-                    value={String(communityStats.dropped)}
-                  />
-                )}
-                {(communityStats.not_seen ?? 0) +
-                  (communityStats.not_interested ?? 0) >
-                  0 && (
-                  <InfoRow
-                    label="People Interested"
-                    value={String(
-                      (communityStats.not_seen ?? 0) +
-                        (communityStats.not_interested ?? 0),
-                    )}
+                    label={`Origin Country`}
+                    value={details.originCountry.join(", ")}
                   />
                 )}
               </div>
-            )}
+
+              {communityStats && Object.keys(communityStats).length > 0 && (
+                <div className="border-t border-white/[0.06] pt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:block lg:space-y-3 col-span-2">
+                  {(communityStats.watching ?? 0) > 0 && (
+                    <InfoRow
+                      label={isBook ? "People Reading" : "People Watching"}
+                      value={String(communityStats.watching)}
+                    />
+                  )}
+                  {(communityStats.watched ?? 0) > 0 && (
+                    <InfoRow
+                      label={isBook ? "People Read" : "People Finished"}
+                      value={String(communityStats.watched)}
+                    />
+                  )}
+                  {(communityStats.on_hold ?? 0) > 0 && (
+                    <InfoRow
+                      label="People On Hold"
+                      value={String(communityStats.on_hold)}
+                    />
+                  )}
+                  {(communityStats.dropped ?? 0) > 0 && (
+                    <InfoRow
+                      label="People Dropped"
+                      value={String(communityStats.dropped)}
+                    />
+                  )}
+                  {(communityStats.not_seen ?? 0) +
+                    (communityStats.not_interested ?? 0) >
+                    0 && (
+                    <InfoRow
+                      label="People Interested"
+                      value={String(
+                        (communityStats.not_seen ?? 0) +
+                          (communityStats.not_interested ?? 0),
+                      )}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Other Cravelists (desktop only - under info) */}
           {otherCravelists.length > 0 && (
             <div className="hidden lg:block">
-              <h3 className="text-lg font-bold text-white mb-3">
-                Found In
-              </h3>
+              <h3 className="text-lg font-bold text-white mb-3">Found In</h3>
               <div className="space-y-3">
                 {otherCravelists.map((c) => (
                   <Link
@@ -766,7 +775,9 @@ export default function MediaDetailClient({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{c.name}</p>
+                      <p className="font-medium text-white truncate">
+                        {c.name}
+                      </p>
                       <p className="text-xs text-[var(--text-muted)]">
                         {c.itemCount} titles
                       </p>
@@ -964,7 +975,11 @@ export default function MediaDetailClient({
                         )}
                       </div>
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {p.type === "flatrate" ? "Subs" : p.type === "buy" ? "Buy" : "Rent"}
+                        {p.type === "flatrate"
+                          ? "Subs"
+                          : p.type === "buy"
+                            ? "Buy"
+                            : "Rent"}
                       </span>
                     </a>
                   );
@@ -998,34 +1013,38 @@ export default function MediaDetailClient({
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-3 items-center">
                       {watchProviders.map((p) => (
-                          <a
-                            key={p.id}
-                            href={getJustWatchUrl(details.title, "tv")}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
-                            title={`Watch on ${p.name}`}
-                          >
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
-                              {p.logoPath ? (
-                                <Image
-                                  src={`https://image.tmdb.org/t/p/original${p.logoPath}`}
-                                  alt={p.name}
-                                  width={40}
-                                  height={40}
-                                  className="object-contain"
-                                  unoptimized
-                                />
-                              ) : (
-                                <span className="text-xs text-zinc-500">
-                                  {p.name.slice(0, 2)}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-[var(--text-muted)]">
-                              {p.type === "flatrate" ? "Subs" : p.type === "buy" ? "Buy" : "Rent"}
-                            </span>
-                          </a>
+                        <a
+                          key={p.id}
+                          href={getJustWatchUrl(details.title, "tv")}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity"
+                          title={`Watch on ${p.name}`}
+                        >
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
+                            {p.logoPath ? (
+                              <Image
+                                src={`https://image.tmdb.org/t/p/original${p.logoPath}`}
+                                alt={p.name}
+                                width={40}
+                                height={40}
+                                className="object-contain"
+                                unoptimized
+                              />
+                            ) : (
+                              <span className="text-xs text-zinc-500">
+                                {p.name.slice(0, 2)}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-[var(--text-muted)]">
+                            {p.type === "flatrate"
+                              ? "Subs"
+                              : p.type === "buy"
+                                ? "Buy"
+                                : "Rent"}
+                          </span>
+                        </a>
                       ))}
                     </div>
                     <div className="mt-2 flex items-center gap-1.5">
@@ -1049,69 +1068,71 @@ export default function MediaDetailClient({
                 )}
                 {tvSeasons.length > 0 && (
                   <>
-                    <h2 className="text-lg font-bold text-white mb-3">Seasons</h2>
-                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                    {tvSeasons.map((season) => {
-                      const posterUrl = getPosterUrl(
-                        season.posterPath,
-                        "w500",
-                      );
-                      const seasonYear = season.airDate
-                        ? new Date(season.airDate).getFullYear()
-                        : null;
-                      return (
-                        <Link
-                          key={season.seasonNumber}
-                          href={`/media/tv/${mediaId}/season/${season.seasonNumber}`}
-                          className="group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer"
-                        >
-                          <div className="relative aspect-[3/4] w-full overflow-hidden">
-                            {posterUrl ? (
-                              <Image
-                                src={posterUrl}
-                                alt={season.name}
-                                fill
-                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                sizes="176px"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-3xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
-                                📺
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            <span className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/90 font-medium">
-                              S{season.seasonNumber}
-                            </span>
-                            {season.voteAverage != null &&
-                              season.voteAverage > 0 && (
-                                <span className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
-                                  ★ {season.voteAverage.toFixed(1)}
-                                </span>
+                    <h2 className="text-lg font-bold text-white mb-3">
+                      Seasons
+                    </h2>
+                    <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                      {tvSeasons.map((season) => {
+                        const posterUrl = getPosterUrl(
+                          season.posterPath,
+                          "w500",
+                        );
+                        const seasonYear = season.airDate
+                          ? new Date(season.airDate).getFullYear()
+                          : null;
+                        return (
+                          <Link
+                            key={season.seasonNumber}
+                            href={`/media/tv/${mediaId}/season/${season.seasonNumber}`}
+                            className="group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass recommendation-card-frame rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                          >
+                            <div className="relative aspect-[3/4] w-full overflow-hidden">
+                              {posterUrl ? (
+                                <Image
+                                  src={posterUrl}
+                                  alt={season.name}
+                                  fill
+                                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                  sizes="176px"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-3xl bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-rose-900/40">
+                                  📺
+                                </div>
                               )}
-                          </div>
-                          <div className="p-2.5">
-                            <h3 className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
-                              Season {season.seasonNumber}
-                            </h3>
-                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--text-muted)]">
-                              <span>
-                                {season.episodeCount} episode
-                                {season.episodeCount === 1 ? "" : "s"}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <span className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/90 font-medium">
+                                S{season.seasonNumber}
                               </span>
-                              {seasonYear && (
-                                <>
-                                  <span>·</span>
-                                  <span>{seasonYear}</span>
-                                </>
-                              )}
+                              {season.voteAverage != null &&
+                                season.voteAverage > 0 && (
+                                  <span className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
+                                    ★ {season.voteAverage.toFixed(1)}
+                                  </span>
+                                )}
                             </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
+                            <div className="p-2.5">
+                              <h3 className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
+                                Season {season.seasonNumber}
+                              </h3>
+                              <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--text-muted)]">
+                                <span>
+                                  {season.episodeCount} episode
+                                  {season.episodeCount === 1 ? "" : "s"}
+                                </span>
+                                {seasonYear && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{seasonYear}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
                   </>
                 )}
               </div>
@@ -1121,35 +1142,38 @@ export default function MediaDetailClient({
           {details.cast && details.cast.length > 0 && (
             <div>
               <h2 className="text-lg font-bold text-white mb-3">
-                {details.type === "anime" ? "Characters & Voice Actors" : "Cast"}
+                {details.type === "anime"
+                  ? "Characters & Voice Actors"
+                  : "Cast"}
               </h2>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
                 {details.cast.map((member) => {
-                  const className = "shrink-0 w-24 sm:w-28 text-center group block";
+                  const className =
+                    "shrink-0 w-24 sm:w-28 text-center group block";
                   const content = (
                     <>
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2 ring-0 group-hover:ring-2 group-hover:ring-purple-500/50 transition-all">
-                      {member.profileUrl ? (
-                        <Image
-                          src={member.profileUrl}
-                          alt={member.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-200"
-                          sizes="112px"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
-                          👤
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs font-medium text-white leading-tight line-clamp-1 group-hover:text-purple-300 transition-colors">
-                      {member.name}
-                    </p>
-                    <p className="text-[11px] text-[var(--text-muted)] leading-tight line-clamp-1">
-                      {member.character}
-                    </p>
+                      <div className="relative aspect-square rounded-xl overflow-hidden bg-zinc-800 mb-2 ring-0 group-hover:ring-2 group-hover:ring-purple-500/50 transition-all">
+                        {member.profileUrl ? (
+                          <Image
+                            src={member.profileUrl}
+                            alt={member.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-200"
+                            sizes="112px"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-3xl text-zinc-600">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs font-medium text-white leading-tight line-clamp-1 group-hover:text-purple-300 transition-colors">
+                        {member.name}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)] leading-tight line-clamp-1">
+                        {member.character}
+                      </p>
                     </>
                   );
                   return member.personUrl ? (
@@ -1163,7 +1187,11 @@ export default function MediaDetailClient({
                       {content}
                     </a>
                   ) : (
-                    <Link key={member.id} href={`/person/${member.id}`} className={className}>
+                    <Link
+                      key={member.id}
+                      href={`/person/${member.id}`}
+                      className={className}
+                    >
                       {content}
                     </Link>
                   );
@@ -1175,9 +1203,7 @@ export default function MediaDetailClient({
           {/* Watch Order (anime only) */}
           {details.type === "anime" && animeRelations.length > 0 && (
             <div>
-              <h2 className="text-lg font-bold text-white mb-3">
-                Watch Order
-              </h2>
+              <h2 className="text-lg font-bold text-white mb-3">Watch Order</h2>
               <p className="text-sm text-[var(--text-muted)] mb-3">
                 Start from the beginning or explore related entries.
               </p>
@@ -1198,7 +1224,7 @@ export default function MediaDetailClient({
                     <Link
                       key={rel.id}
                       href={`/media/anime/${rel.id}`}
-                      className={`group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer ${isCurrent ? "ring-2 ring-purple-500/60" : ""}`}
+                      className={`group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass recommendation-card-frame rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer ${isCurrent ? "ring-2 ring-purple-500/60" : ""}`}
                     >
                       <div className="relative aspect-[3/4] w-full overflow-hidden">
                         {rel.posterUrl ? (
@@ -1323,9 +1349,7 @@ export default function MediaDetailClient({
           {/* Other Cravelists (mobile only - after recommended titles) */}
           {otherCravelists.length > 0 && (
             <div className="lg:hidden">
-              <h2 className="text-lg font-bold text-white mb-3">
-                Found In
-              </h2>
+              <h2 className="text-lg font-bold text-white mb-3">Found In</h2>
               <div className="space-y-3">
                 {otherCravelists.map((c) => (
                   <Link
@@ -1357,7 +1381,9 @@ export default function MediaDetailClient({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{c.name}</p>
+                      <p className="font-medium text-white truncate">
+                        {c.name}
+                      </p>
                       <p className="text-xs text-[var(--text-muted)]">
                         {c.itemCount} titles
                       </p>
@@ -1406,9 +1432,7 @@ export default function MediaDetailClient({
               <div className="space-y-4">
                 {reviews.map((review) => {
                   const displayName =
-                    review.user.fullName ||
-                    review.user.username ||
-                    "Anonymous";
+                    review.user.fullName || review.user.username || "Anonymous";
                   const initials = displayName
                     .split(" ")
                     .map((w) => w[0])
@@ -1416,8 +1440,7 @@ export default function MediaDetailClient({
                     .slice(0, 2)
                     .toUpperCase();
                   const isSpoilerHidden =
-                    review.containsSpoilers &&
-                    !revealedSpoilers.has(review.id);
+                    review.containsSpoilers && !revealedSpoilers.has(review.id);
                   const timeAgo = getTimeAgo(review.createdAt);
 
                   return (
@@ -1540,9 +1563,7 @@ export default function MediaDetailClient({
               </span>
             </label>
             {reviewError && (
-              <p className="text-sm text-amber-400 mb-4">
-                {reviewError}
-              </p>
+              <p className="text-sm text-amber-400 mb-4">{reviewError}</p>
             )}
             <div className="flex gap-2">
               <button

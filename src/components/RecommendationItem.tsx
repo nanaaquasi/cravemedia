@@ -88,10 +88,10 @@ export default function RecommendationItem({
   /** Watched/watching grid: border wraps poster + meta (inner shell); list: border on outer card */
   const cardShellClass =
     isList && hasWatchHighlight
-      ? `liquid-glass rounded-xl border-2 ${highlightBorderClass} box-border`
+      ? `liquid-glass recommendation-card-accent rounded-xl border-2 ${highlightBorderClass} box-border`
       : !isList && hasWatchHighlight
         ? ""
-        : "liquid-glass";
+        : "liquid-glass recommendation-card-frame";
   const cardProps = {
     className: `group stagger-item rounded-xl ${
       hasGridOwnerToolbar ? "!overflow-visible" : "overflow-hidden"
@@ -257,7 +257,7 @@ export default function RecommendationItem({
     </div>
   ) : hasWatchHighlight ? (
     <div
-      className={`liquid-glass rounded-xl border-2 ${
+      className={`liquid-glass recommendation-card-accent rounded-xl border-2 ${
         hasGridOwnerToolbar ? "!overflow-visible" : "overflow-hidden"
       } flex flex-col box-border ${highlightBorderClass}`}
     >

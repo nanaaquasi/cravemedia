@@ -75,7 +75,9 @@ function randomIndex(length: number, exclude?: number): number {
   return idx;
 }
 
-function getMessagesForMediaType(mediaType: ContentType | ContentType[] | undefined): string[] {
+function getMessagesForMediaType(
+  mediaType: ContentType | ContentType[] | undefined,
+): string[] {
   if (!mediaType || mediaType === "all") {
     return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
   }
@@ -83,8 +85,8 @@ function getMessagesForMediaType(mediaType: ContentType | ContentType[] | undefi
   if (keys.includes("all")) {
     return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
   }
-  const merged = keys.flatMap((k) =>
-    MEDIA_SPECIFIC_MESSAGES[k as MediaTypeKey] ?? []
+  const merged = keys.flatMap(
+    (k) => MEDIA_SPECIFIC_MESSAGES[k as MediaTypeKey] ?? [],
   );
   return merged.length > 0 ? merged : getMessagesForMediaType("all");
 }
@@ -99,7 +101,7 @@ export default function CuratingLoader({
       mode === "journey"
         ? JOURNEY_MESSAGES
         : getMessagesForMediaType(mediaType),
-    [mode, mediaType]
+    [mode, mediaType],
   );
   const [index, setIndex] = useState(() => randomIndex(messages.length));
 
@@ -245,7 +247,7 @@ export default function CuratingLoader({
       <div className="relative z-10 text-center">
         <p
           key={index}
-          className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-white/90 to-white/70 animate-curate-text-fade drop-shadow-lg"
+          className="text-2xl sm:text-3xl font-bold md:font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-white/90 to-white/70 animate-curate-text-fade drop-shadow-lg"
         >
           {messages[Math.min(index, messages.length - 1)]}
         </p>

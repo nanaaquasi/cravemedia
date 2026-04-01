@@ -170,15 +170,15 @@ function MediaCard({
   return (
     <div className="group shrink-0 w-36 snap-start mb-2 transition-transform duration-200 hover:scale-[1.02]">
       {isWatched ? (
-        <div className="rounded-lg border-2 border-emerald-400/95 overflow-hidden bg-zinc-900/40 box-border">
+        <div className="rounded-lg border-2 border-emerald-400/95 overflow-hidden bg-zinc-900/40 box-border shadow-[0_10px_36px_-6px_rgba(0,0,0,0.58)] ring-1 ring-white/15">
           {inner}
         </div>
       ) : isWatching ? (
-        <div className="rounded-lg border-2 border-amber-400/95 overflow-hidden bg-zinc-900/40 box-border">
+        <div className="rounded-lg border-2 border-amber-400/95 overflow-hidden bg-zinc-900/40 box-border shadow-[0_10px_36px_-6px_rgba(0,0,0,0.58)] ring-1 ring-white/15">
           {inner}
         </div>
       ) : (
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <div className="rounded-lg border-2 border-white/28 overflow-hidden bg-zinc-900/35 shadow-[0_10px_36px_-6px_rgba(0,0,0,0.58)] ring-1 ring-white/10">
           {inner}
         </div>
       )}

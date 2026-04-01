@@ -10,6 +10,18 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function dateInVisibleMonth(dateStr: string, y: number, month: number): boolean {
+  const prefix = `${y}-${String(month).padStart(2, "0")}-`;
+  return dateStr.startsWith(prefix);
+}
+
 export default function CalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -45,6 +57,20 @@ export default function CalendarPage() {
       })
       .catch(() => setLoading(false));
   }, [year, month]);
+
+  /** When viewing the current month, open today's releases if any (initial load & month changes). */
+  useEffect(() => {
+    if (loading) return;
+    const t = new Date();
+    if (year !== t.getFullYear() || month !== t.getMonth() + 1) return;
+    const todayStr = localDateKey(t);
+    if ((byDate[todayStr]?.length ?? 0) === 0) return;
+    setSelectedDate((prev) => {
+      if (prev === null) return todayStr;
+      if (!dateInVisibleMonth(prev, year, month)) return todayStr;
+      return prev;
+    });
+  }, [loading, year, month, byDate]);
 
   const goPrev = () => {
     if (month === 1) {
