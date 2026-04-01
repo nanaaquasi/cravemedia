@@ -639,6 +639,44 @@ export type Database = {
           },
         ];
       };
+      user_media_status: {
+        Row: {
+          finished_at: string | null;
+          media_id: string;
+          media_type: string;
+          runtime_minutes: number | null;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          finished_at?: string | null;
+          media_id: string;
+          media_type: string;
+          runtime_minutes?: number | null;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          finished_at?: string | null;
+          media_id?: string;
+          media_type?: string;
+          runtime_minutes?: number | null;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_media_status_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_stats: {
         Row: {
           average_item_rating: number | null;

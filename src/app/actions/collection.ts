@@ -1,5 +1,6 @@
 "use server";
 
+import { parseRuntimeMinutes } from "@/lib/runtime";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CRAVELIST_LABEL } from "@/config/labels";
@@ -418,25 +419,6 @@ export async function deleteCollectionItem(
   return { success: true };
 }
 
-/** Parse runtime string to minutes (e.g. "130 min" -> 130, "2h 30m" -> 150) */
-function parseRuntimeMinutes(runtime: string | null | undefined): number | null {
-  if (!runtime || typeof runtime !== "string") return null;
-  const s = runtime.trim().toLowerCase();
-  const minMatch = /(\d+)\s*min/.exec(s);
-  if (minMatch) return Number.parseInt(minMatch[1], 10);
-  const hourMatch = /(\d+)\s*h/.exec(s);
-  const minPart = /(\d+)\s*m/.exec(s);
-  if (hourMatch) {
-    const hours = Number.parseInt(hourMatch[1], 10);
-    const mins = minPart ? Number.parseInt(minPart[1], 10) : 0;
-    return hours * 60 + mins;
-  }
-  if (minPart) return Number.parseInt(minPart[1], 10);
-  const pagesMatch = /(\d+)\s*pages?/i.exec(s);
-  if (pagesMatch) return Number.parseInt(pagesMatch[1], 10) * 2; // ~2 min/page estimate
-  return null;
-}
-
 const WATCH_STATUSES = [
   "not_seen",
   "watching",
@@ -536,6 +518,7 @@ export async function updateMediaStatusAcrossCollections(
   mediaId: string,
   mediaType: string,
   newStatus: WatchStatus,
+  runtimeMinutes?: number | null,
 ) {
   const supabase = await createClient();
 
@@ -547,42 +530,81 @@ export async function updateMediaStatusAcrossCollections(
     return { error: "You must be logged in." };
   }
 
+  const isWatched = newStatus === "watched";
+  const nowIso = new Date().toISOString();
+
+  if (newStatus === "not_seen") {
+    const { error: delErr } = await supabase
+      .from("user_media_status")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("media_id", mediaId)
+      .eq("media_type", mediaType);
+    if (delErr) {
+      return { error: delErr.message };
+    }
+  } else {
+    const umsPayload: Record<string, unknown> = {
+      user_id: user.id,
+      media_id: mediaId,
+      media_type: mediaType,
+      status: newStatus,
+      finished_at: isWatched ? nowIso : null,
+      runtime_minutes:
+        isWatched && runtimeMinutes != null && runtimeMinutes > 0
+          ? runtimeMinutes
+          : null,
+      updated_at: nowIso,
+    };
+    if (!isWatched) {
+      umsPayload.runtime_minutes = null;
+    }
+    const { error: upsertErr } = await supabase
+      .from("user_media_status")
+      .upsert(umsPayload, {
+        onConflict: "user_id,media_id,media_type",
+      });
+    if (upsertErr) {
+      return { error: upsertErr.message };
+    }
+  }
+
   const { data: userCollections } = await supabase
     .from("collections")
     .select("id")
     .eq("user_id", user.id);
 
-  if (!userCollections?.length) {
-    return { error: `No ${CRAVELIST_LABEL}s found.` };
+  const collectionIds = userCollections?.map((c) => c.id) ?? [];
+
+  if (collectionIds.length > 0) {
+    const updateData: Record<string, unknown> = {
+      status: newStatus,
+      finished_at: isWatched ? nowIso : null,
+    };
+    if (!isWatched) {
+      updateData.item_rating = null;
+      updateData.review_text = null;
+      updateData.runtime_minutes = null;
+    } else if (runtimeMinutes != null && runtimeMinutes > 0) {
+      updateData.runtime_minutes = runtimeMinutes;
+    }
+
+    const { error } = await supabase
+      .from("collection_items")
+      .update(updateData)
+      .eq("media_id", mediaId)
+      .eq("media_type", mediaType)
+      .in("collection_id", collectionIds);
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    for (const cid of collectionIds) {
+      revalidatePath(`/collections/${cid}`);
+    }
   }
 
-  const collectionIds = userCollections.map((c) => c.id);
-  const isWatched = newStatus === "watched";
-
-  const updateData: Record<string, unknown> = {
-    status: newStatus,
-    finished_at: isWatched ? new Date().toISOString() : null,
-  };
-  if (!isWatched) {
-    updateData.item_rating = null;
-    updateData.review_text = null;
-    updateData.runtime_minutes = null;
-  }
-
-  const { error } = await supabase
-    .from("collection_items")
-    .update(updateData)
-    .eq("media_id", mediaId)
-    .eq("media_type", mediaType)
-    .in("collection_id", collectionIds);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  for (const cid of collectionIds) {
-    revalidatePath(`/collections/${cid}`);
-  }
   revalidatePath("/profile");
   revalidatePath("/discover");
   revalidatePath(`/media/${mediaType}/${mediaId}`);

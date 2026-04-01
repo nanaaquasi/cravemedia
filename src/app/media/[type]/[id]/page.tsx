@@ -319,53 +319,66 @@ export default async function MediaDetailPage({ params }: PageProps) {
       };
     }[];
 
+    const STATUS_PRIORITY: WatchStatus[] = [
+      "watched",
+      "watching",
+      "on_hold",
+      "dropped",
+      "not_interested",
+      "not_seen",
+    ];
+
     let currentStatus: WatchStatus | null = null;
     let collectionNames: string[] = [];
     if (user) {
-      const { data: userCollections } = await supabase
-        .from("collections")
-        .select("id")
-        .eq("user_id", user.id);
-
-      if (userCollections?.length) {
-        const userCollectionIds = new Set(userCollections.map((c) => c.id));
-        const userItems = allItems.filter((i) =>
-          userCollectionIds.has(i.collection_id),
-        );
-
-        if (userItems.length) {
-          const priority: WatchStatus[] = [
-            "watched",
-            "watching",
-            "on_hold",
-            "dropped",
-            "not_interested",
-            "not_seen",
-          ];
-          currentStatus =
-            priority.find((s) => userItems.some((i) => i.status === s)) ??
-            "not_seen";
-
-          const { data: userItemRows } = await supabase
-            .from("collection_items")
-            .select("collection_id, collections!inner(name, user_id)")
+      const [{ data: userCollections }, { data: standaloneStatusRow }] =
+        await Promise.all([
+          supabase.from("collections").select("id").eq("user_id", user.id),
+          supabase
+            .from("user_media_status")
+            .select("status")
+            .eq("user_id", user.id)
             .eq("media_id", id)
             .eq("media_type", type)
-            .eq("collections.user_id", user.id);
+            .maybeSingle(),
+        ]);
 
-          const byId = new Map<string, string>();
-          for (const row of userItemRows ?? []) {
-            const cid = row.collection_id;
-            if (byId.has(cid)) continue;
-            const col = row.collections as { name?: string } | null;
-            if (col?.name) byId.set(cid, col.name);
-          }
-          collectionNames = Array.from(byId.values());
+      const userCollectionIds = new Set(
+        (userCollections ?? []).map((c) => c.id),
+      );
+      const userItems = allItems.filter((i) =>
+        userCollectionIds.has(i.collection_id),
+      );
+
+      const statusesFromLists = userItems
+        .map((i) => i.status as WatchStatus)
+        .filter(Boolean);
+      const standalone = standaloneStatusRow?.status as WatchStatus | undefined;
+      const mergedStatuses = standalone
+        ? [...statusesFromLists, standalone]
+        : statusesFromLists;
+
+      currentStatus =
+        STATUS_PRIORITY.find((s) => mergedStatuses.includes(s)) ?? "not_seen";
+
+      if (userCollectionIds.size > 0) {
+        const { data: userItemRows } = await supabase
+          .from("collection_items")
+          .select("collection_id, collections!inner(name, user_id)")
+          .eq("media_id", id)
+          .eq("media_type", type)
+          .eq("collections.user_id", user.id);
+
+        const byId = new Map<string, string>();
+        for (const row of userItemRows ?? []) {
+          const cid = row.collection_id;
+          if (byId.has(cid)) continue;
+          const col = row.collections as { name?: string } | null;
+          if (col?.name) byId.set(cid, col.name);
         }
+        collectionNames = Array.from(byId.values());
       }
     }
-
-    const hasInCollection = currentStatus !== null;
 
     // Build other curators' cravelists (public, not owned by current user)
     const currentUserId = user?.id;

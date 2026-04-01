@@ -22,8 +22,9 @@ export async function getWatchedKeysForDiscoverItems(
 }
 
 /**
- * Keys the user has marked `watched` or `watching` in any cravelist, intersected with discover items.
- * If the same title is both watched and watching across lists, **watched** wins.
+ * Keys the user has marked `watched` or `watching` for the given media ids: any Cravelist row **or**
+ * a standalone `user_media_status` row. Intersected with `items`. If the same title is both watched
+ * and watching across sources, **watched** wins.
  */
 export async function getDiscoverWatchStatusesForItems(
   supabase: SupabaseClient,
@@ -33,17 +34,31 @@ export async function getDiscoverWatchStatusesForItems(
   if (items.length === 0) return { watchedKeys: [], watchingKeys: [] };
   const want = new Set(items.map((i) => discoverMediaKey(i.type, i.id)));
 
-  const { data, error } = await supabase
-    .from("collection_items")
-    .select("media_id, media_type, status, collections!inner(user_id)")
-    .eq("collections.user_id", userId)
-    .in("status", ["watched", "watching"]);
-
-  if (error || !data) return { watchedKeys: [], watchingKeys: [] };
+  const [collectionRes, standaloneRes] = await Promise.all([
+    supabase
+      .from("collection_items")
+      .select("media_id, media_type, status, collections!inner(user_id)")
+      .eq("collections.user_id", userId)
+      .in("status", ["watched", "watching"]),
+    supabase
+      .from("user_media_status")
+      .select("media_id, media_type, status")
+      .eq("user_id", userId)
+      .in("status", ["watched", "watching"]),
+  ]);
 
   const watched = new Set<string>();
   const watching = new Set<string>();
-  for (const row of data) {
+
+  const rows = [
+    ...(collectionRes.data ?? []),
+    ...(standaloneRes.data ?? []),
+  ];
+  if (collectionRes.error || standaloneRes.error) {
+    return { watchedKeys: [], watchingKeys: [] };
+  }
+
+  for (const row of rows) {
     const key = discoverMediaKey(row.media_type, row.media_id);
     if (!want.has(key)) continue;
     if (row.status === "watched") watched.add(key);

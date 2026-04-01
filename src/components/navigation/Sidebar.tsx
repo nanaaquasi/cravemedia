@@ -111,7 +111,31 @@ export default function Sidebar({
           );
         })()}
 
-        {/* My Cravelists (second, right after Ask Craveo) */}
+        {/* Discover (second) */}
+        {(() => {
+          const { href, label, icon: Icon } = navItems[1];
+          const isActive =
+            pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors
+                ${isActive ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"}
+                ${isExpanded ? "justify-start" : "justify-center"}`}
+            >
+              <Icon
+                className="w-5 h-5 shrink-0"
+                strokeWidth={isActive ? 2.5 : 2}
+              />
+              {isExpanded && (
+                <span className="text-sm font-medium truncate">{label}</span>
+              )}
+            </Link>
+          );
+        })()}
+
+        {/* My Cravelists */}
         <div
           className="relative"
           onMouseEnter={() => {
@@ -174,8 +198,8 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Discover, Calendar, Profile */}
-        {navItems.slice(1).map(({ href, label, icon: Icon }) => {
+        {/* Calendar, Profile */}
+        {navItems.slice(2).map(({ href, label, icon: Icon }) => {
           const isActive =
             pathname === href || pathname.startsWith(`${href}/`);
           return (

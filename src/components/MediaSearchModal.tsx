@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { X, Search, Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -7,12 +9,29 @@ interface MediaSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (item: EnrichedRecommendation) => void;
+  /** Modal title (default: Search Media) */
+  title?: string;
+  /** Blocks dismiss until navigation completes; use with global top bar (e.g. NextTopLoader) */
+  isNavigating?: boolean;
+  /** Prefetch route on result hover (e.g. router.prefetch) */
+  onResultHover?: (item: EnrichedRecommendation) => void;
 }
+
+const CONTENT_TYPES = [
+  { id: "all", label: "All" },
+  { id: "movie", label: "Movies" },
+  { id: "tv", label: "TV Shows" },
+  { id: "book", label: "Books" },
+  { id: "anime", label: "Anime" },
+] as const;
 
 export default function MediaSearchModal({
   isOpen,
   onClose,
   onSelect,
+  title = "Search Media",
+  isNavigating = false,
+  onResultHover,
 }: MediaSearchModalProps) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
@@ -27,8 +46,18 @@ export default function MediaSearchModal({
     }
   }, [isOpen]);
 
-  // Debounced search
   useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
     const delayDebounceFn = setTimeout(async () => {
       if (query.trim().length > 2) {
         setIsSearching(true);
@@ -52,33 +81,44 @@ export default function MediaSearchModal({
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, type]);
+  }, [query, type, isOpen]);
 
   if (!isOpen) return null;
 
-  const contentTypes = [
-    { id: "all", label: "All" },
-    { id: "movie", label: "Movies" },
-    { id: "tv", label: "TV Shows" },
-    { id: "book", label: "Books" },
-    { id: "anime", label: "Anime" },
-  ];
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity ${
+          isNavigating ? "pointer-events-none" : "cursor-pointer"
+        }`}
+        onClick={isNavigating ? undefined : onClose}
+        aria-hidden
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200">
+      <div
+        className="relative z-10 w-full max-w-2xl bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-busy={isNavigating}
+        aria-labelledby="media-search-modal-title"
+      >
         <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between shrink-0">
-          <h2 className="text-xl font-semibold text-white">Search Media</h2>
+          <h2
+            id="media-search-modal-title"
+            className="text-xl font-semibold text-white"
+          >
+            {title}
+          </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 -mr-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+            disabled={isNavigating}
+            className={`p-2 -mr-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors ${
+              isNavigating
+                ? "opacity-40 pointer-events-none"
+                : "cursor-pointer"
+            }`}
+            aria-label="Close"
           >
             <X size={20} />
           </button>
@@ -86,26 +126,30 @@ export default function MediaSearchModal({
 
         <div className="p-6 pb-2 shrink-0 space-y-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5" />
+            <Search
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 w-5 h-5"
+              aria-hidden
+            />
             <input
               type="text"
               autoFocus
               placeholder="Search for movies, books, TV shows..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all shadow-inner"
+              className="w-full bg-black/50 border border-white/10 rounded-xl pl-12 pr-12 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all shadow-inner"
             />
-            {isSearching && (
-              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-500 w-5 h-5 animate-spin" />
-            )}
+            {isSearching ? (
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-500 w-5 h-5 animate-spin pointer-events-none" />
+            ) : null}
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {contentTypes.map((t) => (
+            {CONTENT_TYPES.map((t) => (
               <button
                 key={t.id}
+                type="button"
                 onClick={() => setType(t.id)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border cursor-pointer ${
                   type === t.id
                     ? "bg-white text-black border-transparent"
                     : "bg-transparent text-zinc-400 border-white/10 hover:text-white hover:border-white/30"
@@ -117,15 +161,18 @@ export default function MediaSearchModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
           {query.trim().length > 2 ? (
             results.length > 0 ? (
               <div className="space-y-3 mt-4">
                 {results.map((item, idx) => (
                   <button
                     key={`${item.externalId}-${idx}`}
+                    type="button"
+                    onMouseEnter={() => onResultHover?.(item)}
                     onClick={() => onSelect(item)}
-                    className="w-full text-left bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 rounded-xl p-3 flex gap-4 transition-all group"
+                    disabled={isNavigating}
+                    className="w-full text-left bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 rounded-xl p-3 flex gap-4 transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-100"
                   >
                     <div className="w-16 h-24 bg-black/50 rounded-lg overflow-hidden shrink-0 relative">
                       {item.posterUrl ? (
@@ -147,11 +194,11 @@ export default function MediaSearchModal({
                         <h3 className="font-semibold text-white truncate">
                           {item.title}
                         </h3>
-                        {item.year && (
+                        {item.year ? (
                           <span className="text-xs text-zinc-400 shrink-0">
                             {item.year}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <p className="text-sm text-zinc-400 truncate mt-0.5">
                         {item.creator}
@@ -163,11 +210,11 @@ export default function MediaSearchModal({
                         <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-medium h-fit">
                           {item.type}
                         </span>
-                        {item.rating && (
+                        {item.rating ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 font-medium flex items-center gap-1 h-fit">
                             ★ {Number(item.rating).toFixed(1)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </button>
@@ -175,7 +222,7 @@ export default function MediaSearchModal({
               </div>
             ) : !isSearching ? (
               <div className="mt-12 text-center text-zinc-500">
-                <p>No results found for "{query}"</p>
+                <p>No results found for &quot;{query}&quot;</p>
                 <p className="text-sm mt-1">
                   Try a different search term or type
                 </p>

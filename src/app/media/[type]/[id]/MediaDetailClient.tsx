@@ -23,6 +23,7 @@ import {
   reviewMediaAcrossCollections,
   type WatchStatus,
 } from "@/app/actions/collection";
+import { parseRuntimeMinutes } from "@/lib/runtime";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import TruncatedTitle from "@/components/TruncatedTitle";
@@ -325,10 +326,13 @@ export default function MediaDetailClient({
     const prev = status;
     setStatus(newStatus);
     setStatusOpen(false);
+    const runtimeForWatched =
+      newStatus === "watched" ? parseRuntimeMinutes(details.runtime) : null;
     const result = await updateMediaStatusAcrossCollections(
       mediaId,
       details.type,
       newStatus,
+      runtimeForWatched,
     );
     if (result.error) {
       setStatus(prev);
