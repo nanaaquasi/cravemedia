@@ -29,9 +29,10 @@ export default function PersonDetailClient({ person, credits }: Props) {
   const [bioExpanded, setBioExpanded] = useState(false);
   const bio = person.biography ?? "";
   const isBioLong = bio.length > BIO_TRUNCATE_LENGTH;
-  const displayBio = isBioLong && !bioExpanded
-    ? bio.slice(0, BIO_TRUNCATE_LENGTH).trim() + "…"
-    : bio;
+  const displayBio =
+    isBioLong && !bioExpanded
+      ? bio.slice(0, BIO_TRUNCATE_LENGTH).trim() + "…"
+      : bio;
 
   const birthInfo =
     person.birthday || person.placeOfBirth

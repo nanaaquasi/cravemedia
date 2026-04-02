@@ -3,10 +3,8 @@ import {
   getMediaDetails,
   getMovieWatchProviders,
   getPosterUrl,
-  getTVEpisodeRatings,
   getTVSeasons,
   getTVWatchProviders,
-  type EpisodeQualityData,
   type TVSeasonSummary,
   type WatchProvider,
 } from "@/lib/tmdb";
@@ -17,6 +15,7 @@ import MediaDetailClient, { MediaDetails } from "./MediaDetailClient";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { WatchStatus } from "@/app/actions/collection";
 import { getSeasonWatchHighlights } from "@/app/actions/episode-progress";
+import { getSessionUser } from "@/lib/auth/get-session-user";
 
 /** Supabase nested embeds sometimes return an object, sometimes a single-element array */
 function pickEmbeddedProfile<T>(p: T | T[] | null | undefined): T | null {
@@ -174,11 +173,6 @@ export default async function MediaDetailPage({ params }: PageProps) {
 
     const supabase = await createClient();
 
-    const episodeQualityPromise: Promise<EpisodeQualityData> =
-      type === "tv"
-        ? getTVEpisodeRatings(idNum)
-        : Promise.resolve([]);
-
     const tvSeasonsPromise: Promise<TVSeasonSummary[]> =
       type === "tv" ? getTVSeasons(idNum) : Promise.resolve([]);
 
@@ -190,17 +184,14 @@ export default async function MediaDetailPage({ params }: PageProps) {
           : Promise.resolve([]);
 
     const [
-      authResult,
       communityResult,
       collectionReviewsResult,
       standaloneReviewsResult,
-      episodeQuality,
       tvSeasons,
       watchProviders,
       otherCravelistsResult,
       contentStatsResult,
     ] = await Promise.all([
-        supabase.auth.getUser(),
         supabase
           .from("collection_items")
           .select("status, collection_id, collections(name)")
@@ -233,7 +224,6 @@ export default async function MediaDetailPage({ params }: PageProps) {
             return [];
           }
         })(),
-        episodeQualityPromise,
         tvSeasonsPromise,
         watchProvidersPromise,
         supabase
@@ -252,7 +242,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
           .maybeSingle(),
       ]);
 
-    const user = authResult.data?.user;
+    const user = await getSessionUser();
     const allItems = communityResult.data ?? [];
     const rawCollectionReviews = collectionReviewsResult.data ?? [];
     const rawStandaloneReviews: unknown[] = Array.isArray(standaloneReviewsResult)
@@ -468,35 +458,9 @@ export default async function MediaDetailPage({ params }: PageProps) {
         });
     }
 
-    // Override season ratings with IMDb averages from episode quality (when available)
-    const tvSeasonsWithImdb =
-      type === "tv" && episodeQuality.length > 0
-        ? tvSeasons.map((season) => {
-            const episodeRatings = episodeQuality.find(
-              (s) => s[0]?.seasonNumber === season.seasonNumber,
-            );
-            if (
-              episodeRatings &&
-              episodeRatings.length > 0 &&
-              episodeRatings.some((e) => e.voteAverage > 0)
-            ) {
-              const sum = episodeRatings.reduce(
-                (a, e) => a + e.voteAverage,
-                0,
-              );
-              const avg = sum / episodeRatings.length;
-              return {
-                ...season,
-                voteAverage: Math.round(avg * 10) / 10,
-              };
-            }
-            return season;
-          })
-        : tvSeasons;
-
     const seasonWatchHighlights =
-      user && type === "tv" && tvSeasonsWithImdb.length > 0
-        ? await getSeasonWatchHighlights(id, tvSeasonsWithImdb)
+      user && type === "tv" && tvSeasons.length > 0
+        ? await getSeasonWatchHighlights(id, tvSeasons)
         : undefined;
 
     const contentStats = contentStatsResult.data ?? {
@@ -514,9 +478,8 @@ export default async function MediaDetailPage({ params }: PageProps) {
           communityStats={communityStats}
           reviews={reviews}
           canReview={!!user}
-          episodeQuality={episodeQuality}
           collectionNames={collectionNames}
-          tvSeasons={tvSeasonsWithImdb}
+          tvSeasons={tvSeasons}
           seasonWatchHighlights={seasonWatchHighlights}
           animeRelations={animeRelations}
           watchProviders={watchProviders}

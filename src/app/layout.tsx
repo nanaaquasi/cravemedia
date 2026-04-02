@@ -5,8 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
-import { createClient } from "@/lib/supabase/server";
-import { resolveSessionUser } from "@/app/api/auth/session/route";
+import { getSessionUser } from "@/lib/auth/get-session-user";
 import { SerwistProvider } from "./serwist";
 
 const syne = Syne({
@@ -110,8 +109,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const initialUser = await resolveSessionUser(supabase);
+  const initialUser = await getSessionUser();
 
   return (
     <html lang="en" className={`${syne.variable}`}>

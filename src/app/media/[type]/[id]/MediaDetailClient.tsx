@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import DOMPurify from "isomorphic-dompurify";
@@ -40,6 +40,7 @@ import {
   type WatchProvider,
 } from "@/lib/tmdb";
 import type { SeasonWatchHighlight } from "@/app/actions/episode-progress";
+import { mergeImdbSeasonAverages } from "@/lib/tv-season-ratings";
 
 const OVERVIEW_TRUNCATE_LENGTH = 280;
 
@@ -240,7 +241,6 @@ interface MediaDetailClientProps {
   communityStats?: Record<string, number>;
   reviews?: MediaReview[];
   canReview?: boolean;
-  episodeQuality?: EpisodeQualityData;
   collectionNames?: string[];
   tvSeasons?: TVSeasonSummary[];
   /** Per-season watch highlight from episode_progress (TV only) */
@@ -264,7 +264,6 @@ export default function MediaDetailClient({
   communityStats,
   reviews = [],
   canReview = false,
-  episodeQuality = [],
   collectionNames = [],
   tvSeasons = [],
   seasonWatchHighlights,
@@ -289,6 +288,43 @@ export default function MediaDetailClient({
   const [revealedSpoilers, setRevealedSpoilers] = useState<Set<string>>(
     new Set(),
   );
+
+  const [episodeQualityData, setEpisodeQualityData] =
+    useState<EpisodeQualityData>([]);
+  const [episodeQualityLoad, setEpisodeQualityLoad] = useState<
+    "idle" | "loading" | "done"
+  >(() => (details.type === "tv" ? "loading" : "idle"));
+
+  const tvSeasonsDisplay = useMemo(
+    () => mergeImdbSeasonAverages(tvSeasons, episodeQualityData),
+    [tvSeasons, episodeQualityData],
+  );
+
+  useEffect(() => {
+    if (details.type !== "tv") {
+      setEpisodeQualityLoad("idle");
+      return;
+    }
+    let cancelled = false;
+    setEpisodeQualityLoad("loading");
+    fetch(`/api/tv/${encodeURIComponent(mediaId)}/episode-ratings`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("bad"))))
+      .then((json: { episodeQuality?: EpisodeQualityData }) => {
+        if (!cancelled) {
+          setEpisodeQualityData(json.episodeQuality ?? []);
+          setEpisodeQualityLoad("done");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEpisodeQualityData([]);
+          setEpisodeQualityLoad("done");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [details.type, mediaId]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -1031,7 +1067,7 @@ export default function MediaDetailClient({
 
           {/* Seasons (TV only) */}
           {details.type === "tv" &&
-            (tvSeasons.length > 0 || watchProviders.length > 0) && (
+            (tvSeasonsDisplay.length > 0 || watchProviders.length > 0) && (
               <div>
                 {watchProviders.length > 0 && (
                   <div className="mb-4">
@@ -1090,13 +1126,13 @@ export default function MediaDetailClient({
                     </div>
                   </div>
                 )}
-                {tvSeasons.length > 0 && (
+                {tvSeasonsDisplay.length > 0 && (
                   <>
                     <h2 className="text-lg font-bold text-white mb-3">
                       Seasons
                     </h2>
                     <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                      {tvSeasons.map((season) => {
+                      {tvSeasonsDisplay.map((season) => {
                         const highlight =
                           seasonWatchHighlights?.[season.seasonNumber] ?? null;
                         const isSeasonWatched = highlight === "watched";
@@ -1361,14 +1397,29 @@ export default function MediaDetailClient({
             </div>
           )}
 
-          {/* Episode Quality (TV only) */}
-          {details.type === "tv" && episodeQuality.length > 0 && (
+          {/* Episode Quality (TV only) — loaded client-side so the page shell renders fast */}
+          {details.type === "tv" && episodeQualityLoad === "loading" && (
+            <div>
+              <h2 className="text-lg font-bold text-white mb-3">
+                Episode Quality
+              </h2>
+              <div
+                className="rounded-xl border border-white/10 bg-white/[0.03] p-6 flex items-center gap-3 text-sm text-[var(--text-muted)]"
+                aria-busy
+                aria-label="Loading episode ratings"
+              >
+                <Loader2 className="w-5 h-5 animate-spin text-purple-400 shrink-0" />
+                Loading episode ratings…
+              </div>
+            </div>
+          )}
+          {details.type === "tv" && episodeQualityData.length > 0 && (
             <div>
               <h2 className="text-lg font-bold text-white mb-3">
                 Episode Quality
               </h2>
               <EpisodeQualityGrid
-                data={episodeQuality}
+                data={episodeQualityData}
                 mediaTitle={details.title}
                 mediaId={mediaId}
               />
