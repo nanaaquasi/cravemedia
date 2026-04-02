@@ -547,8 +547,14 @@ export default function MediaDetailClient({
                   </button>
                 )}
                 {statusConfig && (
-                  <div ref={statusRefMobile} className="relative">
+                  <div
+                    ref={statusRefMobile}
+                    className="relative"
+                    onMouseEnter={() => setStatusOpen(true)}
+                    onMouseLeave={() => setStatusOpen(false)}
+                  >
                     <button
+                      type="button"
                       onClick={() => setStatusOpen((p) => !p)}
                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-colors cursor-pointer text-sm ${
                         status !== "not_seen"
@@ -564,30 +570,33 @@ export default function MediaDetailClient({
                       />
                     </button>
                     {statusOpen && (
-                      <div
-                        role="menu"
-                        className="absolute left-0 top-full mt-1 py-1 min-w-[160px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
-                      >
-                        {STATUS_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          const label = isBook ? opt.bookLabel : opt.label;
-                          const isSelected = opt.value === status;
-                          return (
-                            <button
-                              key={opt.value}
-                              role="menuitem"
-                              onClick={() => handleStatusChange(opt.value)}
-                              className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
-                                isSelected
-                                  ? "bg-white/10 text-white"
-                                  : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                              }`}
-                            >
-                              <Icon className="w-3.5 h-3.5 shrink-0" />
-                              {label}
-                            </button>
-                          );
-                        })}
+                      <div className="absolute left-0 top-full z-30 pt-1 min-w-[160px]">
+                        <div
+                          role="menu"
+                          className="py-1 rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl"
+                        >
+                          {STATUS_OPTIONS.map((opt) => {
+                            const Icon = opt.icon;
+                            const label = isBook ? opt.bookLabel : opt.label;
+                            const isSelected = opt.value === status;
+                            return (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                role="menuitem"
+                                onClick={() => handleStatusChange(opt.value)}
+                                className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-white/10 text-white"
+                                    : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -852,8 +861,14 @@ export default function MediaDetailClient({
             )}
 
             {statusConfig && (
-              <div ref={statusRef} className="relative">
+              <div
+                ref={statusRef}
+                className="relative"
+                onMouseEnter={() => setStatusOpen(true)}
+                onMouseLeave={() => setStatusOpen(false)}
+              >
                 <button
+                  type="button"
                   onClick={() => setStatusOpen((p) => !p)}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-colors cursor-pointer ${
                     status !== "not_seen"
@@ -869,30 +884,33 @@ export default function MediaDetailClient({
                   />
                 </button>
                 {statusOpen && (
-                  <div
-                    role="menu"
-                    className="absolute left-0 top-full mt-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-30"
-                  >
-                    {STATUS_OPTIONS.map((opt) => {
-                      const Icon = opt.icon;
-                      const label = isBook ? opt.bookLabel : opt.label;
-                      const isSelected = opt.value === status;
-                      return (
-                        <button
-                          key={opt.value}
-                          role="menuitem"
-                          onClick={() => handleStatusChange(opt.value)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
-                            isSelected
-                              ? "bg-white/10 text-white"
-                              : "text-zinc-300 hover:bg-white/5 hover:text-white"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4 shrink-0" />
-                          {label}
-                        </button>
-                      );
-                    })}
+                  <div className="absolute left-0 top-full z-30 pt-1 min-w-[180px]">
+                    <div
+                      role="menu"
+                      className="py-1 rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl"
+                    >
+                      {STATUS_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const label = isBook ? opt.bookLabel : opt.label;
+                        const isSelected = opt.value === status;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => handleStatusChange(opt.value)}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                              isSelected
+                                ? "bg-white/10 text-white"
+                                : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4 shrink-0" />
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
