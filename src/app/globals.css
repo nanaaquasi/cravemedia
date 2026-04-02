@@ -581,3 +581,36 @@ body {
   font-family: var(--font-syne), "Syne", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
+
+/* ─── PWA Animations ──────────────────────────────────────────────────── */
+
+@keyframes pwaPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.8;
+  }
+}
+
+@keyframes pwaFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-pwa-pulse {
+  animation: pwaPulse 2.5s ease-in-out infinite;
+}
+
+.animate-pwa-float {
+  animation: pwaFloat 3s ease-in-out infinite;
+}
+

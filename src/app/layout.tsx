@@ -7,6 +7,7 @@ import "./globals.css";
 import GlobalLayout from "@/components/GlobalLayout";
 import { createClient } from "@/lib/supabase/server";
 import { resolveSessionUser } from "@/app/api/auth/session/route";
+import { SerwistProvider } from "./serwist";
 
 const syne = Syne({
   subsets: ["latin"],
@@ -19,6 +20,7 @@ export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#020205",
 };
 
 function getMetadataBase(): string {
@@ -31,28 +33,52 @@ function getMetadataBase(): string {
   return raw.startsWith("localhost") ? `http://${raw}` : `https://${raw}`;
 }
 
+const APP_NAME = "Craveo";
+const APP_DEFAULT_TITLE = "Craveo — Discover Movies, TV Shows & Books";
+const APP_TITLE_TEMPLATE = "%s — Craveo";
+const APP_DESCRIPTION =
+  "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(getMetadataBase()),
-  title: "Craveo — Discover Movies, TV Shows & Books",
-  description:
-    "Describe what you're craving and get personalized recommendations for movies, TV shows, and books.",
+  applicationName: APP_NAME,
+  title: {
+    default: APP_DEFAULT_TITLE,
+    template: APP_TITLE_TEMPLATE,
+  },
+  description: APP_DESCRIPTION,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: APP_DEFAULT_TITLE,
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
-    title: "Craveo — Discover Movies, TV Shows & Books",
+    title: {
+      default: APP_DEFAULT_TITLE,
+      template: APP_TITLE_TEMPLATE,
+    },
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     type: "website",
+    siteName: APP_NAME,
     images: [
       {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Craveo — Discover Movies, TV Shows & Books",
+        alt: APP_DEFAULT_TITLE,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Craveo — Discover Movies, TV Shows & Books",
+    title: {
+      default: APP_DEFAULT_TITLE,
+      template: APP_TITLE_TEMPLATE,
+    },
     description:
       "AI-powered media recommendations based on your mood and preferences.",
     images: [
@@ -60,7 +86,7 @@ export const metadata: Metadata = {
         url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Craveo — Discover Movies, TV Shows & Books",
+        alt: APP_DEFAULT_TITLE,
       },
     ],
   },
@@ -75,6 +101,9 @@ export const metadata: Metadata = {
 
 import { ListsProvider } from "@/context/ListsContext";
 import { SessionProvider } from "@/context/SessionContext";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import PWAUpdatePrompt from "@/components/PWAUpdatePrompt";
+import NetworkStatusIndicator from "@/components/NetworkStatusIndicator";
 
 export default async function RootLayout({
   children,
@@ -93,11 +122,16 @@ export default async function RootLayout({
           showSpinner={false}
           crawlSpeed={200}
         />
-        <SessionProvider initialUser={initialUser}>
-          <ListsProvider>
-            <GlobalLayout>{children}</GlobalLayout>
-          </ListsProvider>
-        </SessionProvider>
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <SessionProvider initialUser={initialUser}>
+            <ListsProvider>
+              <NetworkStatusIndicator />
+              <GlobalLayout>{children}</GlobalLayout>
+              <PWAInstallPrompt />
+              <PWAUpdatePrompt />
+            </ListsProvider>
+          </SessionProvider>
+        </SerwistProvider>
         <Analytics />
         <SpeedInsights />
       </body>
