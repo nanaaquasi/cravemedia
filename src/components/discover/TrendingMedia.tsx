@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Check, Play, FolderPlus } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Check, Play, FolderPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { useCanScroll } from "@/hooks/useCanScroll";
 import type { TMDBMediaItem } from "@/lib/discover-trending";
 import { discoverMediaKey } from "@/lib/discover-watched";
 import { useSession } from "@/context/SessionContext";
@@ -194,7 +195,7 @@ function FilterTabs({
   onChange: (v: FilterTab) => void;
 }) {
   return (
-    <div className="flex gap-1 p-1 rounded-lg bg-white/5 w-fit mb-4">
+    <div className="flex gap-1 p-1 rounded-lg bg-white/5 w-fit">
       {FILTER_TABS.map((tab) => (
         <button
           key={tab.value}
@@ -209,6 +210,85 @@ function FilterTabs({
           {tab.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function CarouselSection({
+  title,
+  subtitle,
+  items,
+  filterValue,
+  onFilterChange,
+  watchHighlightFor,
+  onQuickAdd,
+}: {
+  title: string;
+  subtitle: string;
+  items: TMDBMediaItem[];
+  filterValue: FilterTab;
+  onFilterChange: (v: FilterTab) => void;
+  watchHighlightFor: (item: TMDBMediaItem) => WatchHighlight;
+  onQuickAdd: (item: TMDBMediaItem) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const canScroll = useCanScroll(scrollRef);
+
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -600, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 600, behavior: "smooth" });
+    }
+  };
+
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4 mt-2">
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-2">{title}</h2>
+          <p className="text-zinc-400 text-sm mb-4">{subtitle}</p>
+          <FilterTabs value={filterValue} onChange={onFilterChange} />
+        </div>
+        {canScroll && (
+          <div className="hidden md:flex gap-2 self-end pb-1">
+            <button
+              onClick={scrollLeft}
+              className="p-2 sm:p-2.5 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 text-white transition-colors cursor-pointer backdrop-blur-md shadow-md"
+              aria-label={`Scroll ${title} left`}
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={scrollRight}
+              className="p-2 sm:p-2.5 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 text-white transition-colors cursor-pointer backdrop-blur-md shadow-md"
+              aria-label={`Scroll ${title} right`}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        )}
+      </div>
+      <div 
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory scroll-smooth"
+      >
+        {items.map((item) => (
+          <MediaCard
+            key={`${item.type}-${item.id}`}
+            item={item}
+            watchHighlight={watchHighlightFor(item)}
+            showQuickAdd
+            onQuickAdd={() => onQuickAdd(item)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -321,44 +401,26 @@ export function TrendingMedia({
   return (
     <section className="mb-12 space-y-8">
       {allTrending.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Trending</h2>
-          <p className="text-zinc-400 text-sm mb-2">
-            What&apos;s hot right now
-          </p>
-          <FilterTabs value={trendingFilter} onChange={setTrendingFilter} />
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-            {filteredTrending.map((item) => (
-              <MediaCard
-                key={`${item.type}-${item.id}`}
-                item={item}
-                watchHighlight={watchHighlightFor(item)}
-                showQuickAdd
-                onQuickAdd={() => handleQuickAdd(item)}
-              />
-            ))}
-          </div>
-        </div>
+        <CarouselSection
+          title="Trending"
+          subtitle="What's hot right now"
+          items={filteredTrending}
+          filterValue={trendingFilter}
+          onFilterChange={setTrendingFilter}
+          watchHighlightFor={watchHighlightFor}
+          onQuickAdd={handleQuickAdd}
+        />
       )}
       {allPopular.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Popular</h2>
-          <p className="text-zinc-400 text-sm mb-2">
-            Movies and shows everyone&apos;s watching
-          </p>
-          <FilterTabs value={popularFilter} onChange={setPopularFilter} />
-          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-            {filteredPopular.map((item) => (
-              <MediaCard
-                key={`${item.type}-${item.id}`}
-                item={item}
-                watchHighlight={watchHighlightFor(item)}
-                showQuickAdd
-                onQuickAdd={() => handleQuickAdd(item)}
-              />
-            ))}
-          </div>
-        </div>
+        <CarouselSection
+          title="Popular"
+          subtitle="Movies and shows everyone's watching"
+          items={filteredPopular}
+          filterValue={popularFilter}
+          onFilterChange={setPopularFilter}
+          watchHighlightFor={watchHighlightFor}
+          onQuickAdd={handleQuickAdd}
+        />
       )}
 
       <AddToCollectionModal
