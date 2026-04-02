@@ -57,6 +57,22 @@ export default function SearchForm({
     null,
   );
   const [displayedPrompts, setDisplayedPrompts] = useState<string[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!expandedCategoryId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setExpandedCategoryId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expandedCategoryId]);
 
   const handleCategoryToggle = useCallback((catId: string) => {
     setExpandedCategoryId((prev) => {
@@ -235,7 +251,7 @@ export default function SearchForm({
         </div>
 
         {/* Category chips + expand panel */}
-        <div className="mt-4 sm:mt-5 sm:relative">
+        <div ref={dropdownRef} className="mt-4 sm:mt-5 sm:relative">
           <div
             className={`overflow-x-auto scrollbar-hide pb-2 sm:px-0 min-w-0 ${expandedCategory ? "hidden sm:block" : ""}`}
           >
