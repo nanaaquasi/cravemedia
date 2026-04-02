@@ -12,6 +12,7 @@ import {
   markSeasonUnwatched,
   type EpisodeStatus,
 } from "@/app/actions/episode-progress";
+import { MEDIA_DETAIL_HERO_CLASS } from "@/lib/media-hero-layout";
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
@@ -121,13 +122,13 @@ export default function SeasonDetailClient({
     seasonDetails;
 
   return (
-    <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-      {/* Hero */}
-      <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
+    <main className="min-h-screen flex flex-col w-full max-w-7xl mx-auto pb-20">
+      {/* Hero: same breakout as media detail (GlobalLayout supplies horizontal padding) */}
+      <div className={MEDIA_DETAIL_HERO_CLASS}>
         {/* Back button - inline on banner */}
         <button
           onClick={() => router.back()}
-          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+          className="absolute z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))]"
           aria-label="Go back"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -147,7 +148,7 @@ export default function SeasonDetailClient({
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-900/40 to-rose-900/50" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6">
+        <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] sm:left-[max(1.5rem,env(safe-area-inset-left))] sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:bottom-6">
           <Link
             href={`/media/tv/${mediaId}`}
             className="inline-block text-sm text-white/80 hover:text-white mb-2 transition-colors"
@@ -157,7 +158,7 @@ export default function SeasonDetailClient({
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-white/90 mb-2">
             TV Show
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg break-words min-w-0">
             {showTitle}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-white/80">
@@ -168,7 +169,7 @@ export default function SeasonDetailClient({
       </div>
 
       {/* Content: same two-column layout as main details */}
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start overflow-x-hidden">
         {/* Left column: Poster + Rating on mobile */}
         <div className="flex flex-col gap-5">
           <div className="flex flex-row gap-4 items-start lg:flex-col lg:gap-5">
@@ -244,29 +245,29 @@ export default function SeasonDetailClient({
                 </span>
               </div>
               {canTrackProgress && (
-              <button
-                onClick={handleSeasonToggle}
-                disabled={updatingSeason}
-                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 border ${
-                  isSeasonFullyWatched
-                    ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/[0.3]"
-                    : "bg-white/[0.06] text-[var(--text-secondary)] border-white/10 hover:bg-white/[0.1] hover:text-white"
-                }`}
-              >
-                {updatingSeason ? (
-                  "Updating…"
-                ) : isSeasonFullyWatched ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Season watched
-                  </>
-                ) : (
-                  <>
-                    <Circle className="w-4 h-4" />
-                    Mark season watched
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={handleSeasonToggle}
+                  disabled={updatingSeason}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 border ${
+                    isSeasonFullyWatched
+                      ? "bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/[0.3]"
+                      : "bg-white/[0.06] text-[var(--text-secondary)] border-white/10 hover:bg-white/[0.1] hover:text-white"
+                  }`}
+                >
+                  {updatingSeason ? (
+                    "Updating…"
+                  ) : isSeasonFullyWatched ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Season watched
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="w-4 h-4" />
+                      Mark season watched
+                    </>
+                  )}
+                </button>
               )}
             </div>
 
@@ -275,7 +276,8 @@ export default function SeasonDetailClient({
                 const isHighlighted =
                   highlightEpisodeNumber !== null &&
                   ep.episodeNumber === highlightEpisodeNumber;
-                const isWatched = episodeProgress[ep.episodeNumber] === "watched";
+                const isWatched =
+                  episodeProgress[ep.episodeNumber] === "watched";
                 const isUpdating = updatingEpisode === ep.episodeNumber;
 
                 return (
@@ -329,24 +331,30 @@ export default function SeasonDetailClient({
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {canTrackProgress && (
-                          <button
-                            onClick={() => handleEpisodeToggle(ep.episodeNumber)}
-                            disabled={isUpdating}
-                            className={`p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
-                              isWatched
-                                ? "bg-green-500/20 text-green-400 hover:bg-green-500/[0.3]"
-                                : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-white"
-                            }`}
-                            title={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                          >
-                            {isUpdating ? (
-                              <span className="text-xs">…</span>
-                            ) : isWatched ? (
-                              <CheckCircle className="w-4 h-4" />
-                            ) : (
-                              <Circle className="w-4 h-4" />
-                            )}
-                          </button>
+                            <button
+                              onClick={() =>
+                                handleEpisodeToggle(ep.episodeNumber)
+                              }
+                              disabled={isUpdating}
+                              className={`p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
+                                isWatched
+                                  ? "bg-green-500/20 text-green-400 hover:bg-green-500/[0.3]"
+                                  : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-white"
+                              }`}
+                              title={
+                                isWatched
+                                  ? "Mark as unwatched"
+                                  : "Mark as watched"
+                              }
+                            >
+                              {isUpdating ? (
+                                <span className="text-xs">…</span>
+                              ) : isWatched ? (
+                                <CheckCircle className="w-4 h-4" />
+                              ) : (
+                                <Circle className="w-4 h-4" />
+                              )}
+                            </button>
                           )}
                           <span className="text-xs text-zinc-500">
                             {String(ep.episodeNumber).padStart(2, "0")}

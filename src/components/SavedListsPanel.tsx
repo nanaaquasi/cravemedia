@@ -134,7 +134,10 @@ export default function SavedListsPanel({
         {/* Panel */}
         <div className="relative flex flex-col w-full max-w-md h-full bg-gradient-mesh border-l border-white/5 animate-slide-in-right">
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-[var(--bg-primary)]/90 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-white/5">
+          <div
+            className="sticky top-0 z-10 bg-[var(--bg-primary)]/90 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-white/5"
+            style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}
+          >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Quick Look</h2>
               <button

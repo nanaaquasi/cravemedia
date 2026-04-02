@@ -80,7 +80,8 @@ export default function PWAUpdatePrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -80, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed top-4 left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[9999]"
+          className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[360px] z-[9999]"
+          style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}
         >
           <div className="liquid-glass-strong rounded-[var(--radius-lg)] p-4">
             <div className="flex items-center gap-3">

@@ -31,6 +31,7 @@ import { getCravelistLabel } from "@/config/labels";
 import EpisodeQualityGrid from "@/components/EpisodeQualityGrid";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import type { EnrichedRecommendation } from "@/lib/types";
+import { MEDIA_DETAIL_HERO_CLASS } from "@/lib/media-hero-layout";
 import {
   getPosterUrl,
   type EpisodeQualityData,
@@ -403,13 +404,13 @@ export default function MediaDetailClient({
           : (details.format ?? "Anime");
 
   return (
-    <main className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-7xl mx-auto pb-20">
-      {/* Hero */}
-      <div className="relative -mx-4 sm:-mx-6 md:-mx-8 mb-6 overflow-hidden rounded-2xl aspect-video max-h-[280px] sm:max-h-[320px] min-w-0">
+    <main className="min-h-screen flex flex-col w-full max-w-7xl mx-auto pb-20">
+      {/* Hero: full width; viewport below md, content column from md (sidebar); see MEDIA_DETAIL_HERO_CLASS */}
+      <div className={MEDIA_DETAIL_HERO_CLASS}>
         {/* Back button - inline on banner */}
         <button
           onClick={() => router.back()}
-          className="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm"
+          className="absolute z-20 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 text-white/90 hover:text-white transition-colors cursor-pointer backdrop-blur-sm top-[max(1rem,env(safe-area-inset-top))] left-[max(1rem,env(safe-area-inset-left))]"
           aria-label="Go back"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -429,11 +430,11 @@ export default function MediaDetailClient({
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-900/40 to-rose-900/50" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] via-transparent to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6">
+        <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] sm:left-[max(1.5rem,env(safe-area-inset-left))] sm:right-[max(1.5rem,env(safe-area-inset-right))] sm:bottom-6">
           <span className="inline-block px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-white/90 mb-2">
             {typeLabel}
           </span>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white drop-shadow-lg break-words min-w-0">
             {details.title}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-white/80 flex-wrap">
@@ -474,7 +475,7 @@ export default function MediaDetailClient({
       </div>
 
       {/* Content: two-column on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6 lg:gap-8 max-w-6xl min-w-0 w-full items-start overflow-x-hidden">
         {/* Left column: Poster + Infos */}
         <div className="flex flex-col gap-5">
           {/* Poster + Rating row on mobile */}
