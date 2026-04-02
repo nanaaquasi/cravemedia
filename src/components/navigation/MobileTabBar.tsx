@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookMarked, Compass, Sparkles, Calendar, User } from "lucide-react";
+import { BookMarked, Compass, Sparkles, Calendar, Menu } from "lucide-react";
 import { useSession } from "@/context/SessionContext";
 import { CRAVELIST_LABEL } from "@/config/labels";
 
@@ -10,7 +10,7 @@ const tabs = [
   { href: "/", label: "Ask Craveo", icon: Sparkles },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/calendar", label: "Calendar", icon: Calendar },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/menu", label: "Menu", icon: Menu },
 ] as const;
 
 const LISTS_LOGIN_NEXT = "/?openSavedLists=1";
@@ -115,17 +115,17 @@ export default function MobileTabBar({
         {tabs.slice(2).map(({ href, label, icon: Icon }) => {
           const isActive =
             pathname === href || pathname.startsWith(`${href}/`);
-          const isProfile = href === "/profile";
-          const profileHref = isProfile ? (user ? "/profile" : "/login") : href;
+          const isMenu = href === "/menu";
+          const profileHref = isMenu ? (user ? "/menu" : "/login") : href;
           const profileLabel =
-            isLoading ? "..." : isProfile && !user ? "Sign in" : label;
+            isLoading ? "..." : isMenu && !user ? "Sign in" : label;
 
           return (
             <Link
               key={href}
               href={profileHref}
               className="flex flex-col items-center justify-center gap-1 flex-1 py-2 min-w-0 active:scale-95 transition-transform cursor-pointer"
-              aria-label={isProfile && !user && !isLoading ? "Sign in" : label}
+              aria-label={isMenu && !user && !isLoading ? "Sign in" : label}
             >
               <Icon
                 className={`w-6 h-6 ${
