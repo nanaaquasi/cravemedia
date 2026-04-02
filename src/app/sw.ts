@@ -107,3 +107,51 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+// --- Web Push Notifications ---
+
+self.addEventListener("push", (event) => {
+  if (event.data) {
+    let data: any;
+    try {
+      data = event.data.json();
+    } catch {
+      data = { title: "Craveo Update", body: event.data.text() };
+    }
+
+    const options = {
+      body: data.body || "You have a new update from Craveo!",
+      icon: "/android-chrome-192x192.png",
+      badge: "/android-chrome-192x192.png", // Typically a monochrome 96x96 icon is best, using this as fallback
+      vibrate: [100, 50, 100],
+      data: {
+        url: data.url || "/",
+      },
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(data.title || "Craveo", options)
+    );
+  }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data.url;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // If a window is already open to the URL, focus it
+      for (const client of clientList) {
+        if (client.url === urlToOpen && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise, open a new window/tab
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

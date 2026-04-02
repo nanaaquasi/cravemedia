@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { SettingsContent } from "./SettingsContent";
+import { PushNotificationToggle } from "@/components/PushNotificationToggle";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -37,6 +38,33 @@ export default async function SettingsPage() {
           >
             View profile
           </Link>
+        </section>
+
+        <section className="liquid-glass rounded-2xl border border-white/10 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">
+            Data Management
+          </h2>
+          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+            <div>
+              <p className="font-semibold text-[var(--text-primary)]">Import Watchlists</p>
+              <p className="text-sm text-[var(--text-secondary)] mt-0.5">
+                Import from SIMKL, Trakt, or CSV.
+              </p>
+            </div>
+            <Link
+              href="/import"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer liquid-glass-strong text-white hover:bg-white/10"
+            >
+              Import Data
+            </Link>
+          </div>
+        </section>
+
+        <section className="liquid-glass rounded-2xl border border-white/10 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">
+            Notifications
+          </h2>
+          <PushNotificationToggle />
         </section>
 
         <section className="liquid-glass rounded-2xl border border-white/10 p-6">

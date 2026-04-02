@@ -8,6 +8,10 @@ const TMDB_ANIME_GENRE_ID = 16;
 /** Revalidate trending data every hour */
 const REVALIDATE_SECONDS = 3600;
 
+const TRENDING_LIMIT = 40;
+const POPULAR_MOVIES_LIMIT = 20;
+const POPULAR_TV_LIMIT = 20;
+
 interface TMDBResult {
   id: number;
   title?: string;
@@ -34,6 +38,18 @@ export interface TMDBMediaItem {
   rating: number | null;
   releaseDate: string | null;
   overview: string | null;
+}
+
+function dedupeTrendingResults(results: TMDBResult[]): TMDBResult[] {
+  const seen = new Set<string>();
+  const out: TMDBResult[] = [];
+  for (const r of results) {
+    const key = `${r.media_type ?? "?"}-${r.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
 }
 
 function isLikelyAnime(r: TMDBResult): boolean {
@@ -92,36 +108,62 @@ async function fetchTrendingData(): Promise<{
     };
   }
 
-  const url = (endpoint: string) => {
+  const url = (endpoint: string, page = 1) => {
     const u = new URL(`${TMDB_BASE}${endpoint}`);
     u.searchParams.set("api_key", apiKey);
+    u.searchParams.set("page", String(page));
     return u.toString();
   };
 
-  const [trendingRes, movieRes, tvRes] = await Promise.all([
-    fetch(url("/trending/all/day"), { next: { revalidate: REVALIDATE_SECONDS } }),
-    fetch(url("/movie/popular"), { next: { revalidate: REVALIDATE_SECONDS } }),
-    fetch(url("/tv/popular"), { next: { revalidate: REVALIDATE_SECONDS } }),
+  const [
+    trendingRes1,
+    trendingRes2,
+    movieRes,
+    tvRes,
+  ] = await Promise.all([
+    fetch(url("/trending/all/day", 1), {
+      next: { revalidate: REVALIDATE_SECONDS },
+    }),
+    fetch(url("/trending/all/day", 2), {
+      next: { revalidate: REVALIDATE_SECONDS },
+    }),
+    fetch(url("/movie/popular", 1), {
+      next: { revalidate: REVALIDATE_SECONDS },
+    }),
+    fetch(url("/tv/popular", 1), {
+      next: { revalidate: REVALIDATE_SECONDS },
+    }),
   ]);
 
-  if (!trendingRes.ok || !movieRes.ok || !tvRes.ok) {
+  if (
+    !trendingRes1.ok ||
+    !trendingRes2.ok ||
+    !movieRes.ok ||
+    !tvRes.ok
+  ) {
     throw new Error("TMDB API error");
   }
 
-  const [trendingData, movieData, tvData] = (await Promise.all([
-    trendingRes.json(),
-    movieRes.json(),
-    tvRes.json(),
-  ])) as [TMDBResponse, TMDBResponse, TMDBResponse];
+  const [trendingData1, trendingData2, movieData, tvData] =
+    (await Promise.all([
+      trendingRes1.json(),
+      trendingRes2.json(),
+      movieRes.json(),
+      tvRes.json(),
+    ])) as [TMDBResponse, TMDBResponse, TMDBResponse, TMDBResponse];
 
-  const trendingRaw = (trendingData.results ?? []).filter(
+  const trendingMerged = dedupeTrendingResults([
+    ...(trendingData1.results ?? []),
+    ...(trendingData2.results ?? []),
+  ]);
+  const trendingRaw = trendingMerged.filter(
     (r) =>
       r.poster_path &&
       (r.media_type === "movie" || r.media_type === "tv") &&
       !(r.media_type === "tv" && isLikelyAnime(r))
   );
   const trending: TMDBMediaItem[] = trendingRaw
-    .slice(0, 20)
+    .slice(0, TRENDING_LIMIT)
     .map((r) =>
       toMediaItem(r, r.media_type === "tv" ? "tv" : "movie")
     );
@@ -131,8 +173,12 @@ async function fetchTrendingData(): Promise<{
     (r) => r.poster_path && !isLikelyAnime(r)
   );
   const popularRaw = [
-    ...movieRaw.slice(0, 10).map((r) => ({ ...r, media_type: "movie" })),
-    ...tvRaw.slice(0, 10).map((r) => ({ ...r, media_type: "tv" })),
+    ...movieRaw
+      .slice(0, POPULAR_MOVIES_LIMIT)
+      .map((r) => ({ ...r, media_type: "movie" })),
+    ...tvRaw
+      .slice(0, POPULAR_TV_LIMIT)
+      .map((r) => ({ ...r, media_type: "tv" })),
   ];
   const popular: TMDBMediaItem[] = popularRaw.map((r) =>
     toMediaItem(r, r.media_type === "tv" ? "tv" : "movie")

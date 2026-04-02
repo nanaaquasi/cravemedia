@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   BookMarked,
+  UploadCloud,
 } from "lucide-react";
 import { CravelistsSignInCard } from "@/components/CravelistsSignInCard";
 import { useSession } from "@/context/SessionContext";
@@ -263,10 +264,24 @@ export default function Sidebar({
         </Link>
 
         <Link
+          href="/import"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl
+            text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors
+            ${isExpanded ? "justify-start" : "justify-center"}`}
+          title="Import Data"
+        >
+          <UploadCloud className="w-5 h-5 shrink-0" />
+          {isExpanded && (
+            <span className="text-sm font-medium truncate">Import</span>
+          )}
+        </Link>
+
+        <Link
           href="/settings"
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl
             text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors
             ${isExpanded ? "justify-start" : "justify-center"}`}
+          title="Settings"
         >
           <Settings className="w-5 h-5 shrink-0" />
           {isExpanded && (

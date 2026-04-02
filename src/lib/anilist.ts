@@ -203,7 +203,7 @@ async function anilistFetch<T>(
 
 const DISCOVER_ANIME_QUERY = `
   query {
-    trending: Page(page: 1, perPage: 20) {
+    trending: Page(page: 1, perPage: 40) {
       media(type: ANIME, sort: [TRENDING_DESC]) {
         id
         title { romaji english native }
@@ -212,7 +212,7 @@ const DISCOVER_ANIME_QUERY = `
         averageScore
       }
     }
-    popular: Page(page: 1, perPage: 20) {
+    popular: Page(page: 1, perPage: 40) {
       media(type: ANIME, sort: [POPULARITY_DESC]) {
         id
         title { romaji english native }
