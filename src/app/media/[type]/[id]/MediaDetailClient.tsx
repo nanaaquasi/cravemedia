@@ -7,6 +7,7 @@ import DOMPurify from "isomorphic-dompurify";
 import {
   ArrowLeft,
   Eye,
+  Check,
   CheckCircle,
   EyeOff,
   Pause,
@@ -38,6 +39,7 @@ import {
   type TVSeasonSummary,
   type WatchProvider,
 } from "@/lib/tmdb";
+import type { SeasonWatchHighlight } from "@/app/actions/episode-progress";
 
 const OVERVIEW_TRUNCATE_LENGTH = 280;
 
@@ -241,6 +243,8 @@ interface MediaDetailClientProps {
   episodeQuality?: EpisodeQualityData;
   collectionNames?: string[];
   tvSeasons?: TVSeasonSummary[];
+  /** Per-season watch highlight from episode_progress (TV only) */
+  seasonWatchHighlights?: Record<number, SeasonWatchHighlight>;
   animeRelations?: AnimeRelationItem[];
   watchProviders?: WatchProvider[];
   contentStats?: { favorites_count: number; views_count: number };
@@ -263,6 +267,7 @@ export default function MediaDetailClient({
   episodeQuality = [],
   collectionNames = [],
   tvSeasons = [],
+  seasonWatchHighlights,
   animeRelations = [],
   watchProviders = [],
   contentStats,
@@ -1074,6 +1079,12 @@ export default function MediaDetailClient({
                     </h2>
                     <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
                       {tvSeasons.map((season) => {
+                        const highlight =
+                          seasonWatchHighlights?.[season.seasonNumber] ?? null;
+                        const isSeasonWatched = highlight === "watched";
+                        const isSeasonWatching = highlight === "watching";
+                        const hasSeasonHighlight =
+                          isSeasonWatched || isSeasonWatching;
                         const posterUrl = getPosterUrl(
                           season.posterPath,
                           "w500",
@@ -1081,11 +1092,16 @@ export default function MediaDetailClient({
                         const seasonYear = season.airDate
                           ? new Date(season.airDate).getFullYear()
                           : null;
+                        const cardBorder = isSeasonWatched
+                          ? "border-2 border-emerald-400/95 ring-1 ring-white/15"
+                          : isSeasonWatching
+                            ? "border-2 border-amber-400/95 ring-1 ring-white/15"
+                            : "border-2 border-white/28 ring-1 ring-white/10 liquid-glass recommendation-card-frame";
                         return (
                           <Link
                             key={season.seasonNumber}
                             href={`/media/tv/${mediaId}/season/${season.seasonNumber}`}
-                            className="group shrink-0 w-36 sm:w-40 md:w-44 block liquid-glass recommendation-card-frame rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+                            className={`group shrink-0 w-36 sm:w-40 md:w-44 block rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] cursor-pointer bg-zinc-900/35 shadow-[0_10px_36px_-6px_rgba(0,0,0,0.58)] box-border ${cardBorder}`}
                           >
                             <div className="relative aspect-[3/4] w-full overflow-hidden">
                               {posterUrl ? (
@@ -1093,7 +1109,11 @@ export default function MediaDetailClient({
                                   src={posterUrl}
                                   alt={season.name}
                                   fill
-                                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                  className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
+                                    hasSeasonHighlight
+                                      ? "brightness-[0.88] saturate-[0.92]"
+                                      : ""
+                                  }`}
                                   sizes="176px"
                                   unoptimized
                                 />
@@ -1102,19 +1122,64 @@ export default function MediaDetailClient({
                                   📺
                                 </div>
                               )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              <span className="absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white/90 font-medium">
+                              {isSeasonWatched && (
+                                <>
+                                  <div
+                                    className="absolute inset-0 bg-gradient-to-t from-emerald-950/55 via-emerald-950/15 to-transparent pointer-events-none z-[1]"
+                                    aria-hidden
+                                  />
+                                  <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-semibold shadow-md z-[1] pointer-events-none">
+                                    <Check
+                                      className="w-3 h-3 shrink-0"
+                                      strokeWidth={3}
+                                      aria-hidden
+                                    />
+                                    Watched
+                                  </div>
+                                </>
+                              )}
+                              {isSeasonWatching && (
+                                <>
+                                  <div
+                                    className="absolute inset-0 bg-gradient-to-t from-amber-950/55 via-amber-950/15 to-transparent pointer-events-none z-[1]"
+                                    aria-hidden
+                                  />
+                                  <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-500 text-[10px] font-semibold text-amber-950 shadow-md z-[1] pointer-events-none">
+                                    <Play
+                                      className="w-3 h-3 shrink-0 fill-current"
+                                      aria-hidden
+                                    />
+                                    Watching
+                                  </div>
+                                </>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[1]" />
+                              <span
+                                className={`absolute bottom-2 left-2 text-[10px] px-2 py-1 rounded-full text-white/90 font-medium z-[1] pointer-events-none ${
+                                  hasSeasonHighlight
+                                    ? "bg-black/75"
+                                    : "bg-black/50 backdrop-blur-sm"
+                                }`}
+                              >
                                 S{season.seasonNumber}
                               </span>
                               {season.voteAverage != null &&
                                 season.voteAverage > 0 && (
-                                  <span className="absolute top-2 right-2 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300">
+                                  <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-2 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-medium text-amber-300 z-[1] pointer-events-none">
                                     ★ {season.voteAverage.toFixed(1)}
                                   </span>
                                 )}
                             </div>
                             <div className="p-2.5">
-                              <h3 className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
+                              <h3
+                                className={`text-[13px] font-semibold truncate ${
+                                  isSeasonWatched
+                                    ? "text-emerald-200/95"
+                                    : isSeasonWatching
+                                      ? "text-amber-200/95"
+                                      : "text-[var(--text-primary)]"
+                                }`}
+                              >
                                 Season {season.seasonNumber}
                               </h3>
                               <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[var(--text-muted)]">

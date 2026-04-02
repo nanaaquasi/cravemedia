@@ -4,6 +4,10 @@ import { parseRuntimeMinutes } from "@/lib/runtime";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CRAVELIST_LABEL } from "@/config/labels";
+import {
+  markAllTvEpisodesWatched,
+  clearAllTvEpisodeProgressForShow,
+} from "@/app/actions/episode-progress";
 import type { EnrichedRecommendation, JourneyItem } from "@/lib/types";
 
 export async function createCollectionWithItems(
@@ -602,6 +606,23 @@ export async function updateMediaStatusAcrossCollections(
 
     for (const cid of collectionIds) {
       revalidatePath(`/collections/${cid}`);
+    }
+  }
+
+  if (mediaType === "tv") {
+    if (newStatus === "watched") {
+      const epResult = await markAllTvEpisodesWatched(
+        mediaId,
+        runtimeMinutes,
+      );
+      if (epResult.error) {
+        return { error: epResult.error };
+      }
+    } else if (newStatus === "not_seen") {
+      const clearResult = await clearAllTvEpisodeProgressForShow(mediaId);
+      if (clearResult.error) {
+        return { error: clearResult.error };
+      }
     }
   }
 

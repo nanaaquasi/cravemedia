@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import MediaDetailClient, { MediaDetails } from "./MediaDetailClient";
 import { ViewTracker } from "@/components/ViewTracker";
 import type { WatchStatus } from "@/app/actions/collection";
+import { getSeasonWatchHighlights } from "@/app/actions/episode-progress";
 
 /** Supabase nested embeds sometimes return an object, sometimes a single-element array */
 function pickEmbeddedProfile<T>(p: T | T[] | null | undefined): T | null {
@@ -493,6 +494,11 @@ export default async function MediaDetailPage({ params }: PageProps) {
           })
         : tvSeasons;
 
+    const seasonWatchHighlights =
+      user && type === "tv" && tvSeasonsWithImdb.length > 0
+        ? await getSeasonWatchHighlights(id, tvSeasonsWithImdb)
+        : undefined;
+
     const contentStats = contentStatsResult.data ?? {
       favorites_count: 0,
       views_count: 0,
@@ -511,6 +517,7 @@ export default async function MediaDetailPage({ params }: PageProps) {
           episodeQuality={episodeQuality}
           collectionNames={collectionNames}
           tvSeasons={tvSeasonsWithImdb}
+          seasonWatchHighlights={seasonWatchHighlights}
           animeRelations={animeRelations}
           watchProviders={watchProviders}
           otherCravelists={otherCravelists}

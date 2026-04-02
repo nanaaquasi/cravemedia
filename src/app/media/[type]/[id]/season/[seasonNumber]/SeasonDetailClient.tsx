@@ -291,7 +291,7 @@ export default function SeasonDetailClient({
                     }`}
                   >
                     {/* Thumbnail */}
-                    <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-zinc-800 relative">
+                    <div className="shrink-0 w-32 sm:w-40 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                       {ep.stillUrl ? (
                         <Image
                           src={ep.stillUrl}
@@ -304,11 +304,6 @@ export default function SeasonDetailClient({
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-2xl text-zinc-600">
                           📺
-                        </div>
-                      )}
-                      {isWatched && (
-                        <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-green-500/90 flex items-center justify-center">
-                          <CheckCircle className="w-5 h-5 text-white" />
                         </div>
                       )}
                     </div>
