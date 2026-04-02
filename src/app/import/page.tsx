@@ -66,15 +66,17 @@ export default function ImportPage() {
           // Map standard CSV fields (Trakt, SIMKL, or custom) to Craveo items
           const items: EnrichedRecommendation[] = rows.map((row) => ({
             title: row.Title || row.title || row.Name || row.name || "Unknown Title",
-            year: row.Year || row.year || "Unknown",
+            year: Number(row.Year || row.year) || 0,
             type: (row.Type || row.type || "movie").toLowerCase().includes("movie") 
                   ? "movie" : "tv",
             creator: row.Creator || row.Director || row.Author || "Unknown",
             description: row.Description || row.Overview || "Imported item.",
             genres: row.Genres ? row.Genres.split(",") : ["Imported"],
-            reasoning: "Imported from CSV.",
-            image_url: row.Poster || row.Image || "",
-            match_score: 100,
+            posterUrl: row.Poster || row.Image || null,
+            rating: null,
+            ratingSource: null,
+            runtime: null,
+            externalId: null,
           }));
 
           if (items.length === 0) {
