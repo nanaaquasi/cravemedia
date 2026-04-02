@@ -39,6 +39,11 @@ export default function MobileTabBar({
         bg-white/[0.06] backdrop-blur-2xl
         border-t border-white/10
         shadow-[0_-4px_24px_rgba(0,0,0,0.2)]"
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+      }}
     >
       <div className="flex items-center justify-around h-16">
         {tabs.slice(0, 2).map(({ href, label, icon: Icon }) => {

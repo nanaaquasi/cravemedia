@@ -100,7 +100,8 @@ export default function PWAInstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[380px] z-[9999]"
+          className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[380px] z-[9999] md:bottom-6"
+          style={{ bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="liquid-glass-strong rounded-[var(--radius-xl)] p-5">
             <button
@@ -152,7 +153,8 @@ export default function PWAInstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 120, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed bottom-24 md:bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-[380px] z-[9999]"
+          className="fixed left-4 right-4 md:left-auto md:right-6 md:w-[380px] z-[9999] md:bottom-6"
+          style={{ bottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <div className="liquid-glass-strong rounded-[var(--radius-xl)] p-5">
             <button
