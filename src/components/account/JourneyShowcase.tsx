@@ -1,5 +1,9 @@
-import { Play, Calendar, Star } from "lucide-react";
+"use client";
+
+import { Play, Calendar, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useRef } from "react";
+import { useCanScroll } from "@/hooks/useCanScroll";
 
 import { Tables } from "@/lib/supabase/database.types";
 
@@ -44,30 +48,69 @@ export function JourneyShowcase({
   description,
   onViewAll,
 }: JourneyShowcaseProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const canScroll = useCanScroll(scrollRef);
+
+  const scrollLeft = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -600, behavior: "smooth" });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 600, behavior: "smooth" });
+    }
+  };
+
   if (journeys.length === 0) return null;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Play className="w-5 h-5 text-purple-400 fill-current" />
-          {title}
-        </h2>
-        {onViewAll && (
-          <button
-            onClick={onViewAll}
-            className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            View All
-          </button>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-4 gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Play className="w-5 h-5 text-purple-400 fill-current" />
+              {title}
+            </h2>
+            {onViewAll && (
+              <button
+                onClick={onViewAll}
+                className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+              >
+                View All
+              </button>
+            )}
+          </div>
+          {description && (
+            <p className="text-sm text-zinc-400">{description}</p>
+          )}
+        </div>
+        {canScroll && (
+          <div className="hidden md:flex gap-2 self-end pb-1">
+            <button
+              onClick={scrollLeft}
+              className="p-2 sm:p-2.5 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 text-white transition-colors cursor-pointer backdrop-blur-md shadow-md"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={scrollRight}
+              className="p-2 sm:p-2.5 rounded-full border border-white/10 bg-black/40 hover:bg-white/10 text-white transition-colors cursor-pointer backdrop-blur-md shadow-md"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
         )}
       </div>
 
-      {description && (
-        <p className="text-sm text-zinc-400 mb-4">{description}</p>
-      )}
-
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory md:overflow-visible md:grid md:grid-cols-2 lg:grid-cols-3 md:snap-none">
+      <div 
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory scroll-smooth"
+      >
         {journeys.map((journey) => {
           const items = (journey.items as any[]) || [];
           const currentPos = journey.current_position || 1;
