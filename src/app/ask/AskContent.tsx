@@ -9,6 +9,8 @@ import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
 import SimilarToModal from "@/components/SimilarToModal";
+import HowItWorksModal from "@/components/HowItWorksModal";
+import { Play } from "lucide-react";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 import { ensureQueryReflectsTypes } from "@/lib/query-utils";
 import {
@@ -50,6 +52,7 @@ export default function AskContent() {
   const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
   const [isSimilarToModalOpen, setIsSimilarToModalOpen] = useState(false);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [initialTypeSelection, setInitialTypeSelection] = useState<
     ContentType | ContentType[]
   >("all");
@@ -232,7 +235,7 @@ export default function AskContent() {
           ))}
         </div>
         <div className="relative z-10 flex flex-col items-center">
-          <div className="text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 mt-10">
+          <div className="flex flex-col items-center text-center w-full max-w-3xl mx-auto px-1 md:px-6 lg:px-8 xl:px-10 mb-2 mt-10">
             <h1 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
               <span className="text-white">Ask Craveo</span>
               <br />
@@ -243,6 +246,28 @@ export default function AskContent() {
             <p className="text-(--text-secondary) text-base md:text-md leading-relaxed px-6 md:px-3 mb-6">
               Describe what you&apos;re in the mood for — in plain English.
             </p>
+            <button
+              type="button"
+              onClick={() => setIsHowItWorksOpen(true)}
+              className="relative flex items-center gap-2 px-6 py-3 mt-4 rounded-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group shadow-[0_0_10px_rgba(236,72,153,0.15)] overflow-hidden outline-none"
+            >
+              {/* Spinning Beam */}
+              <span className="absolute w-[200%] h-[200%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,transparent_75%,#d8b4fe_90%,#ec4899_100%)] opacity-80 group-hover:opacity-100 transition-opacity" />
+
+              {/* Inner Button Cover */}
+              <span className="absolute inset-px rounded-full bg-black/90 group-hover:bg-black transition-colors z-0" />
+
+              {/* Content */}
+              <span className="relative z-10 flex items-center gap-2.5 text-white/90 group-hover:text-white transition-colors">
+                <Play
+                  size={16}
+                  className="fill-white/80 group-hover:fill-white text-transparent transition-all"
+                />
+                <span className="text-sm font-semibold tracking-wide">
+                  What is Craveo?
+                </span>
+              </span>
+            </button>
           </div>
 
           <SearchForm
@@ -259,6 +284,11 @@ export default function AskContent() {
         isOpen={isSimilarToModalOpen}
         onClose={() => setIsSimilarToModalOpen(false)}
         onFindSimilar={handleSimilarToFind}
+      />
+
+      <HowItWorksModal
+        isOpen={isHowItWorksOpen}
+        onClose={() => setIsHowItWorksOpen(false)}
       />
 
       <div className="hidden relative pt-0 sm:pt-8 pb-16">

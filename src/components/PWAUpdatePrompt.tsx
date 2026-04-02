@@ -19,6 +19,9 @@ export default function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    
+    // Suppress update toast during local development to avoid annoyance during hot-reloads
+    if (process.env.NODE_ENV === "development") return;
 
     const checkForUpdate = async () => {
       try {
