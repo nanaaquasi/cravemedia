@@ -235,8 +235,10 @@ export default function SearchForm({
         </div>
 
         {/* Category chips + expand panel */}
-        <div className="mt-4 sm:mt-5 relative">
-          <div className="overflow-x-auto scrollbar-hide pb-2 sm:px-0 min-w-0">
+        <div className="mt-4 sm:mt-5 sm:relative">
+          <div
+            className={`overflow-x-auto scrollbar-hide pb-2 sm:px-0 min-w-0 ${expandedCategory ? "hidden sm:block" : ""}`}
+          >
             <div className="flex gap-2 sm:flex-wrap sm:justify-center min-w-max sm:min-w-0">
               {SUGGESTION_CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
@@ -260,10 +262,10 @@ export default function SearchForm({
             </div>
           </div>
 
-          {/* Dropdown overlays categories */}
+          {/* Dropdown: inline on mobile (so page scrolls), absolute overlay on sm+ */}
           {expandedCategory && (
             <div
-              className="absolute left-0 right-0 top-0 z-20 rounded-2xl border border-white/15 bg-[#0a0a0d]/95 backdrop-blur-md overflow-hidden shadow-xl shadow-black/50"
+              className="relative sm:absolute left-0 right-0 sm:top-0 z-20 rounded-2xl border border-white/15 bg-[#0a0a0d]/95 backdrop-blur-md overflow-hidden shadow-xl shadow-black/50 mb-20 sm:mb-0"
               role="dialog"
               aria-label={`${expandedCategory.label} suggestions`}
             >
@@ -285,7 +287,7 @@ export default function SearchForm({
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <ul className="divide-y divide-white/5 max-h-[240px] overflow-y-auto overflow-x-hidden">
+              <ul className="divide-y divide-white/5 sm:max-h-[240px] overflow-y-auto overflow-x-hidden">
                 {displayedPrompts.map((prompt) => (
                   <li key={prompt}>
                     <button
