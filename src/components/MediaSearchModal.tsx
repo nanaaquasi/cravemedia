@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { X, Search, Loader2, Plus } from "lucide-react";
 import Image from "next/image";
 import { EnrichedRecommendation } from "@/lib/types";
 
@@ -15,6 +15,8 @@ interface MediaSearchModalProps {
   isNavigating?: boolean;
   /** Prefetch route on result hover (e.g. router.prefetch) */
   onResultHover?: (item: EnrichedRecommendation) => void;
+  /** Optional add action button on the card */
+  onAddClick?: (item: EnrichedRecommendation) => void;
 }
 
 const CONTENT_TYPES = [
@@ -32,6 +34,7 @@ export default function MediaSearchModal({
   title = "Search Media",
   isNavigating = false,
   onResultHover,
+  onAddClick,
 }: MediaSearchModalProps) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
@@ -86,7 +89,7 @@ export default function MediaSearchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center px-4">
       <div
         className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity ${
           isNavigating ? "pointer-events-none" : "cursor-pointer"
@@ -166,13 +169,21 @@ export default function MediaSearchModal({
             results.length > 0 ? (
               <div className="space-y-3 mt-4">
                 {results.map((item, idx) => (
-                  <button
+                  <div
                     key={`${item.externalId}-${idx}`}
-                    type="button"
                     onMouseEnter={() => onResultHover?.(item)}
-                    onClick={() => onSelect(item)}
-                    disabled={isNavigating}
-                    className="w-full text-left bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 rounded-xl p-3 flex gap-4 transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-100"
+                    onClick={() => !isNavigating && onSelect(item)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(item);
+                      }
+                    }}
+                    className={`w-full text-left bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 rounded-xl p-3 flex gap-4 transition-all cursor-pointer ${
+                      isNavigating ? "opacity-50 pointer-events-none" : ""
+                    }`}
                   >
                     <div className="w-16 h-24 bg-black/50 rounded-lg overflow-hidden shrink-0 relative">
                       {item.posterUrl ? (
@@ -206,18 +217,36 @@ export default function MediaSearchModal({
                       <p className="text-xs text-zinc-500 mt-auto line-clamp-2">
                         {item.description || "No description available."}
                       </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-medium h-fit">
-                          {item.type}
-                        </span>
-                        {item.rating ? (
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 font-medium flex items-center gap-1 h-fit">
-                            ★ {Number(item.rating).toFixed(1)}
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-medium h-fit">
+                            {item.type}
                           </span>
-                        ) : null}
+                          {item.rating ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-yellow-500/10 text-yellow-500 font-medium flex items-center gap-1 h-fit">
+                              ★ {Number(item.rating).toFixed(1)}
+                            </span>
+                          ) : null}
+                        </div>
+                        {onAddClick && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onAddClick(item);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer border border-transparent hover:border-white/10 text-xs font-medium relative z-10"
+                            aria-label="Add item"
+                            disabled={isNavigating}
+                          >
+                            <span>Add to Cravelist</span>
+                            <Plus size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             ) : !isSearching ? (

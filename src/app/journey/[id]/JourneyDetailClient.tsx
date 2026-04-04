@@ -112,17 +112,16 @@ export default function JourneyDetailClient({
   return (
     <div className="flex flex-col min-h-screen">
       <div className="mb-8">
-        <Link
-          href={isOwner ? "/profile" : "/"}
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group"
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group cursor-pointer"
         >
           <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </div>
-          <span className="text-sm font-medium">
-            {isOwner ? "Back to Profile" : "Back to Home"}
-          </span>
-        </Link>
+          <span className="text-sm font-medium">Back</span>
+        </button>
       </div>
 
       {!isOwner && (

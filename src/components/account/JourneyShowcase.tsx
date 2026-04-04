@@ -122,7 +122,7 @@ export function JourneyShowcase({
             <Link
               key={journey.id}
               href={`/journey/${journey.id}`}
-              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10 shrink-0 w-64 snap-start md:shrink md:w-auto"
+              className="group relative bg-zinc-900/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-zinc-900/60 transition-all hover:border-white/10 shrink-0 w-72 md:w-96 snap-start"
             >
               <div className="aspect-video relative bg-zinc-800">
                 {thumbnailUrl ? (

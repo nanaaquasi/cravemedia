@@ -11,8 +11,6 @@ import ShareModal from "./ShareModal";
 import type { SessionUser } from "@/app/api/auth/session/route";
 import { toggleCollectionVisibility } from "@/app/actions/collection";
 import { toggleJourneyVisibility } from "@/app/actions/journey";
-import { useLists } from "@/hooks/useLists";
-import CreateCollectionModal from "./CreateCollectionModal";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 
 const ITEMS_PER_LIST = 3;
@@ -38,10 +36,8 @@ export default function SavedListsPanel({
   user,
 }: SavedListsPanelProps) {
   const router = useRouter();
-  const { createList, refreshLists } = useLists();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [listToDelete, setListToDelete] = useState<string | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [shareConfig, setShareConfig] = useState<{
     url: string;
     title: string;
@@ -101,25 +97,6 @@ export default function SavedListsPanel({
     }
   };
 
-  const handleCreateCollection = async ({
-    name,
-    description,
-  }: {
-    name: string;
-    description: string;
-  }) => {
-    const result = await createList(name, description, [], {
-      isPublic: false,
-      isExplicitlySaved: true,
-    });
-    if (result) {
-      await refreshLists();
-      setIsCreateModalOpen(false);
-      router.push(`/collections/${result.id}`);
-      onClose();
-    }
-  };
-
   const emptyStateTooltip = "Create a new cravelist";
 
   return (
@@ -135,7 +112,7 @@ export default function SavedListsPanel({
         <div className="relative flex flex-col w-full max-w-md h-full bg-gradient-mesh border-l border-white/5 animate-slide-in-right">
           {/* Header */}
           <div
-            className="sticky top-0 z-10 bg-[var(--bg-primary)]/90 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-white/5"
+            className="sticky top-0 z-10 bg-(--bg-primary)/90 backdrop-blur-md px-4 sm:px-6 md:px-8 py-4 sm:py-5 border-b border-white/5"
             style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}
           >
             <div className="flex items-center justify-between">
@@ -194,16 +171,19 @@ export default function SavedListsPanel({
             ) : lists.length === 0 ? (
               <button
                 type="button"
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={() => {
+                  router.push("/collections/new");
+                  onClose();
+                }}
                 title={emptyStateTooltip}
                 aria-label={emptyStateTooltip}
                 className="flex flex-col items-center justify-center py-16 px-6 w-full rounded-2xl border-2 border-dashed border-white/10 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all cursor-pointer group"
               >
                 <FolderPlus className="w-16 h-16 text-white/40 group-hover:text-purple-400/80 mb-4 transition-colors" strokeWidth={1.5} />
-                <p className="text-[var(--text-secondary)] text-sm font-medium">
+                <p className="text-(--text-secondary) text-sm font-medium">
                   Create your first {CRAVELIST_LABEL.toLowerCase()}
                 </p>
-                <p className="text-[var(--text-muted)] text-xs mt-1" title={emptyStateTooltip}>
+                <p className="text-(--text-muted) text-xs mt-1" title={emptyStateTooltip}>
                   Click to create a new list
                 </p>
               </button>
@@ -374,12 +354,6 @@ export default function SavedListsPanel({
         onConfirm={() => listToDelete && onDeleteList(listToDelete)}
         title="Delete List?"
         description={`Are you sure you want to delete "${getListName(listToDelete)}"? This cannot be undone.`}
-      />
-
-      <CreateCollectionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onConfirm={handleCreateCollection}
       />
 
       {shareConfig && (

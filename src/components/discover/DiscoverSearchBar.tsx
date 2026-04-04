@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { track } from "@vercel/analytics";
 import type { EnrichedRecommendation } from "@/lib/types";
 import MediaSearchModal from "@/components/MediaSearchModal";
+import AddToCollectionModal from "@/components/AddToCollectionModal";
 
 function mediaDetailHref(item: EnrichedRecommendation): string | null {
   if (!item.externalId) return null;
@@ -21,6 +22,8 @@ export function DiscoverSearchBar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedItemForAdd, setSelectedItemForAdd] = useState<EnrichedRecommendation | null>(null);
 
   useEffect(() => {
     if (!pendingHref) return;
@@ -67,6 +70,11 @@ export function DiscoverSearchBar() {
     [router],
   );
 
+  const handleAddClick = useCallback((item: EnrichedRecommendation) => {
+    setSelectedItemForAdd(item);
+    setIsAddModalOpen(true);
+  }, []);
+
   return (
     <div className="relative z-30 w-full">
       <button
@@ -84,9 +92,19 @@ export function DiscoverSearchBar() {
         isOpen={isOpen}
         onClose={handleClose}
         onSelect={handleSelect}
+        onAddClick={handleAddClick}
         title="Discover"
         isNavigating={Boolean(pendingHref)}
         onResultHover={handleResultHover}
+      />
+
+      <AddToCollectionModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setSelectedItemForAdd(null);
+        }}
+        item={selectedItemForAdd}
       />
     </div>
   );
