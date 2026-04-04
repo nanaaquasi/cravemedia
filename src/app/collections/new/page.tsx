@@ -17,6 +17,7 @@ import {
   Trash2,
   LayoutGrid,
   List,
+  ChevronDown,
 } from "lucide-react";
 import { createCollectionWithItems } from "@/app/actions/collection";
 import { EnrichedRecommendation } from "@/lib/types";
@@ -252,6 +253,10 @@ function CreateCollectionContent() {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
+  // Mobile: keep list panel open by default; tuck form behind details accordion
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [mobileListOpen, setMobileListOpen] = useState(true);
+
   // Persist draft to localStorage on every meaningful change
   useEffect(() => {
     if (savedCollectionId) return;
@@ -443,8 +448,8 @@ function CreateCollectionContent() {
   };
 
   return (
-    <main className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-10 md:pt-6 min-h-screen">
-      <div className="mb-6 md:mb-10 flex items-center justify-between">
+    <main className="flex-1 flex flex-col max-w-6xl mx-auto w-full pt-6 md:pt-6 lg:pt-10 min-h-screen">
+      <div className="mb-4 md:mb-8 lg:mb-10 flex items-center justify-between">
         <button
           onClick={() => router.back()}
           className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group cursor-pointer"
@@ -456,17 +461,42 @@ function CreateCollectionContent() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-8">
         {/* Left Column: Form Details - Sticky on large screens */}
-        <div className="lg:col-span-1 lg:sticky lg:top-8 lg:self-start space-y-6">
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 liquid-glass">
-            <h1 className="text-2xl font-bold text-white mb-6">
+        <div className="lg:col-span-1 lg:sticky lg:top-8 lg:self-start space-y-2 lg:space-y-6">
+          <h1 className="lg:hidden text-xl font-bold text-white">
+            Create {CRAVELIST_LABEL}
+          </h1>
+          <button
+            type="button"
+            onClick={() => setMobileDetailsOpen((o) => !o)}
+            aria-expanded={mobileDetailsOpen}
+            className="lg:hidden w-full flex items-center justify-between gap-2 p-3 rounded-2xl liquid-glass border border-white/10 text-left cursor-pointer"
+          >
+            <div>
+              <p className="text-base font-semibold text-white">
+                {CRAVELIST_LABEL} details
+              </p>
+              <p className="text-sm text-zinc-400 mt-0.5">
+                Name, description and settings
+              </p>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 shrink-0 text-zinc-400 transition-transform ${mobileDetailsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          <div
+            className={`space-y-3 lg:space-y-6 ${!mobileDetailsOpen ? "hidden lg:block" : ""}`}
+          >
+          <div className="bg-white/5 border border-white/10 rounded-2xl lg:rounded-3xl p-4 lg:p-6 liquid-glass">
+            <h1 className="hidden lg:block text-2xl font-bold text-white mb-6">
               Create {CRAVELIST_LABEL}
             </h1>
 
-            <div className="space-y-5">
+            <div className="space-y-3 lg:space-y-5">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+                <label className="block text-sm font-medium text-zinc-300 mb-1 lg:mb-1.5">
                   Name <span className="text-purple-400">*</span>
                 </label>
                 <input
@@ -475,7 +505,7 @@ function CreateCollectionContent() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 lg:px-4 lg:py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all text-[15px] lg:text-base"
                 />
 
                 {/* AI Suggestion Trigger */}
@@ -485,7 +515,7 @@ function CreateCollectionContent() {
                   suggestions.length === 0 && (
                     <button
                       onClick={handleSuggestNames}
-                      className="mt-3 flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors mx-1 cursor-pointer group"
+                      className="mt-2 lg:mt-3 flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors mx-1 cursor-pointer group"
                     >
                       <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                       Out of ideas? Let&apos;s suggest a title
@@ -494,7 +524,7 @@ function CreateCollectionContent() {
 
                 {/* AI Loading State */}
                 {isSuggesting && (
-                  <div className="mt-4 flex items-center gap-2 text-sm text-zinc-400 mx-1">
+                  <div className="mt-3 lg:mt-4 flex items-center gap-2 text-sm text-zinc-400 mx-1">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-400" />
                     Generating ideas based on your items...
                   </div>
@@ -502,7 +532,7 @@ function CreateCollectionContent() {
 
                 {/* AI Suggestions List */}
                 {suggestions.length > 0 && !name.trim() && !isSuggesting && (
-                  <div className="mt-4 animate-slide-up bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
+                  <div className="mt-3 lg:mt-4 animate-slide-up bg-purple-500/10 border border-purple-500/20 rounded-xl p-3">
                     <div className="flex items-center justify-between mb-2 px-1">
                       <p className="text-xs text-purple-300/80 font-medium">
                         Suggested Names:
@@ -534,7 +564,7 @@ function CreateCollectionContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1.5">
+                <label className="block text-sm font-medium text-zinc-400 mb-1 lg:mb-1.5">
                   Description (Optional)
                 </label>
                 <textarea
@@ -542,18 +572,18 @@ function CreateCollectionContent() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={isSubmitting}
-                  rows={4}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none"
+                  rows={3}
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 lg:px-4 lg:py-3 min-h-22 lg:min-h-30 text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all resize-none text-[15px] lg:text-base"
                 />
               </div>
 
-              <div className="pt-2 space-y-3">
+              <div className="pt-0 lg:pt-2 space-y-2 lg:space-y-3">
                 <button
                   type="button"
                   onClick={() => setIsPublic(!isPublic)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-2.5 lg:p-3 rounded-xl bg-black/30 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 lg:gap-3">
                     <div
                       className={`p-2 rounded-lg ${isPublic ? "bg-green-500/20 text-green-400" : "bg-zinc-800 text-zinc-400"}`}
                     >
@@ -586,9 +616,9 @@ function CreateCollectionContent() {
                 <button
                   type="button"
                   onClick={() => setIsRanked(!isRanked)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-black/30 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between p-2.5 lg:p-3 rounded-xl bg-black/30 border border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 lg:gap-3">
                     <div
                       className={`p-2 rounded-lg ${isRanked ? "bg-purple-500/20 text-purple-400" : "bg-zinc-800 text-zinc-400"}`}
                     >
@@ -614,9 +644,10 @@ function CreateCollectionContent() {
               </div>
             </div>
           </div>
+          </div>
 
-          {/* Action Buttons: Moved from header to under the sidebar */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          {/* Action buttons — desktop only (under form) */}
+          <div className="hidden lg:flex flex-col sm:flex-row gap-3 pt-2">
             {savedCollectionId ? (
               <Link
                 href={`/collections/${savedCollectionId}`}
@@ -648,15 +679,36 @@ function CreateCollectionContent() {
         </div>
 
         {/* Right Column: Media List — scroll container with glass look */}
-        <div className="lg:col-span-2 relative rounded-2xl border border-white/20 overflow-y-auto max-h-[calc(100vh-4rem)] bg-linear-to-br from-white/6 via-white/3 to-white/5 backdrop-blur-[32px] backdrop-saturate-150 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15),0_8px_32px_-4px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between p-4 sticky top-0 z-30 rounded-t-2xl border-b border-white/15 bg-white/5 backdrop-blur-xl">
+        <div className="lg:col-span-2 space-y-2 lg:space-y-4">
+          <button
+            type="button"
+            onClick={() => setMobileListOpen((o) => !o)}
+            aria-expanded={mobileListOpen}
+            className="lg:hidden w-full flex items-center justify-between gap-2 p-3 rounded-2xl liquid-glass border border-white/10 text-left cursor-pointer"
+          >
             <div>
+              <p className="text-base font-semibold text-white">List items</p>
+              <p className="text-sm text-zinc-400 mt-0.5">
+                {items.length} {items.length === 1 ? "item" : "items"}
+              </p>
+            </div>
+            <ChevronDown
+              className={`w-5 h-5 shrink-0 text-zinc-400 transition-transform ${mobileListOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          <div
+            className={`space-y-2 lg:space-y-4 ${!mobileListOpen ? "hidden lg:block" : ""}`}
+          >
+        <div className="relative rounded-2xl border border-white/20 overflow-y-auto max-h-[min(70dvh,calc(100vh-4rem))] lg:max-h-[calc(100vh-4rem)] bg-linear-to-br from-white/6 via-white/3 to-white/5 backdrop-blur-[32px] backdrop-saturate-150 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.15),0_8px_32px_-4px_rgba(0,0,0,0.5)]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 justify-end lg:justify-between p-3 lg:p-4 sticky top-0 z-30 rounded-t-2xl border-b border-white/15 bg-white/5 backdrop-blur-xl">
+            <div className="hidden lg:block shrink-0 min-w-0">
               <h2 className="text-lg font-semibold text-white">List Items</h2>
               <p className="text-sm text-zinc-400">
                 {items.length} {items.length === 1 ? "item" : "items"}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-1 p-1 bg-black/40 rounded-xl border border-white/5 mr-2">
                 <button
                   type="button"
@@ -700,7 +752,7 @@ function CreateCollectionContent() {
               </button>
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="text-sm font-medium flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white transition-colors cursor-pointer shrink-0"
+                className="text-sm font-medium flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white transition-colors cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 Add Item
@@ -708,16 +760,16 @@ function CreateCollectionContent() {
             </div>
           </div>
 
-          <div className="p-4">
+          <div className="p-3 lg:p-4">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center rounded-3xl border-2 border-dashed border-white/10 bg-white/5">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+              <div className="flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 text-center rounded-2xl lg:rounded-3xl border-2 border-dashed border-white/10 bg-white/5">
+                <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-white/5 flex items-center justify-center mb-3 lg:mb-4">
                   <Plus className="w-8 h-8 text-zinc-500" />
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">
+                <h3 className="text-base lg:text-lg font-medium text-white mb-1.5 lg:mb-2">
                   No items added yet
                 </h3>
-                <p className="text-zinc-400 text-sm max-w-sm mb-6">
+                <p className="text-zinc-400 text-sm max-w-sm mb-4 lg:mb-6">
                   Start adding your favorite movies, TV shows, and books to
                   build out your {CRAVELIST_LABEL.toLowerCase()}.
                 </p>
@@ -763,6 +815,38 @@ function CreateCollectionContent() {
                 </SortableContext>
               </DndContext>
             )}
+          </div>
+        </div>
+          </div>
+
+          <div className="flex lg:hidden flex-col gap-2">
+            {savedCollectionId ? (
+              <Link
+                href={`/collections/${savedCollectionId}`}
+                className="w-full px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 cursor-pointer"
+              >
+                View {CRAVELIST_LABEL}
+              </Link>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={!name.trim() || isSubmitting}
+                className="w-full px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <span>Save {CRAVELIST_LABEL}</span>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => router.back()}
+              disabled={isSubmitting}
+              className="w-full px-6 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white bg-black/50 border border-white/10 hover:bg-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
