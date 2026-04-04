@@ -5,9 +5,9 @@ import { X, Plus, Check } from "lucide-react";
 import { EnrichedRecommendation } from "@/lib/types";
 import { useLists } from "@/hooks/useLists";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
-import CreateCollectionModal from "./CreateCollectionModal";
 import Toast from "./Toast";
 import { itemIsInSavedList } from "@/lib/list-membership";
+import { useRouter } from "next/navigation";
 
 interface AddToCollectionModalProps {
   isOpen: boolean;
@@ -23,10 +23,10 @@ export default function AddToCollectionModal({
   item,
   onItemAdded,
 }: AddToCollectionModalProps) {
-  const { lists, addItemToList, createList, refreshLists } = useLists();
+  const router = useRouter();
+  const { lists, addItemToList, refreshLists } = useLists();
   const collections = lists.filter((l) => !l.isJourney);
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [addingToListId, setAddingToListId] = useState<string | null>(null);
   const [addedToLists, setAddedToLists] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -36,11 +36,7 @@ export default function AddToCollectionModal({
       void refreshLists();
       setAddedToLists(new Set());
     }
-  }, [isOpen, item?.externalId, item?.type, refreshLists]);
-
-  useEffect(() => {
-    if (!isOpen) setIsCreateModalOpen(false);
-  }, [isOpen]);
+  }, [isOpen, item, refreshLists]);
 
   const handleAdd = async (listId: string) => {
     if (!item) return;
@@ -65,29 +61,11 @@ export default function AddToCollectionModal({
     }
   };
 
-  const handleCreateAndAdd = async ({
-    name,
-    description,
-  }: {
-    name: string;
-    description: string;
-  }) => {
+  const handleCreateNewList = () => {
     if (!item) return;
-    try {
-      const newList = await createList(name, description, [item], {
-        isPublic: false,
-        isExplicitlySaved: true,
-      });
-      if (newList) {
-        setAddedToLists((prev) => new Set(prev).add(newList.id));
-        setToastMessage(`Added “${item.title}” to “${newList.name}”`);
-        onClose();
-        onItemAdded?.();
-      }
-    } catch (e) {
-      console.error("Failed to create and add", e);
-      setToastMessage("Couldn’t create that list. Try again.");
-    }
+    const itemParam = encodeURIComponent(JSON.stringify(item));
+    router.push(`/collections/new?item=${itemParam}`);
+    onClose();
   };
 
   const showMainModal = isOpen && item;
@@ -95,7 +73,7 @@ export default function AddToCollectionModal({
   return (
     <>
       {showMainModal && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+      <div className="fixed inset-0 z-100 flex items-center justify-center px-4">
         {/* Backdrop */}
         <div
           className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity cursor-pointer"
@@ -120,7 +98,7 @@ export default function AddToCollectionModal({
           <div className="p-2 max-h-[60vh] overflow-y-auto min-h-[150px]">
             <button
               type="button"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={handleCreateNewList}
               className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left text-zinc-300 hover:text-white cursor-pointer group"
             >
               <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 group-hover:border-white/20 transition-all shrink-0">
@@ -151,9 +129,9 @@ export default function AddToCollectionModal({
                       onClick={() => handleAdd(col.id)}
                       disabled={alreadyInList || isAdding}
                       title={col.name}
-                      className={`w-full flex items-center justify-between gap-2 p-3 rounded-xl text-left transition-colors min-h-[3.25rem] ${
+                      className={`w-full flex items-center justify-between gap-2 p-3 rounded-xl text-left transition-colors min-h-13 ${
                         alreadyInList
-                          ? "bg-white/[0.04] cursor-not-allowed opacity-90"
+                          ? "bg-white/4 cursor-not-allowed opacity-90"
                           : "hover:bg-white/5 group disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                       }`}
                     >
@@ -202,12 +180,6 @@ export default function AddToCollectionModal({
         </div>
       </div>
       )}
-
-      <CreateCollectionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onConfirm={handleCreateAndAdd}
-      />
 
       <Toast
         message={toastMessage}

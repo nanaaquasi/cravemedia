@@ -21,10 +21,7 @@ import { RecentlyReviewed } from "./RecentlyReviewed";
 import { FavoritesTab } from "./FavoritesTab";
 import Link from "next/link";
 import { Clock, Plus, LayoutGrid, Loader2, Play, Sparkles } from "lucide-react";
-import CreateCollectionModal from "@/components/CreateCollectionModal";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
-import { useLists } from "@/hooks/useLists";
-import Toast from "@/components/Toast";
 
 interface AccountViewProps {
   profile: Profile | null;
@@ -75,9 +72,7 @@ export function AccountView({
   const [activeTab, setActiveTab] = useState("Overview");
   const [dashboardData, setDashboardData] =
     useState<ProfileDashboardData>(initialDashboardData);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const { createList, refreshLists } = useLists();
+    useState<ProfileDashboardData>(initialDashboardData);
 
   const unsubRef = useRef<(() => void) | null>(null);
   useEffect(() => {
@@ -117,30 +112,6 @@ export function AccountView({
   const finalStats = {
     followers: dashboardData.followersCount,
     following: dashboardData.followingCount,
-  };
-
-  const handleCreateCollection = async ({
-    name,
-    description,
-  }: {
-    name: string;
-    description: string;
-  }) => {
-    try {
-      const result = await createList(name, description, [], {
-        isPublic: false,
-        isExplicitlySaved: true,
-      });
-      if (result) {
-        setToastMessage(`Created ${CRAVELIST_LABEL.toLowerCase()} "${name}"`);
-        await refreshLists();
-        setIsCreateModalOpen(false);
-        router.push(`/collections/${result.id}`);
-      }
-    } catch (e) {
-      console.error(e);
-      setToastMessage(`Failed to create ${CRAVELIST_LABEL.toLowerCase()}.`);
-    }
   };
 
   return (
@@ -384,7 +355,7 @@ export function AccountView({
                   My {CRAVELIST_LABEL_PLURAL}
                 </h2>
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => router.push("/collections/new")}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-medium text-sm hover:bg-zinc-200 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -422,13 +393,6 @@ export function AccountView({
           )}
         </div>
       </div>
-
-      <CreateCollectionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onConfirm={handleCreateCollection}
-      />
-      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
 }

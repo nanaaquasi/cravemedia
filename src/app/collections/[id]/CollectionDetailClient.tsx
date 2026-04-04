@@ -34,7 +34,6 @@ import { useRouter } from "next/navigation";
 import ShareModal from "@/components/ShareModal";
 import MediaSearchModal from "@/components/MediaSearchModal";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
-import CreateCollectionModal from "@/components/CreateCollectionModal";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import Modal from "@/components/Modal";
 import {
@@ -54,10 +53,7 @@ import {
 } from "@/lib/collection-item-sort";
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
-import {
-  CRAVELIST_LABEL,
-  CRAVELIST_LABEL_PLURAL,
-} from "@/config/labels";
+import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
 import {
   DndContext,
   closestCenter,
@@ -130,7 +126,6 @@ export default function CollectionDetailClient({
     collection.description ?? "",
   );
   const [isSavingCollection, setIsSavingCollection] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -213,7 +208,7 @@ export default function CollectionDetailClient({
     }
   }
 
-  const { addItemToList, createList, refreshLists } = useLists();
+  const { addItemToList } = useLists();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -282,27 +277,6 @@ export default function CollectionDetailClient({
     }
   };
 
-  const handleCreateCollection = async ({
-    name,
-    description,
-  }: {
-    name: string;
-    description: string;
-  }) => {
-    const result = await createList(name, description, [], {
-      isPublic: false,
-      isExplicitlySaved: true,
-    });
-    if (result?.id) {
-      setToastMessage(`Created ${CRAVELIST_LABEL.toLowerCase()} "${name}"`);
-      await refreshLists();
-      setIsCreateModalOpen(false);
-      router.push(`/collections/${result.id}`);
-    } else {
-      setToastMessage(`Failed to create ${CRAVELIST_LABEL.toLowerCase()}.`);
-    }
-  };
-
   const handleStatusChange = async (itemId: string, newStatus: WatchStatus) => {
     setOrderedItems((prev) =>
       sortCollectionItemsByWatchStatus(
@@ -358,7 +332,9 @@ export default function CollectionDetailClient({
   const handleAddItem = async (item: EnrichedRecommendation) => {
     try {
       await addItemToList(collection.id, item);
-      setToastMessage(`Added "${item.title}" to ${CRAVELIST_LABEL.toLowerCase()}`);
+      setToastMessage(
+        `Added "${item.title}" to ${CRAVELIST_LABEL.toLowerCase()}`,
+      );
       setIsSearchModalOpen(false);
       router.refresh();
     } catch (e) {
@@ -373,7 +349,9 @@ export default function CollectionDetailClient({
       setToastMessage(result.error);
     } else {
       setOrderedItems((prev) => prev.filter((i) => i.id !== itemId));
-      setToastMessage(`Removed "${itemTitle}" from ${CRAVELIST_LABEL.toLowerCase()}`);
+      setToastMessage(
+        `Removed "${itemTitle}" from ${CRAVELIST_LABEL.toLowerCase()}`,
+      );
       router.refresh();
     }
   };
@@ -425,21 +403,20 @@ export default function CollectionDetailClient({
     <div className="flex flex-col min-h-screen pb-12">
       {/* Header / Navigation */}
       <div className="mb-6 sm:mb-8 flex flex-col justify-start">
-        <Link
-          href={isOwner ? "/profile" : "/"}
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group self-start"
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors group self-start cursor-pointer"
         >
           <div className="p-2 rounded-full bg-black/20 group-hover:bg-black/40 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </div>
-          <span className="text-sm font-medium">
-            {isOwner ? "Back to Profile" : "Back to Home"}
-          </span>
-        </Link>
+          <span className="text-sm font-medium">Back</span>
+        </button>
       </div>
 
       {!isOwner && (
-        <div className="animate-fade-in-up mb-8 p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div className="animate-fade-in-up mb-8 p-4 rounded-xl bg-linear-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-3">
             {ownerProfile?.avatarUrl ? (
               <img
@@ -467,7 +444,8 @@ export default function CollectionDetailClient({
                 </span>
               </h3>
               <p className="text-sm text-white/60">
-                Save this {CRAVELIST_LABEL.toLowerCase()} to your library to keep it.
+                Save this {CRAVELIST_LABEL.toLowerCase()} to your library to
+                keep it.
               </p>
             </div>
           </div>
@@ -490,7 +468,9 @@ export default function CollectionDetailClient({
                     if (result.error) {
                       setToastMessage(result.error);
                     } else if (result.newCollectionId) {
-                      router.push(`/collections/${result.newCollectionId}?saved=1`);
+                      router.push(
+                        `/collections/${result.newCollectionId}?saved=1`,
+                      );
                     }
                   }}
                   disabled={isCloning}
@@ -501,7 +481,9 @@ export default function CollectionDetailClient({
                   ) : (
                     <Bookmark className="w-4 h-4" />
                   )}
-                  {isCloning ? "Saving..." : `Save to My ${CRAVELIST_LABEL_PLURAL}`}
+                  {isCloning
+                    ? "Saving..."
+                    : `Save to My ${CRAVELIST_LABEL_PLURAL}`}
                 </button>
               )
             ) : (
@@ -515,7 +497,7 @@ export default function CollectionDetailClient({
             )}
             {user ? (
               <button
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={() => router.push("/collections/new")}
                 className="w-full sm:w-auto justify-center whitespace-nowrap px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium transition-colors cursor-pointer"
               >
                 Create Your Own
@@ -533,7 +515,7 @@ export default function CollectionDetailClient({
       )}
 
       {/* Cravelist Info */}
-      <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="mb-12 flex flex-col gap-6">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold tracking-wider uppercase border border-purple-500/20">
@@ -544,9 +526,11 @@ export default function CollectionDetailClient({
             </span>
             {isOwner && orderedItems.length > 0 && (
               <span className="text-zinc-500 text-xs font-medium">
-                {orderedItems.filter(
-                  (i) => i.status === "watched" || i.status === "dropped",
-                ).length}
+                {
+                  orderedItems.filter(
+                    (i) => i.status === "watched" || i.status === "dropped",
+                  ).length
+                }
                 /{orderedItems.length} finished
               </span>
             )}
@@ -636,7 +620,7 @@ export default function CollectionDetailClient({
             ) : (
               <div className="group">
                 <div className="flex items-start gap-3">
-                  <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                  <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
                     {collection.name}
                   </h1>
                   {isOwner && (
@@ -662,11 +646,11 @@ export default function CollectionDetailClient({
                       <span>{contentStats.favorites_count} ♥</span>
                     ) : null}
                     {contentStats?.views_count ? (
-                      <span>{contentStats.views_count.toLocaleString()} views</span>
+                      <span>
+                        {contentStats.views_count.toLocaleString()} views
+                      </span>
                     ) : null}
-                    {savesCount > 0 ? (
-                      <span>{savesCount} saved</span>
-                    ) : null}
+                    {savesCount > 0 ? <span>{savesCount} saved</span> : null}
                   </p>
                 ) : null}
                 {collection.description ? (
@@ -690,9 +674,9 @@ export default function CollectionDetailClient({
           </div>
         </div>
 
-        {/* Lower actions positioned to the right */}
+        {/* Lower actions positioned to the left */}
         {isOwner && (
-          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0 mt-4 md:mt-0">
+          <div className="flex flex-wrap items-center gap-2 self-start shrink-0">
             {orderedItems.length > 0 && (
               <>
                 {/* Status filter */}
@@ -705,11 +689,15 @@ export default function CollectionDetailClient({
                     <span>
                       {statusFilter === "all"
                         ? "Status"
-                        : WATCH_STATUSES.find((s) => s.value === statusFilter)
-                            ?.label ?? statusFilter}
+                        : (WATCH_STATUSES.find((s) => s.value === statusFilter)
+                            ?.label ?? statusFilter)}
                     </span>
                     <span className="text-white/50">
-                      ({statusFilter === "all" ? orderedItems.length : statusCounts[statusFilter] ?? 0})
+                      (
+                      {statusFilter === "all"
+                        ? orderedItems.length
+                        : (statusCounts[statusFilter] ?? 0)}
+                      )
                     </span>
                     <ChevronDown
                       className={`w-3.5 h-3.5 text-white/50 transition-transform ${
@@ -727,7 +715,9 @@ export default function CollectionDetailClient({
                         className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors cursor-pointer"
                       >
                         <span>All statuses</span>
-                        <span className="text-white/50">{orderedItems.length}</span>
+                        <span className="text-white/50">
+                          {orderedItems.length}
+                        </span>
                       </button>
                       {WATCH_STATUSES.map(({ value, label }) => (
                         <button
@@ -739,7 +729,9 @@ export default function CollectionDetailClient({
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-white/10 transition-colors cursor-pointer"
                         >
                           <span>{label}</span>
-                          <span className="text-white/50">{statusCounts[value] ?? 0}</span>
+                          <span className="text-white/50">
+                            {statusCounts[value] ?? 0}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -931,10 +923,10 @@ export default function CollectionDetailClient({
             Add movies, TV shows, books, and anime to build your curated list.
           </p>
           {isOwner && (
-            <button
-              onClick={() => setIsSearchModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-            >
+              <button
+                onClick={() => setIsSearchModalOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+              >
               <Plus className="w-4 h-4" />
               Add Items
             </button>
@@ -946,6 +938,7 @@ export default function CollectionDetailClient({
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         onSelect={handleAddItem}
+        onAddClick={handleAddItem}
       />
 
       <DeleteConfirmationModal
@@ -1068,11 +1061,6 @@ export default function CollectionDetailClient({
         }
       />
 
-      <CreateCollectionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onConfirm={handleCreateCollection}
-      />
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </div>
   );
@@ -1235,10 +1223,7 @@ function SortableItemWrapper({
 
   function renderOwnerToolbar() {
     return (
-      <div
-        ref={dropdownRef}
-        className="relative flex items-center gap-1"
-      >
+      <div ref={dropdownRef} className="relative flex items-center gap-1">
         {isWatched && (
           <button
             type="button"
@@ -1274,7 +1259,7 @@ function SortableItemWrapper({
         {dropdownOpen && (
           <div
             role="menu"
-            className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-[60]"
+            className="absolute right-0 bottom-full mb-1 py-1 min-w-[180px] rounded-lg bg-zinc-900/95 backdrop-blur border border-white/10 shadow-xl z-60"
             onClick={(e) => e.stopPropagation()}
           >
             {WATCH_STATUSES.map((opt) => {
@@ -1334,7 +1319,7 @@ function SortableItemWrapper({
         item={item}
         index={index}
         viewMode={viewMode}
-        watchHighlight={watchHighlight}
+        watchHighlight={isOwner ? watchHighlight : undefined}
         posterGridToolbarRight={
           isOwner && viewMode === "grid" ? renderOwnerToolbar() : undefined
         }
