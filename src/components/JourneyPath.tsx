@@ -90,7 +90,8 @@ export default function JourneyPath({
   const { getProgressForJourney, markWatched: markWatchedLocal } =
     useJourneyProgress(journeyId);
 
-  const isSavedJourney = UUID_REGEX.test(journeyId) && initialProgress !== undefined;
+  const isSavedJourney =
+    UUID_REGEX.test(journeyId) && initialProgress !== undefined;
 
   const [localProgress, setLocalProgress] = useState<{
     completed: Set<number>;
@@ -106,19 +107,22 @@ export default function JourneyPath({
     return { completed: new Set(), currentPosition: 1 };
   });
 
-  const progress = isSavedJourney && localProgress
-    ? localProgress
-    : {
-        completed: new Set(getProgressForJourney(journeyId).completed),
-        currentPosition: getProgressForJourney(journeyId).currentPosition,
-      };
+  const progress =
+    isSavedJourney && localProgress
+      ? localProgress
+      : {
+          completed: new Set(getProgressForJourney(journeyId).completed),
+          currentPosition: getProgressForJourney(journeyId).currentPosition,
+        };
 
-  const currentPosition = isSavedJourney && localProgress
-    ? localProgress.currentPosition
-    : getProgressForJourney(journeyId).currentPosition;
-  const completed = isSavedJourney && localProgress
-    ? localProgress.completed
-    : new Set(getProgressForJourney(journeyId).completed);
+  const currentPosition =
+    isSavedJourney && localProgress
+      ? localProgress.currentPosition
+      : getProgressForJourney(journeyId).currentPosition;
+  const completed =
+    isSavedJourney && localProgress
+      ? localProgress.completed
+      : new Set(getProgressForJourney(journeyId).completed);
 
   const [showActionsFor, setShowActionsFor] = useState<number | null>(null);
   const [markError, setMarkError] = useState<string | null>(null);
@@ -157,10 +161,14 @@ export default function JourneyPath({
   const handleSaveItemReview = useCallback(async () => {
     if (reviewItemPosition == null) return;
     setIsSavingItemReview(true);
-    const result = await updateJourneyItemReview(journeyId, reviewItemPosition, {
-      rating: reviewRating || undefined,
-      review: reviewText.trim() || undefined,
-    });
+    const result = await updateJourneyItemReview(
+      journeyId,
+      reviewItemPosition,
+      {
+        rating: reviewRating || undefined,
+        review: reviewText.trim() || undefined,
+      },
+    );
     setIsSavingItemReview(false);
     if (!result.error) {
       setReviewItemPosition(null);
@@ -295,24 +303,22 @@ export default function JourneyPath({
             </div>
           )}
 
-          {isOwner &&
-            isSavedJourney &&
-            journeyStatus === "completed" && (
-              <button
-                onClick={() => setShowJourneyReviewModal(true)}
-                className="mb-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-colors cursor-pointer"
-              >
-                <Star className="w-4 h-4" />
-                {journeyReviewData?.reviewText || journeyReviewData?.overallRating
-                  ? "Edit journey review"
-                  : "Add journey review"}
-              </button>
-            )}
+          {isOwner && isSavedJourney && journeyStatus === "completed" && (
+            <button
+              onClick={() => setShowJourneyReviewModal(true)}
+              className="mb-4 w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-colors cursor-pointer"
+            >
+              <Star className="w-4 h-4" />
+              {journeyReviewData?.reviewText || journeyReviewData?.overallRating
+                ? "Edit journey review"
+                : "Add journey review"}
+            </button>
+          )}
 
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
             {journey.journeyTitle}
           </h2>
-          <p className="text-sm text-purple-300/80 mb-4">
+          <p className="text-md md:text-lg text-purple-300/80 mb-4">
             {journey.description}
           </p>
           <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -337,7 +343,7 @@ export default function JourneyPath({
               forkedCount > 0) && (
               <span className="text-sm text-zinc-500">
                 {(contentStats?.favorites_count ?? 0) > 0 && (
-                  <span>{(contentStats?.favorites_count ?? 0)} ♥</span>
+                  <span>{contentStats?.favorites_count ?? 0} ♥</span>
                 )}
                 {(contentStats?.favorites_count ?? 0) > 0 &&
                   ((contentStats?.views_count ?? 0) > 0 || forkedCount > 0) && (
@@ -351,9 +357,7 @@ export default function JourneyPath({
                 {(contentStats?.views_count ?? 0) > 0 && forkedCount > 0 && (
                   <span className="mx-1">·</span>
                 )}
-                {forkedCount > 0 && (
-                  <span>{forkedCount} saved</span>
-                )}
+                {forkedCount > 0 && <span>{forkedCount} saved</span>}
               </span>
             )}
           </div>
@@ -602,10 +606,14 @@ export default function JourneyPath({
               disabled={isSavingItemReview}
               className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:border-purple-500 focus:outline-none resize-none disabled:opacity-50 mb-4"
             />
-            <p className="text-zinc-500 text-xs mb-4">{reviewText.length}/280</p>
+            <p className="text-zinc-500 text-xs mb-4">
+              {reviewText.length}/280
+            </p>
             <div className="flex gap-2">
               <button
-                onClick={() => !isSavingItemReview && setReviewItemPosition(null)}
+                onClick={() =>
+                  !isSavingItemReview && setReviewItemPosition(null)
+                }
                 disabled={isSavingItemReview}
                 className="flex-1 py-2.5 rounded-xl font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
               >
@@ -631,7 +639,9 @@ export default function JourneyPath({
       {/* Journey review modal (when completed) */}
       <Modal
         isOpen={showJourneyReviewModal}
-        onClose={() => !isSavingJourneyReview && setShowJourneyReviewModal(false)}
+        onClose={() =>
+          !isSavingJourneyReview && setShowJourneyReviewModal(false)
+        }
         maxSize="md"
       >
         <div className="pt-2">
@@ -681,9 +691,7 @@ export default function JourneyPath({
           </div>
           <textarea
             value={journeyReviewText}
-            onChange={(e) =>
-              setJourneyReviewText(e.target.value.slice(0, 280))
-            }
+            onChange={(e) => setJourneyReviewText(e.target.value.slice(0, 280))}
             placeholder="Add a short review of the journey (optional)"
             rows={3}
             maxLength={280}

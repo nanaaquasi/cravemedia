@@ -1,94 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import type { ContentType } from "@/lib/types";
 import { motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-
-const JOURNEY_MESSAGES = [
-  "Plotting your path through the cosmos...",
-  "Mapping the route from start to finish...",
-  "Weaving your story, one step at a time...",
-  "Sit back—we're crafting your adventure...",
-  "Connecting the dots for your perfect journey...",
-  "Designing the sequence of your dreams...",
-  "Charting your course through the stars...",
-  "Building the roadmap to your next obsession...",
-];
-
-const MEDIA_SPECIFIC_MESSAGES = {
-  movie: [
-    "Dimming the lights for your private screening...",
-    "Scanning the archives for a cinematic masterpiece...",
-    "Casting the leads for your next favorite film...",
-    "Reviewing the dailies to find the perfect pick...",
-    "Wait for it... the opening credits are starting...",
-    "Sifting through the reels for a hidden gem...",
-    "Adjusting the lens for your next big adventure...",
-    "Scouting locations for a story you'll love...",
-  ],
-  tv: [
-    "Cueing up your next great binge-watch...",
-    "Synchronizing with the latest season's best...",
-    "Checking the schedule for your next obsession...",
-    "Buffering the best plot twists just for you...",
-    "Setting the stage for a marathon-worthy series...",
-    "Scanning the airwaves for your perfect signal...",
-    "Drafting the pilot for your new favorite show...",
-    "Ensuring the cliffhanger is worth the wait...",
-  ],
-  book: [
-    "Cracking the spine on a new journey...",
-    "Leafing through the shelves for a page-turner...",
-    "Dusting off the classics and the bestsellers...",
-    "Finding the perfect chapter to get lost in...",
-    "Scouring the library for your next great read...",
-    "Inking the pages of your upcoming adventure...",
-    "Bookmark found. Fetching your next story...",
-    "Translating your mood into a literary escape...",
-  ],
-  anime: [
-    "Powering up the search to over 9000...",
-    "Syncing the subtitles for your next watch...",
-    "Sketching the frames of a new world...",
-    "Opening the portal to your next isekai...",
-    "Calibrating the spirit energy for your picks...",
-    "Scanning the multiverse for top-tier animation...",
-    "Choosing a story with a legendary soundtrack...",
-    "Rendering the masterpiece you’ve been waiting for...",
-  ],
-};
-
-type MediaTypeKey = keyof typeof MEDIA_SPECIFIC_MESSAGES;
+import {
+  JOURNEY_CURATING_MESSAGES,
+  getCuratingMessagesForMediaType,
+} from "@/config/curating-loader-messages";
+import { useRotatingCuratingMessage } from "@/hooks/useRotatingCuratingMessage";
 
 interface CuratingLoaderProps {
   mode?: "list" | "journey";
   mediaType?: ContentType | ContentType[];
-}
-
-function randomIndex(length: number, exclude?: number): number {
-  if (length <= 1) return 0;
-  let idx = Math.floor(Math.random() * length);
-  if (exclude !== undefined && idx === exclude) {
-    idx = (idx + 1) % length;
-  }
-  return idx;
-}
-
-function getMessagesForMediaType(
-  mediaType: ContentType | ContentType[] | undefined,
-): string[] {
-  if (!mediaType || mediaType === "all") {
-    return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
-  }
-  const keys = Array.isArray(mediaType) ? mediaType : [mediaType];
-  if (keys.includes("all")) {
-    return (Object.values(MEDIA_SPECIFIC_MESSAGES) as string[][]).flat();
-  }
-  const merged = keys.flatMap(
-    (k) => MEDIA_SPECIFIC_MESSAGES[k as MediaTypeKey] ?? [],
-  );
-  return merged.length > 0 ? merged : getMessagesForMediaType("all");
 }
 
 export default function CuratingLoader({
@@ -99,18 +23,13 @@ export default function CuratingLoader({
   const messages = useMemo(
     () =>
       mode === "journey"
-        ? JOURNEY_MESSAGES
-        : getMessagesForMediaType(mediaType),
+        ? JOURNEY_CURATING_MESSAGES
+        : getCuratingMessagesForMediaType(mediaType),
     [mode, mediaType],
   );
-  const [index, setIndex] = useState(() => randomIndex(messages.length));
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((i) => randomIndex(messages.length, i));
-    }, 2800);
-    return () => clearInterval(id);
-  }, [messages.length]);
+  const { message, index } = useRotatingCuratingMessage(messages, {
+    active: true,
+  });
 
   // Lock body scroll when loader is active
   useEffect(() => {
@@ -247,9 +166,9 @@ export default function CuratingLoader({
       <div className="relative z-10 text-center">
         <p
           key={index}
-          className="text-2xl sm:text-3xl font-bold md:font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-white/90 to-white/70 animate-curate-text-fade drop-shadow-lg"
+          className="text-2xl sm:text-3xl font-bold md:font-extrabold text-transparent bg-clip-text bg-linear-to-r from-white via-white/90 to-white/70 animate-curate-text-fade drop-shadow-lg"
         >
-          {messages[Math.min(index, messages.length - 1)]}
+          {message}
         </p>
       </div>
     </motion.div>

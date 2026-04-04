@@ -3,11 +3,16 @@ import {
   AIResponse,
   ContentType,
   JourneyAIResponse,
+  PromoteItem,
   RefineAnswer,
   RefineResponse,
 } from "./types";
 import { getSystemPrompt } from "./ai-prompts";
-import { getJourneySystemPrompt } from "./ai-journey-prompts";
+import {
+  buildJourneyFromListUserMessage,
+  getJourneyFromListPrompt,
+  getJourneySystemPrompt,
+} from "./ai-journey-prompts";
 import { getRefineSystemPrompt } from "./ai-refine-prompts";
 import { cleanAndParseJSON } from "./ai-utils";
 
@@ -97,6 +102,56 @@ export async function generateJourneyWithGemini(
   return cleanAndParseJSON<JourneyAIResponse>(text);
 }
 
+export async function generateJourneyFromListWithGemini(
+  items: PromoteItem[],
+  type: ContentType | ContentType[],
+  options: {
+    collectionName: string;
+    collectionDescription?: string | null;
+    maxItems?: number;
+    userContext?: import("./types").UserRecommendContext;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  },
+): Promise<JourneyAIResponse> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GOOGLE_AI_API_KEY is required for Gemini provider");
+  }
+
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const ai = new GoogleGenAI({ apiKey });
+
+  const userMessage = buildJourneyFromListUserMessage(
+    items,
+    options.collectionName,
+    options.collectionDescription,
+  );
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: userMessage,
+    config: {
+      systemInstruction: getJourneyFromListPrompt(type, {
+        maxItems: options.maxItems,
+        userContext: options.userContext,
+        inputItemCount: items.length,
+      }),
+      maxOutputTokens: options.maxOutputTokens || 6000,
+      temperature: options.temperature ?? 0.4,
+      responseMimeType: options.responseMimeType || "application/json",
+    },
+  });
+
+  const text = response.text ?? "";
+  if (!text) {
+    throw new Error("No text response from Gemini");
+  }
+
+  return cleanAndParseJSON<JourneyAIResponse>(text);
+}
+
 export async function generateRefineWithGemini(
   query: string,
   type: ContentType | ContentType[],
@@ -125,6 +180,27 @@ export async function generateRefineWithGemini(
       maxOutputTokens: 2000,
       temperature: 0.8,
       responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          questions: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                text: { type: "string" },
+                options: { type: "array", items: { type: "string" } },
+                multiSelect: { type: "boolean" },
+              },
+              required: ["id", "text", "options", "multiSelect"],
+            },
+          },
+          isComplete: { type: "boolean" },
+          refinedQuery: { type: "string", nullable: true },
+        },
+        required: ["questions", "isComplete"],
+      },
     },
   });
 

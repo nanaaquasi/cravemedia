@@ -157,6 +157,16 @@ export default async function CollectionDetailPage({
   };
   const savesCount = cloneCountResult.count ?? 0;
 
+  let linkedJourneyId: string | null = null;
+  if (isOwner) {
+    const { data: promotedJourney } = await supabase
+      .from("journeys")
+      .select("id")
+      .eq("source_collection_id", id)
+      .maybeSingle();
+    linkedJourneyId = promotedJourney?.id ?? null;
+  }
+
   return (
     <>
       <ViewTracker targetType="collection" targetId={id} />
@@ -180,6 +190,7 @@ export default async function CollectionDetailPage({
       }
       contentStats={contentStats}
       savesCount={savesCount}
+      linkedJourneyId={linkedJourneyId}
     />
     </>
   );

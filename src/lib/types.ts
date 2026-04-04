@@ -17,6 +17,21 @@ export interface AIResponse {
   items: AIRecommendation[];
 }
 
+/** Items passed to AI when promoting a collection to a journey */
+export interface PromoteItem {
+  title: string;
+  year: number;
+  type: "movie" | "tv" | "book" | "anime";
+  genres: string[];
+  description?: string;
+  creator?: string;
+  posterUrl?: string | null;
+  externalId?: string | null;
+  runtime?: string | null;
+  rating?: number | null;
+  ratingSource?: string | null;
+}
+
 export interface EnrichedRecommendation extends AIRecommendation {
   posterUrl: string | null;
   rating: number | null;

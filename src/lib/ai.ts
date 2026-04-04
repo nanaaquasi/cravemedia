@@ -2,22 +2,26 @@ import {
   AIResponse,
   ContentType,
   JourneyAIResponse,
+  PromoteItem,
   RefineAnswer,
   RefineResponse,
 } from "./types";
 import {
   generateWithGemini,
   generateJourneyWithGemini,
+  generateJourneyFromListWithGemini,
   generateRefineWithGemini,
 } from "./ai-gemini";
 import {
   generateWithOpenAI,
   generateJourneyWithOpenAI,
+  generateJourneyFromListWithOpenAI,
   generateRefineWithOpenAI,
 } from "./ai-openai";
 import {
   generateWithAnthropic,
   generateJourneyWithAnthropic,
+  generateJourneyFromListWithAnthropic,
   generateRefineWithAnthropic,
 } from "./ai-anthropic";
 import { withRetry } from "./ai-retry";
@@ -99,6 +103,43 @@ export async function generateJourney(
     default:
       raw = await withRetry(() =>
         generateJourneyWithGemini(query, type, options),
+      );
+  }
+
+  return normalizeJourneyResponse(raw);
+}
+
+export async function generateJourneyFromList(
+  items: PromoteItem[],
+  type: ContentType | ContentType[],
+  options: {
+    collectionName: string;
+    collectionDescription?: string | null;
+    maxItems?: number;
+    userContext?: import("./types").UserRecommendContext;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  },
+): Promise<JourneyAIResponse> {
+  const provider = process.env.AI_PROVIDER || "gemini";
+  let raw: JourneyAIResponse;
+
+  switch (provider) {
+    case "openai":
+      raw = await withRetry(() =>
+        generateJourneyFromListWithOpenAI(items, type, options),
+      );
+      break;
+    case "anthropic":
+      raw = await withRetry(() =>
+        generateJourneyFromListWithAnthropic(items, type, options),
+      );
+      break;
+    case "gemini":
+    default:
+      raw = await withRetry(() =>
+        generateJourneyFromListWithGemini(items, type, options),
       );
   }
 

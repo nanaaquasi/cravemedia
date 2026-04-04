@@ -20,10 +20,15 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { createCollectionWithItems } from "@/app/actions/collection";
+import { promoteCollectionToJourney } from "@/app/actions/journey";
 import { EnrichedRecommendation } from "@/lib/types";
 import MediaSearchModal from "@/components/MediaSearchModal";
 import Papa from "papaparse";
 import Toast from "@/components/Toast";
+import Modal from "@/components/Modal";
+import { JOURNEY_MAX_ITEMS } from "@/config/journey";
+import { JOURNEY_CURATING_MESSAGES } from "@/config/curating-loader-messages";
+import { useRotatingCuratingMessage } from "@/hooks/useRotatingCuratingMessage";
 import {
   DndContext,
   closestCenter,
@@ -256,6 +261,12 @@ function CreateCollectionContent() {
   // Mobile: keep list panel open by default; tuck form behind details accordion
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [mobileListOpen, setMobileListOpen] = useState(true);
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [isPromotingJourney, setIsPromotingJourney] = useState(false);
+  const { message: promoteLoaderMessage, index: promoteLoaderIndex } =
+    useRotatingCuratingMessage(JOURNEY_CURATING_MESSAGES, {
+      active: isPromotingJourney,
+    });
 
   // Persist draft to localStorage on every meaningful change
   useEffect(() => {
@@ -413,6 +424,24 @@ function CreateCollectionContent() {
         if (fileInputRef.current) fileInputRef.current.value = "";
       },
     });
+  };
+
+  const handleConfirmPromoteJourney = async () => {
+    if (!savedCollectionId) return;
+    setIsPromoteModalOpen(false);
+    setIsPromotingJourney(true);
+    try {
+      const result = await promoteCollectionToJourney(savedCollectionId);
+      if (result.error) {
+        setToastMessage(result.error);
+        return;
+      }
+      if (result.journeyId) {
+        router.push(`/journey/${result.journeyId}`);
+      }
+    } finally {
+      setIsPromotingJourney(false);
+    }
   };
 
   const handleSave = async () => {
@@ -647,15 +676,28 @@ function CreateCollectionContent() {
           </div>
 
           {/* Action buttons — desktop only (under form) */}
-          <div className="hidden lg:flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="hidden lg:flex flex-col gap-3 pt-2">
             {savedCollectionId ? (
-              <Link
-                href={`/collections/${savedCollectionId}`}
-                className="flex-1 order-1 sm:order-2 px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 cursor-pointer"
-              >
-                View {CRAVELIST_LABEL}
-              </Link>
-            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href={`/collections/${savedCollectionId}`}
+                  className="flex-1 px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 cursor-pointer"
+                >
+                  View {CRAVELIST_LABEL}
+                </Link>
+                {items.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPromoteModalOpen(true)}
+                    className="flex-1 px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium border border-purple-500/50 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                    Create Journey from this
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {!savedCollectionId ? (
               <button
                 onClick={handleSave}
                 disabled={!name.trim() || isSubmitting}
@@ -667,7 +709,7 @@ function CreateCollectionContent() {
                   <span>Save {CRAVELIST_LABEL}</span>
                 )}
               </button>
-            )}
+            ) : null}
             <button
               onClick={() => router.back()}
               disabled={isSubmitting}
@@ -821,12 +863,24 @@ function CreateCollectionContent() {
 
           <div className="flex lg:hidden flex-col gap-2">
             {savedCollectionId ? (
-              <Link
-                href={`/collections/${savedCollectionId}`}
-                className="w-full px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 cursor-pointer"
-              >
-                View {CRAVELIST_LABEL}
-              </Link>
+              <>
+                <Link
+                  href={`/collections/${savedCollectionId}`}
+                  className="w-full px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors shadow-lg shadow-purple-500/20 cursor-pointer"
+                >
+                  View {CRAVELIST_LABEL}
+                </Link>
+                {items.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPromoteModalOpen(true)}
+                    className="w-full px-6 py-2.5 flex items-center justify-center gap-2 rounded-xl text-sm font-medium border border-purple-500/50 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                    Create Journey from this
+                  </button>
+                ) : null}
+              </>
             ) : (
               <button
                 onClick={handleSave}
@@ -857,6 +911,74 @@ function CreateCollectionContent() {
         onSelect={handleAddItem}
         onAddClick={handleAddItem}
       />
+
+      <Modal
+        isOpen={isPromoteModalOpen}
+        onClose={() => !isPromotingJourney && setIsPromoteModalOpen(false)}
+        maxSize="md"
+      >
+        <div className="pt-2">
+          <h3 className="text-lg font-semibold text-white mb-3">
+            Create journey from this list?
+          </h3>
+          {items.length > JOURNEY_MAX_ITEMS ? (
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              Journeys work best with up to {JOURNEY_MAX_ITEMS} items so each
+              transition feels meaningful. Craveo will select the best{" "}
+              {JOURNEY_MAX_ITEMS} from your {items.length} items to build the
+              most compelling arc, and explain its choices in the journey
+              description.
+            </p>
+          ) : (
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              We&apos;ll turn your {CRAVELIST_LABEL.toLowerCase()} into a guided
+              journey: Craveo will reorder your titles for the best viewing
+              sequence and add transitions between each step. You can only do this
+              once per list.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsPromoteModalOpen(false)}
+              disabled={isPromotingJourney}
+              className="flex-1 py-2.5 rounded-xl font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmPromoteJourney}
+              className="flex-1 py-2.5 rounded-xl font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors cursor-pointer"
+            >
+              Create journey
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {isPromotingJourney ? (
+        <div
+          className="fixed inset-0 z-120 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm px-6"
+          role="status"
+          aria-live="polite"
+          aria-label="Creating your journey"
+        >
+          <Loader2
+            className="w-12 h-12 animate-spin text-purple-400 mb-4"
+            aria-hidden
+          />
+          <p className="text-white text-lg font-medium text-center">
+            Crafting your journey…
+          </p>
+          <p
+            key={promoteLoaderIndex}
+            className="text-zinc-400 text-sm mt-2 text-center max-w-sm min-h-[2.75rem] px-2 animate-curate-text-fade"
+          >
+            {promoteLoaderMessage}
+          </p>
+        </div>
+      ) : null}
 
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
     </main>

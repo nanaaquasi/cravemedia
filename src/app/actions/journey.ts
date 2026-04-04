@@ -17,9 +17,20 @@ export async function saveJourney(
   return { error: "Use saveJourneyData instead" };
 }
 
-import { JourneyResponse, RefineAnswer } from "@/lib/types";
-import type { JourneyItem } from "@/lib/types";
+import {
+  EnrichedRecommendation,
+  JourneyResponse,
+  RefineAnswer,
+} from "@/lib/types";
+import type { JourneyItem, JourneyItemRaw, PromoteItem } from "@/lib/types";
 import { parseRuntimeMinutes } from "@/lib/runtime";
+import { generateJourneyFromList } from "@/lib/ai";
+import { JOURNEY_MAX_ITEMS } from "@/config/journey";
+import {
+  inferContentTypeFromPromoteItems,
+  mergePromotedJourneyItems,
+} from "@/lib/promote-journey";
+import type { CollectionItem } from "@/lib/supabase/types";
 
 // ...
 
@@ -32,6 +43,8 @@ export async function saveJourneyData(data: {
   refinement_steps?: RefineAnswer[];
   is_public?: boolean;
   is_explicitly_saved?: boolean;
+  /** When set, links this journey to the collection it was promoted from */
+  source_collection_id?: string | null;
 }) {
   const supabase = await createClient();
 
@@ -63,6 +76,7 @@ export async function saveJourneyData(data: {
       status: "wishlist",
       is_public: data.is_public ?? false,
       is_explicitly_saved: data.is_explicitly_saved ?? true,
+      source_collection_id: data.source_collection_id ?? null,
     })
     .select("id")
     .single();
@@ -99,7 +113,163 @@ export async function saveJourneyData(data: {
   }
 
   revalidatePath("/profile");
+  if (data.source_collection_id) {
+    revalidatePath(`/collections/${data.source_collection_id}`);
+  }
   return { success: true, journeyId: newJourney.id };
+}
+
+function collectionRowToPromoteItem(row: CollectionItem): PromoteItem | null {
+  const meta = row.metadata as Partial<EnrichedRecommendation> | null;
+  const title = (row.title || meta?.title || "").trim();
+  if (!title) return null;
+
+  const typeRaw = (row.media_type || meta?.type || "movie").toLowerCase();
+  const type = (
+    ["movie", "tv", "book", "anime"].includes(typeRaw) ? typeRaw : "movie"
+  ) as PromoteItem["type"];
+
+  const year =
+    typeof meta?.year === "number" && !Number.isNaN(meta.year)
+      ? meta.year
+      : 0;
+
+  const genres = Array.isArray(meta?.genres) ? meta.genres : [];
+
+  return {
+    title,
+    year,
+    type,
+    genres,
+    description: meta?.description,
+    creator: meta?.creator,
+    posterUrl: row.image_url ?? meta?.posterUrl ?? null,
+    externalId: meta?.externalId ?? null,
+    runtime: meta?.runtime ?? null,
+    rating: meta?.rating ?? null,
+    ratingSource: meta?.ratingSource ?? null,
+  };
+}
+
+export async function promoteCollectionToJourney(collectionId: string): Promise<{
+  journeyId?: string;
+  error?: string;
+}> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in to create a journey." };
+  }
+
+  const { data: collection, error: colError } = await supabase
+    .from("collections")
+    .select("id, user_id, name, description")
+    .eq("id", collectionId)
+    .single();
+
+  if (colError || !collection) {
+    return { error: "Collection not found." };
+  }
+
+  if (collection.user_id !== user.id) {
+    return { error: "You can only promote your own lists." };
+  }
+
+  const { data: existingJourney } = await supabase
+    .from("journeys")
+    .select("id")
+    .eq("source_collection_id", collectionId)
+    .maybeSingle();
+
+  if (existingJourney?.id) {
+    return { error: "This list has already been turned into a journey." };
+  }
+
+  const { data: rows, error: itemsError } = await supabase
+    .from("collection_items")
+    .select("*")
+    .eq("collection_id", collectionId)
+    .order("position", { ascending: true });
+
+  if (itemsError) {
+    return { error: itemsError.message };
+  }
+
+  const promoteItems = (rows || [])
+    .map(collectionRowToPromoteItem)
+    .filter((p): p is PromoteItem => p !== null);
+
+  if (promoteItems.length === 0) {
+    return { error: "Add at least one item to your list before creating a journey." };
+  }
+
+  const contentType = inferContentTypeFromPromoteItems(promoteItems);
+
+  let aiResult;
+  try {
+    aiResult = await generateJourneyFromList(promoteItems, contentType, {
+      collectionName: collection.name,
+      collectionDescription: collection.description,
+      maxItems: JOURNEY_MAX_ITEMS,
+    });
+  } catch (e) {
+    console.error("promoteCollectionToJourney AI error:", e);
+    return {
+      error:
+        e instanceof Error
+          ? e.message
+          : "Failed to generate journey from your list.",
+    };
+  }
+
+  const rawItems = (aiResult.items || []) as JourneyItemRaw[];
+  if (rawItems.length === 0) {
+    return {
+      error:
+        "Craveo couldn't assemble a valid journey from your list. Try again.",
+    };
+  }
+
+  const mergedItems = mergePromotedJourneyItems(rawItems, promoteItems);
+
+  const totalRuntimeMinutes = mergedItems.reduce((sum, item) => {
+    const m = parseRuntimeMinutes(item.runtime);
+    return sum + (m ?? 0);
+  }, 0);
+
+  const journeyTitle =
+    (aiResult.journey_title ?? "").trim() || collection.name;
+
+  const results: JourneyResponse = {
+    journeyTitle,
+    description: aiResult.description ?? "",
+    totalRuntimeMinutes:
+      totalRuntimeMinutes > 0 ? totalRuntimeMinutes : undefined,
+    difficultyProgression:
+      aiResult.difficulty_progression ?? aiResult.difficultyProgression ?? "",
+    items: mergedItems,
+    itemCount: mergedItems.length,
+  };
+
+  const save = await saveJourneyData({
+    title: journeyTitle,
+    query: `Promoted from Cravelist: ${collection.name}`,
+    results,
+    refinement_steps: [],
+    is_public: false,
+    is_explicitly_saved: true,
+    source_collection_id: collectionId,
+  });
+
+  if (save.error) {
+    return { error: save.error };
+  }
+
+  return { journeyId: save.journeyId };
 }
 
 export async function beginJourney(

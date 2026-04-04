@@ -3,11 +3,16 @@ import {
   AIResponse,
   ContentType,
   JourneyAIResponse,
+  PromoteItem,
   RefineAnswer,
   RefineResponse,
 } from "./types";
 import { getSystemPrompt } from "./ai-prompts";
-import { getJourneySystemPrompt } from "./ai-journey-prompts";
+import {
+  buildJourneyFromListUserMessage,
+  getJourneyFromListPrompt,
+  getJourneySystemPrompt,
+} from "./ai-journey-prompts";
 import { getRefineSystemPrompt } from "./ai-refine-prompts";
 import { cleanAndParseJSON } from "./ai-utils";
 
@@ -29,7 +34,7 @@ export async function generateWithAnthropic(
   }
 
   const client = new Anthropic({ apiKey });
-  const model = process.env.CLAUDE_MODEL || "claude-haiku-4-5-20251001";
+  const model = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
 
   const message = await client.messages.create({
     model,
@@ -69,7 +74,7 @@ export async function generateJourneyWithAnthropic(
   }
 
   const client = new Anthropic({ apiKey });
-  const model = process.env.CLAUDE_MODEL || "claude-haiku-4-5-20251001";
+  const model = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
 
   const message = await client.messages.create({
     model,
@@ -81,6 +86,53 @@ export async function generateJourneyWithAnthropic(
       streamingServiceOnly: options.streamingServiceOnly,
     }),
     messages: [{ role: "user", content: query }],
+  });
+
+  const textBlock = message.content.find((block) => block.type === "text");
+  if (textBlock?.type !== "text") {
+    throw new Error("No text response from Claude");
+  }
+
+  return cleanAndParseJSON<JourneyAIResponse>(textBlock.text);
+}
+
+export async function generateJourneyFromListWithAnthropic(
+  items: PromoteItem[],
+  type: ContentType | ContentType[],
+  options: {
+    collectionName: string;
+    collectionDescription?: string | null;
+    maxItems?: number;
+    userContext?: import("./types").UserRecommendContext;
+    maxOutputTokens?: number;
+    temperature?: number;
+    responseMimeType?: string;
+  },
+): Promise<JourneyAIResponse> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is required for Anthropic provider");
+  }
+
+  const client = new Anthropic({ apiKey });
+  const model = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
+
+  const userMessage = buildJourneyFromListUserMessage(
+    items,
+    options.collectionName,
+    options.collectionDescription,
+  );
+
+  const message = await client.messages.create({
+    model,
+    max_tokens: options.maxOutputTokens || 6000,
+    temperature: options.temperature ?? 0.7,
+    system: getJourneyFromListPrompt(type, {
+      maxItems: options.maxItems,
+      userContext: options.userContext,
+      inputItemCount: items.length,
+    }),
+    messages: [{ role: "user", content: userMessage }],
   });
 
   const textBlock = message.content.find((block) => block.type === "text");
@@ -106,7 +158,7 @@ export async function generateRefineWithAnthropic(
   }
 
   const client = new Anthropic({ apiKey });
-  const model = process.env.CLAUDE_MODEL || "claude-haiku-4-5-20251001";
+  const model = process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514";
 
   const message = await client.messages.create({
     model,

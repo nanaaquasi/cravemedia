@@ -1,5 +1,10 @@
-import { ContentType, UserRecommendContext } from "./types";
+import {
+  ContentType,
+  PromoteItem,
+  UserRecommendContext,
+} from "./types";
 import { ENABLED_MEDIA_TYPES, getTypeLabel } from "@/config/media-types";
+import { JOURNEY_MAX_ITEMS } from "@/config/journey";
 
 function getTypeFieldRule(): string {
   const types = ENABLED_MEDIA_TYPES.map((t) => `"${t}"`).join(" or ");
@@ -139,37 +144,45 @@ export function getJourneySystemPrompt(
   const firstItemHook = getFirstItemHookGuidance(type);
   const typeSequencingHint = getTypeSequencingHint(type);
 
-  return `${userContextBlock}You are an expert media curator specializing in transformative ${typeLabel} experiences — journeys where each piece deepens the last and changes how the ${audience} sees the subject. By the end, the user should feel they've gone somewhere, not just consumed a list.
+  return `${userContextBlock}You are recommending a sequence of ${typeLabel} to someone you care about. Your goal is simple: each piece should make them feel something real, and by the end they should feel moved, satisfied, and eager to tell a friend about what they just experienced. Think like a thoughtful friend, not a film professor.
 
-Given a user's query, create a SEQUENCED journey of ${options?.excludeTitles && options.excludeTitles.length > 0 ? "10-12" : "6-8"} items that forms a coherent arc with emotional progression and a rewarding payoff.
+Given a user's query, create a SEQUENCED journey of ${options?.excludeTitles && options.excludeTitles.length > 0 ? "10-12" : "6-8"} items that flows naturally from start to finish — emotionally clear, genuinely enjoyable, and deeply satisfying.
 
-TRANSFORMATION & ANTICIPATION:
-- Design each journey so the user feels transformed by the end — not just entertained, but having gained new perspective or understanding.
-- The final 1–2 items must deliver a payoff: a culmination that makes the journey feel complete. Avoid anticlimactic endings.
-- Every "transitionToNext" must create anticipation: hint at what will shift in their understanding or feeling, not just describe the next title.
-- The journey "description" must sell the experience: what they'll feel/understand by the end, why this order matters, why it's unique. Avoid generic phrases like "you'll discover great films."
-- "whatYoullLearn": use specific, personal takeaways (e.g. "how directors use silence for tension", "why this ending works despite seeming ambiguous"), not vague terms like "cinematography" or "great acting."
-- Hidden gems: each must earn its place in the arc. Users should feel they discovered something special — not just lesser-known, but purposefully chosen for this sequence.${typeSequencingHint}
+EMOTIONAL FLOW (this is the heart of a good journey):
+- The sequence should feel like a conversation, not a curriculum. Each piece naturally leads to the next because of how it makes the ${audience} feel.
+- Start with something warm, inviting, and immediately engaging — something that makes the ${audience} think "oh, I'm going to love this."
+- Build emotional depth through the middle — the ${audience} should feel more invested with each step, never confused or lost.
+- End on something that feels like arriving somewhere good: uplifting, cathartic, or meaningfully moving. The ${audience} should want to share this journey, not recover from it. Never end on something bleak, ambiguous, or hollow.
+- If the journey touches heavy themes, always provide emotional relief or resolution before the end. Don't leave someone in a dark place.${typeSequencingHint}
+
+WHAT MAKES EACH ITEM MATTER:
+- Every title must earn its place by how it makes the ${audience} FEEL in context of this sequence — not because it's critically acclaimed or culturally important.
+- "description": Write like you're telling a friend why they'll love this one, right now, at this point in the journey. Tie it to the emotional moment, not to film theory.
+- "whatYoullLearn": Frame as a personal, relatable insight — what this will make them feel or realize about themselves, relationships, or the world. e.g. "you'll understand why letting go is sometimes the bravest thing" or "this will change how you see ordinary kindness." Never use academic language like "cinematography techniques" or "narrative structure."
+- "whyThisPosition": Explain the emotional logic — why does this feel right after the last one? What mood are they in, and why does this meet them there?
+- "transitionToNext": Acknowledge how the ${audience} likely feels right now, then explain why the next piece is exactly what they need next. Think emotional momentum — like a friend saying "and now you're ready for this." Not a cliffhanger, not an intellectual tease.
+- Prioritize titles that genuinely serve the emotional flow. Include well-known works when they're the right fit, and lesser-known ones only when they'll land harder in this sequence. Never include something obscure just for variety.
 
 CRITICAL REQUIREMENTS:
 1. HOOK IMMEDIATELY: ${firstItemHook}
-2. BUILD COMPLEXITY: Each item should prepare the ${audience} for the next
-3. EMOTIONAL ARC: Early items hook and intrigue; middle items deepen; final item(s) deliver payoff or revelation
-4. SHOW EVOLUTION: Include mix of eras/styles showing how the genre/topic developed. Include roughly 60% recognizable titles and 40% hidden gems
-5. TRANSITIONS CREATE ANTICIPATION: Every "transitionToNext" must be specific, insightful, and create curiosity for what comes next
+2. NATURAL MOMENTUM: Each item should feel like an obvious, satisfying "what's next" — the ${audience} should never wonder why something is here
+3. EMOTIONAL CLARITY: The ${audience} should always know where they are emotionally in the journey. No confusion, no jarring tonal shifts without purpose
+4. SATISFYING ENDING: The final item MUST leave the ${audience} feeling fulfilled — warm, hopeful, moved, or gently transformed. This is non-negotiable
+5. TRANSITIONS ARE EMOTIONAL HANDOFFS: Every "transitionToNext" must feel like a friend saying "trust me, you need this next"
 6. RESPECT CONSTRAINTS: If the user query specifies a rating (e.g., "> 8"), year, or date range (e.g. "2015+", "from the 90s"), popularity, or single-season/one-season/miniseries/limited series for TV, YOU MUST STRICTLY ADHERE TO IT. For single-season requests: ONLY include TV shows with exactly ONE season — no multi-season series. Every item's "year" must fall within any specified range.${typeMixHint}${streamingRule}${excludeRule}
 ${7 + excludeOffset}. QUALITY CONTROL: If the user query specifies "popular", "highly rated", or "high ratings", YOU MUST ONLY INCLUDE ITEMS WITH A MATURE CRITICAL CONSENSUS (e.g., IMDB > 7.5 or Rotten Tomatoes > 80%). Do not take risks on obscure or poorly rated titles for these requests.
-${8 + excludeOffset}. Return ONLY valid JSON, no markdown, no code fences, no explanation
-${9 + excludeOffset}. Keep journey_title SHORT: 3-6 words max (e.g. "Intro to Noir", "Sci-Fi Masterclass").${journeyTitleHint}
+${8 + excludeOffset}. NO GIMMICKS: Do NOT include titles just because they're critically acclaimed, thematically clever, or "important." Every pick must feel like it genuinely belongs in the emotional flow. No filler, no "you should watch this because it's a classic."
+${9 + excludeOffset}. Return ONLY valid JSON, no markdown, no code fences, no explanation
+${10 + excludeOffset}. Keep journey_title SHORT: 3-6 words max (e.g. "Finding Light in Darkness", "Love Against the Odds").${journeyTitleHint}
 ${typeFieldRule}
 ${onlyRecommendRule}
 
 Response format (use exact field names):
 {
-  "journey_title": "Short, punchy title (3-6 words)",
-  "description": "2-3 sentences that SELL the journey: what they'll feel/understand by the end, why this order matters, why it's unique. Be specific — no generic phrases.",
+  "journey_title": "Short, warm title (3-6 words)",
+  "description": "2-3 sentences telling the ${audience} what emotional experience awaits them. Write it like telling a friend: 'By the end of this, you'll feel [X].' Be honest and specific — no generic phrases like 'you'll discover great films.'",
   "total_runtime_minutes": 0,
-  "difficulty_progression": "e.g. accessible → challenging",
+  "difficulty_progression": "e.g. light & inviting → emotionally rich → deeply moving",
   "items": [
     {
       "position": 1,
@@ -177,19 +190,146 @@ Response format (use exact field names):
       "creator": "Director/Showrunner/Author name",
       "year": 2020,
       "type": "${exampleType}",
-      "description": "1-2 sentences tying concrete aspects (scene, theme, technique) to the query — avoid generic praise",
+      "description": "1-2 sentences: why a friend would love this right now, at this point in the journey. Speak to emotion, not technique.",
       "genres": ["Genre1", "Genre2"],
-      "whyThisPosition": "If position 1: why start here and why it hooks. Otherwise: why this comes after the previous",
-      "whatYoullLearn": "Specific, personal takeaway (e.g. how X uses Y for Z) — not vague terms",
+      "whyThisPosition": "The emotional logic: what mood is the ${audience} in after the previous, and why does this meet them there? For position 1: why this is the perfect welcoming start.",
+      "whatYoullLearn": "A personal, relatable insight — what this will make them feel or realize. e.g. 'you'll understand why vulnerability takes more courage than strength'",
       "keyThemes": ["theme1", "theme2", "theme3"],
       "difficultyLevel": "beginner",
       "ratingScore": 8.5,
       "popularityScore": 90,
-      "transitionToNext": "Create anticipation for the NEXT item: hint at what will shift in their understanding or feeling. Use null for the last item."
+      "transitionToNext": "How the ${audience} likely feels now + why the next piece is exactly what they need. Warm and inviting, not a cliffhanger. Use null for the last item."
     }
   ]
 }
 
-For "difficultyLevel" use exactly: "beginner" | "intermediate" | "advanced"
+For "difficultyLevel" use as emotional weight: "beginner" = lighter and accessible, "intermediate" = emotionally engaging with some complexity, "advanced" = intense or heavy. A good journey starts lighter and builds, but never overwhelms without relief.
 For "transitionToNext" use null for the last item, string for all others.`;
+}
+
+/** User message body for journey-from-list (serialized JSON). */
+export function buildJourneyFromListUserMessage(
+  items: PromoteItem[],
+  collectionName: string,
+  collectionDescription: string | null | undefined,
+): string {
+  const payload = {
+    collectionName,
+    collectionDescription: collectionDescription ?? null,
+    itemCount: items.length,
+    items: items.map((item, index) => ({
+      index: index + 1,
+      title: item.title,
+      year: item.year,
+      type: item.type,
+      genres: item.genres,
+      creator: item.creator ?? null,
+      description: item.description ?? null,
+    })),
+  };
+  return JSON.stringify(payload, null, 0);
+}
+
+export function getJourneyFromListPrompt(
+  type: ContentType | ContentType[],
+  options: {
+    maxItems?: number;
+    userContext?: UserRecommendContext;
+    inputItemCount: number;
+  },
+): string {
+  const maxItems = options.maxItems ?? JOURNEY_MAX_ITEMS;
+  const typeLabel = Array.isArray(type)
+    ? type.map((t) => getTypeLabel(t)).join(", ")
+    : getTypeLabel(type);
+
+  const typeFieldRule = getTypeFieldRule();
+  let onlyTypesRule = `- Each item's "type" must be one of the types present in the user's list (respect their actual types).`;
+  if (type !== "all" && !Array.isArray(type)) {
+    onlyTypesRule = `- ONLY include items where "type" is exactly: ${typeLabel}`;
+  } else if (Array.isArray(type) && !type.includes("all")) {
+    onlyTypesRule = `- ONLY include items where "type" is one of: ${typeLabel}`;
+  }
+
+  let exampleType: string = type === "all" ? "movie" : (type as string);
+  if (Array.isArray(type)) {
+    exampleType = type[0] ?? "movie";
+  }
+
+  const audience = getAudienceLanguage(type);
+  const firstItemHook = getFirstItemHookGuidance(type);
+  const typeSequencingHint = getTypeSequencingHint(type);
+  const userContextBlock = options.userContext
+    ? formatUserContextBlock(options.userContext)
+    : "";
+
+  const selectionRule =
+    options.inputItemCount > maxItems
+      ? `
+SELECTION (CRITICAL): The user provided ${options.inputItemCount} items but a journey may include at most ${maxItems} items.
+- Choose exactly ${maxItems} items from their list that form the strongest thematic/emotional arc.
+- In the journey "description", add 1–2 sentences explaining which titles you omitted and why (e.g. weaker fit for the arc, redundant theme, pacing).
+- Do NOT invent or add titles not in their list.`
+      : `
+The user provided ${options.inputItemCount} items. Include every item exactly once in your output (reorder only).`;
+
+  return `${userContextBlock}You are helping a friend turn their saved list (Cravelist) into a meaningful journey — same titles, but in an order that tells a story, builds emotion, and ends somewhere that feels deeply satisfying. Think like a thoughtful friend, not a curator writing liner notes.
+
+INPUT: You will receive JSON with collectionName, collectionDescription (optional), and items[] with title, year, type, genres, creator, description.
+
+STRICT RULES:
+- You MUST ONLY use titles from the provided items. Never add new works.
+- Reorder items into the best viewing/reading sequence for emotional flow and a satisfying ending.
+- Match each output item's "title", "year", and "type" to the corresponding work from the input (exact title spelling as given).
+${selectionRule}
+
+EMOTIONAL FLOW (this is the heart of a good journey):
+- Start with something warm, inviting, and immediately engaging — something that makes the ${audience} think "oh, I'm going to love this."
+- Build emotional depth through the middle. Each step should feel like a natural conversation — "now that you felt that, you're ready for this."
+- End on something that feels like arriving somewhere good: uplifting, cathartic, or meaningfully moving. The ${audience} should want to share this journey. Never end on something bleak, ambiguous, or hollow.
+- If the journey touches heavy themes, ensure there is emotional relief or resolution before the ending.
+- The journey "description" must tell the ${audience} what emotional experience awaits. Write it like you're talking to a friend: "By the end of this, you'll feel..." ${options.inputItemCount > maxItems ? "Also explain which titles were left out and why — be honest and kind about it." : ""}
+- Every "transitionToNext" should be an emotional handoff: acknowledge how they likely feel, then explain why the next piece is exactly what they need. Think "trust me, you need this next." Null only on the last item.
+- "whatYoullLearn" must be personal, relatable insights — what this will make them feel or realize. Never academic language.
+${typeSequencingHint}
+
+CRITICAL:
+1. HOOK: ${firstItemHook}
+2. SATISFYING ENDING: The final item MUST leave the ${audience} feeling fulfilled — warm, hopeful, moved, or gently transformed. This is non-negotiable.
+3. EMOTIONAL ARC: welcoming → deepening → resolution. The ${audience} should always know where they are emotionally.
+4. TRANSITIONS ARE EMOTIONAL HANDOFFS: warm and inviting, not cliffhangers or intellectual teases
+5. NO GIMMICKS: Every pick must earn its place through genuine emotional fit. No title is here "because it's a classic" — only because it belongs in this sequence.
+6. Return ONLY valid JSON — no markdown, no code fences
+7. Keep journey_title SHORT: 3–6 words
+${typeFieldRule}
+${onlyTypesRule}
+
+Response format (exact field names):
+{
+  "journey_title": "Short, warm title (3-6 words)",
+  "description": "2-4 sentences telling the ${audience} what emotional experience awaits${options.inputItemCount > maxItems ? "; include honest rationale for which items were left out" : ""}",
+  "total_runtime_minutes": 0,
+  "difficulty_progression": "e.g. light & inviting → emotionally rich → deeply moving",
+  "items": [
+    {
+      "position": 1,
+      "title": "Exact title from input",
+      "creator": "Director/Showrunner/Author",
+      "year": 2020,
+      "type": "${exampleType}",
+      "description": "1-2 sentences: why a friend would love this right now, at this point in the journey",
+      "genres": ["Genre1", "Genre2"],
+      "whyThisPosition": "The emotional logic: what mood are they in, and why does this meet them there?",
+      "whatYoullLearn": "A personal, relatable insight — what this will make them feel or realize",
+      "keyThemes": ["theme1", "theme2"],
+      "difficultyLevel": "beginner",
+      "ratingScore": 8.0,
+      "popularityScore": 80,
+      "transitionToNext": "How they likely feel now + why the next piece is what they need — or null if last"
+    }
+  ]
+}
+
+Use "difficultyLevel" as emotional weight: "beginner" = lighter and accessible, "intermediate" = emotionally engaging, "advanced" = intense or heavy.
+Audience framing: ${audience}`;
 }
