@@ -10,6 +10,18 @@ import {
 
 export type RefineStep = "idle" | "loading" | "questions" | "complete";
 
+function sanitizeQuestions(raw: RefineQuestion[]): RefineQuestion[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (q) =>
+      q &&
+      typeof q.id === "string" &&
+      typeof q.text === "string" &&
+      Array.isArray(q.options) &&
+      q.options.length > 0,
+  );
+}
+
 export function useIntentRefine() {
   const [step, setStep] = useState<RefineStep>("idle");
   const [questions, setQuestions] = useState<RefineQuestion[]>([]);
@@ -65,8 +77,14 @@ export function useIntentRefine() {
           setRefinedQuery(result.refinedQuery);
           setStep("complete");
         } else {
-          setQuestions(result.questions);
-          setStep("questions");
+          const valid = sanitizeQuestions(result.questions);
+          if (valid.length === 0) {
+            setError("Received invalid follow-up questions. Please try again.");
+            setStep("idle");
+          } else {
+            setQuestions(valid);
+            setStep("questions");
+          }
         }
       }
     },
@@ -90,8 +108,14 @@ export function useIntentRefine() {
           setRefinedQuery(result.refinedQuery);
           setStep("complete");
         } else {
-          setQuestions(result.questions);
-          setStep("questions");
+          const valid = sanitizeQuestions(result.questions);
+          if (valid.length === 0) {
+            setError("Received invalid follow-up questions. Please try again.");
+            setStep("idle");
+          } else {
+            setQuestions(valid);
+            setStep("questions");
+          }
         }
       }
     },

@@ -847,7 +847,7 @@ export default function IntentRefineStep({
   }
 
   /* ─── AI-generated questions ───────────────────────────────────────── */
-  if (!currentQuestion) return null;
+  if (!currentQuestion || !Array.isArray(currentQuestion.options) || currentQuestion.options.length === 0) return null;
 
   // Total progress dots = all questions across all visible rounds
   const progressDotCount = totalQuestions;

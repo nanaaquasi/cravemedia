@@ -457,7 +457,7 @@ function SearchContent() {
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">
                   {results.collectionTitle}
                 </h2>
-                <p className="text-sm text-purple-300/80 mb-2 flex items-center gap-1.5">
+                <p className="text-md md:text-lg text-purple-300/80 mb-2 flex items-center gap-1.5">
                   {results.collectionDescription}
                 </p>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -528,10 +528,10 @@ function SearchContent() {
                 </div>
                 <div className="mt-4">
                   <RefineBar
-                  onRefine={handleRefine}
-                  onRefresh={handleRefresh}
-                  isLoading={isLoading}
-                />
+                    onRefine={handleRefine}
+                    onRefresh={handleRefresh}
+                    isLoading={isLoading}
+                  />
                 </div>
               </aside>
 

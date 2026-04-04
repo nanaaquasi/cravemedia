@@ -455,6 +455,7 @@ export type Database = {
           query: string;
           review_text: string | null;
           sequence_rating: number | null;
+          source_collection_id: string | null;
           started_at: string | null;
           status: string | null;
           title: string;
@@ -484,6 +485,7 @@ export type Database = {
           query: string;
           review_text?: string | null;
           sequence_rating?: number | null;
+          source_collection_id?: string | null;
           started_at?: string | null;
           status?: string | null;
           title: string;
@@ -513,6 +515,7 @@ export type Database = {
           query?: string;
           review_text?: string | null;
           sequence_rating?: number | null;
+          source_collection_id?: string | null;
           started_at?: string | null;
           status?: string | null;
           title?: string;

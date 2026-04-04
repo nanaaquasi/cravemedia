@@ -27,6 +27,7 @@ import {
   Trash2,
   Star,
   ChevronDown,
+  ListOrdered,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
@@ -54,6 +55,10 @@ import {
 import { useLists } from "@/hooks/useLists";
 import Toast from "@/components/Toast";
 import { CRAVELIST_LABEL, CRAVELIST_LABEL_PLURAL } from "@/config/labels";
+import { JOURNEY_MAX_ITEMS } from "@/config/journey";
+import { JOURNEY_CURATING_MESSAGES } from "@/config/curating-loader-messages";
+import { useRotatingCuratingMessage } from "@/hooks/useRotatingCuratingMessage";
+import { promoteCollectionToJourney } from "@/app/actions/journey";
 import {
   DndContext,
   closestCenter,
@@ -94,6 +99,8 @@ interface CollectionDetailClientProps {
   existingCloneId?: string | null;
   contentStats?: { favorites_count: number; views_count: number };
   savesCount?: number;
+  /** Journey created from this collection via promote (one-time) */
+  linkedJourneyId?: string | null;
 }
 
 export default function CollectionDetailClient({
@@ -108,6 +115,7 @@ export default function CollectionDetailClient({
   existingCloneId = null,
   contentStats,
   savesCount = 0,
+  linkedJourneyId = null,
 }: CollectionDetailClientProps) {
   const [isPublic, setIsPublic] = useState(initialIsPublic);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -126,6 +134,12 @@ export default function CollectionDetailClient({
     collection.description ?? "",
   );
   const [isSavingCollection, setIsSavingCollection] = useState(false);
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+  const [isPromotingJourney, setIsPromotingJourney] = useState(false);
+  const { message: promoteLoaderMessage, index: promoteLoaderIndex } =
+    useRotatingCuratingMessage(JOURNEY_CURATING_MESSAGES, {
+      active: isPromotingJourney,
+    });
 
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -260,6 +274,23 @@ export default function CollectionDetailClient({
       setToastMessage(result.error);
     } else {
       router.push("/profile");
+    }
+  };
+
+  const handleConfirmPromoteJourney = async () => {
+    setIsPromoteModalOpen(false);
+    setIsPromotingJourney(true);
+    try {
+      const result = await promoteCollectionToJourney(collection.id);
+      if (result.error) {
+        setToastMessage(result.error);
+        return;
+      }
+      if (result.journeyId) {
+        router.push(`/journey/${result.journeyId}`);
+      }
+    } finally {
+      setIsPromotingJourney(false);
     }
   };
 
@@ -795,6 +826,25 @@ export default function CollectionDetailClient({
               <Plus className="w-3.5 h-3.5" />
               <span>Add Item</span>
             </button>
+            {orderedItems.length > 0 &&
+              (linkedJourneyId ? (
+                <Link
+                  href={`/journey/${linkedJourneyId}`}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border border-purple-500/50 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20"
+                >
+                  <ListOrdered className="w-3.5 h-3.5" />
+                  <span>View Journey</span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsPromoteModalOpen(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border border-purple-500/50 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20"
+                >
+                  <ListOrdered className="w-3.5 h-3.5" />
+                  <span>Create Journey</span>
+                </button>
+              ))}
             <button
               onClick={() => setIsDeleteModalOpen(true)}
               className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border bg-white/5 text-red-400/80 border-white/10 hover:bg-red-500/10 hover:text-red-400"
@@ -923,10 +973,10 @@ export default function CollectionDetailClient({
             Add movies, TV shows, books, and anime to build your curated list.
           </p>
           {isOwner && (
-              <button
-                onClick={() => setIsSearchModalOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
-              >
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 text-white font-semibold text-sm hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-purple-500/25"
+            >
               <Plus className="w-4 h-4" />
               Add Items
             </button>
@@ -948,6 +998,74 @@ export default function CollectionDetailClient({
         title={`Delete ${CRAVELIST_LABEL.toLowerCase()}?`}
         description={`Are you sure you want to delete "${collection.name}"? This cannot be undone.`}
       />
+
+      <Modal
+        isOpen={isPromoteModalOpen}
+        onClose={() => !isPromotingJourney && setIsPromoteModalOpen(false)}
+        maxSize="md"
+      >
+        <div className="pt-2">
+          <h3 className="text-lg font-semibold text-white mb-3">
+            Create journey from this list?
+          </h3>
+          {orderedItems.length > JOURNEY_MAX_ITEMS ? (
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              Journeys work best with up to {JOURNEY_MAX_ITEMS} items so each
+              transition feels meaningful. Craveo will select the best{" "}
+              {JOURNEY_MAX_ITEMS} from your {orderedItems.length} items to build
+              the most compelling arc, and explain its choices in the journey
+              description.
+            </p>
+          ) : (
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+              We&apos;ll turn your {CRAVELIST_LABEL.toLowerCase()} into a guided
+              journey: Craveo will reorder your titles for the best viewing
+              sequence and add transitions between each step. You can only do
+              this once per list.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsPromoteModalOpen(false)}
+              disabled={isPromotingJourney}
+              className="flex-1 py-2.5 rounded-xl font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmPromoteJourney}
+              className="flex-1 py-2.5 rounded-xl font-medium bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            >
+              Create journey
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {isPromotingJourney ? (
+        <div
+          className="fixed inset-0 z-120 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm px-6"
+          role="status"
+          aria-live="polite"
+          aria-label="Creating your journey"
+        >
+          <Loader2
+            className="w-12 h-12 animate-spin text-purple-400 mb-4"
+            aria-hidden
+          />
+          <p className="text-white text-lg md:text-2xl font-medium text-center">
+            Crafting your journey…
+          </p>
+          <p
+            key={promoteLoaderIndex}
+            className="text-zinc-400 text-md md:text-lg mt-2 text-center max-w-sm min-h-[2.75rem] px-2 animate-curate-text-fade"
+          >
+            {promoteLoaderMessage}
+          </p>
+        </div>
+      ) : null}
 
       {/* Review Modal */}
       <Modal
