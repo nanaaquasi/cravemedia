@@ -21,10 +21,12 @@ import {
   JourneyItemRaw,
   JourneyResponse,
   RecommendationResponse,
+  ReferenceTitle,
 } from "@/lib/types";
 import { getTypeLabel, VALID_CONTENT_TYPES } from "@/config/media-types";
 import { createSearchSession } from "@/app/actions/search";
 import { queryRequestsStreamingOnly } from "@/lib/query-utils";
+import { resolveReferenceTitlesFromQuery } from "@/lib/query-reference-resolver";
 
 /** Parse min year from query (e.g. "2015+", "after 2020", "from 2015") — returns null if none found */
 function parseMinYearFromQuery(query: string): number | null {
@@ -146,6 +148,73 @@ function filterByExcludedTitles<T extends { title?: string }>(
   });
 }
 
+const MAX_REFERENCE_TITLES = 5;
+const REFERENCE_DESCRIPTION_MAX = 600;
+const VALID_REFERENCE_TYPES = new Set(["movie", "tv", "book", "anime"]);
+
+/** Sanitize incoming reference titles from the client. */
+function sanitizeReferenceTitles(input: unknown): ReferenceTitle[] {
+  if (!Array.isArray(input)) return [];
+  const out: ReferenceTitle[] = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const title = typeof r.title === "string" ? r.title.trim() : "";
+    const type = typeof r.type === "string" ? r.type : "";
+    if (!title || !VALID_REFERENCE_TYPES.has(type)) continue;
+    const ref: ReferenceTitle = {
+      title: title.slice(0, 200),
+      type: type as ReferenceTitle["type"],
+    };
+    if (typeof r.year === "string" || typeof r.year === "number") {
+      ref.year = r.year;
+    }
+    if (typeof r.creator === "string" && r.creator.trim()) {
+      ref.creator = r.creator.trim().slice(0, 200);
+    }
+    if (typeof r.description === "string" && r.description.trim()) {
+      ref.description = r.description.trim().slice(0, REFERENCE_DESCRIPTION_MAX);
+    }
+    if (Array.isArray(r.genres)) {
+      ref.genres = r.genres
+        .filter((g): g is string => typeof g === "string" && g.trim().length > 0)
+        .slice(0, 12)
+        .map((g) => g.trim());
+    }
+    out.push(ref);
+    if (out.length >= MAX_REFERENCE_TITLES) break;
+  }
+  return out;
+}
+
+/** Heuristic: at least one reference is animated (anime or Western animation). */
+function referencesIncludeAnimatedRoute(refs: ReferenceTitle[]): boolean {
+  const animatedHints = ["animation", "animated", "anime", "cartoon"];
+  return refs.some((ref) => {
+    if (ref.type === "anime") return true;
+    const genres = (ref.genres ?? []).map((g) => g.toLowerCase());
+    if (genres.some((g) => animatedHints.some((h) => g.includes(h)))) {
+      return true;
+    }
+    const desc = (ref.description ?? "").toLowerCase();
+    return /\b(animated|animation|anime)\b/.test(desc);
+  });
+}
+
+/** Broaden type filter to include both tv & anime when reference is animated. */
+function broadenTypeForAnimatedReferences(
+  type: ContentType | ContentType[],
+  refs: ReferenceTitle[],
+): ContentType | ContentType[] {
+  if (refs.length === 0 || !referencesIncludeAnimatedRoute(refs)) return type;
+  const arr = Array.isArray(type) ? type : [type];
+  if (arr.includes("all")) return type;
+  const visualOnly = arr.every((t) => t === "tv" || t === "anime");
+  if (!visualOnly) return type;
+  const broadened = Array.from(new Set([...arr, "tv", "anime"])) as ContentType[];
+  return broadened.length === 1 ? broadened[0] : broadened;
+}
+
 export async function POST(request: NextRequest) {
   const rateLimitResult = await checkRecommendRateLimit(request.headers);
   if (!rateLimitResult.success) {
@@ -162,7 +231,8 @@ export async function POST(request: NextRequest) {
       type,
       mode = "list",
       excludeTitles = [],
-      maxOutputTokens = 3000, // Default value
+      referenceTitles: referenceTitlesRaw,
+      maxOutputTokens = 4500, // Default value
       temperature = 0.4, // Default value
       responseMimeType = "application/json", // Default value
     } = body as {
@@ -170,6 +240,7 @@ export async function POST(request: NextRequest) {
       type: ContentType | ContentType[];
       mode?: "list" | "journey";
       excludeTitles?: string[];
+      referenceTitles?: unknown;
       maxOutputTokens?: number;
       temperature?: number;
       responseMimeType?: string;
@@ -179,14 +250,20 @@ export async function POST(request: NextRequest) {
       ? excludeTitles.filter((t) => typeof t === "string" && t.trim().length > 0).slice(0, 50)
       : [];
 
+    const sanitizedClientReferenceTitles =
+      sanitizeReferenceTitles(referenceTitlesRaw);
+
     // Validate input
     if (!query || typeof query !== "string" || query.trim().length === 0) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    if (query.length > 500) {
+    // 2000 chars accommodates AI-refined queries (which expand the user's
+    // ≤200-char input into a 1–3 sentence detailed brief), plus optional
+    // "(refine: ...)" suffixes appended on subsequent refinements.
+    if (query.length > 2000) {
       return NextResponse.json(
-        { error: "Query must be 500 characters or less" },
+        { error: "Query must be 2000 characters or less" },
         { status: 400 },
       );
     }
@@ -204,29 +281,78 @@ export async function POST(request: NextRequest) {
     const trimmedQuery = query.trim();
     const streamingServiceOnly = queryRequestsStreamingOnly(trimmedQuery);
 
-    // Fetch user context for personalization (logged-in only)
-    let userContext: Awaited<ReturnType<typeof getUserRecommendContext>> = null;
+    // ── Run independent startup work in parallel ──────────────────────────
+    // - Auto-resolve reference titles from query text (TMDB+AniList lookups)
+    // - Authenticate user + fetch personalization context (Supabase)
+    // None of these depend on each other, so we kick them off concurrently.
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (user) {
-      userContext = await getUserRecommendContext(user.id);
-    }
+    const autoReferencePromise: Promise<ReferenceTitle[]> =
+      sanitizedClientReferenceTitles.length === 0
+        ? resolveReferenceTitlesFromQuery(trimmedQuery, type).catch(() => [])
+        : Promise.resolve([]);
 
+    const userContextPromise: Promise<
+      Awaited<ReturnType<typeof getUserRecommendContext>> | null
+    > = supabase.auth
+      .getUser()
+      .then(async ({ data }) => {
+        if (!data?.user) return null;
+        try {
+          return await getUserRecommendContext(data.user.id);
+        } catch {
+          return null;
+        }
+      })
+      .catch(() => null);
+
+    const [autoReferenceTitles, userContext] = await Promise.all([
+      autoReferencePromise,
+      userContextPromise,
+    ]);
+
+    const mergedReferenceTitles = [
+      ...sanitizedClientReferenceTitles,
+      ...autoReferenceTitles,
+    ];
+    const dedupedReferenceTitles: ReferenceTitle[] = [];
+    const seenRefKeys = new Set<string>();
+    for (const ref of mergedReferenceTitles) {
+      const key = normalizeTitleForMatch(ref.title);
+      if (!key || seenRefKeys.has(key)) continue;
+      seenRefKeys.add(key);
+      dedupedReferenceTitles.push(ref);
+    }
+    const sanitizedReferenceTitles = dedupedReferenceTitles;
+
+    // When references are animated, broaden tv/anime so both animation ecosystems
+    // can surface together.
+    const aiType = broadenTypeForAnimatedReferences(type, sanitizedReferenceTitles);
+
+    // Build a set of reference titles to exclude from results (the AI is told to
+    // avoid them, but we enforce it post-response too).
+    const referenceExcludeTitles = sanitizedReferenceTitles.map((r) => r.title);
+    const allExcludeTitles = Array.from(
+      new Set([...sanitizedExcludeTitles, ...referenceExcludeTitles]),
+    );
+
+    // Skip cache for explicit client references (e.g. Similar To modal) since
+    // the same query string can be paired with different selected references.
+    const hasClientReferences = sanitizedClientReferenceTitles.length > 0;
     const useCache =
-      sanitizedExcludeTitles.length === 0 && !userContext;
+      sanitizedExcludeTitles.length === 0 &&
+      !hasClientReferences &&
+      !userContext;
 
     if (mode === "journey") {
       // Journey mode — skip cache when excluding titles
       const cached = useCache
-        ? await getCachedJourneyAsync(trimmedQuery, type)
+        ? await getCachedJourneyAsync(trimmedQuery, aiType)
         : null;
       if (cached) {
         const { title: jt, description: jd } = ensureMultiTypeLabel(
           cached.journeyTitle,
           cached.description ?? "",
-          type,
+          aiType,
         );
         const filteredItems = (cached.items ?? []).filter(
           (item) => item.externalId != null,
@@ -240,10 +366,11 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const aiResponse = await generateJourney(trimmedQuery, type, {
-        excludeTitles: sanitizedExcludeTitles,
+      const aiResponse = await generateJourney(trimmedQuery, aiType, {
+        excludeTitles: allExcludeTitles,
         userContext: userContext ?? undefined,
         streamingServiceOnly: streamingServiceOnly ?? undefined,
+        referenceTitles: sanitizedReferenceTitles.length > 0 ? sanitizedReferenceTitles : undefined,
         maxOutputTokens,
         temperature,
         responseMimeType,
@@ -255,22 +382,22 @@ export async function POST(request: NextRequest) {
         aiResponse.difficultyProgression ??
         "";
 
-      const journeyTypeArray = Array.isArray(type) ? type : [type];
+      const journeyTypeArray = Array.isArray(aiType) ? aiType : [aiType];
       const isAnimeOnlyJourney =
-        type === "anime" ||
+        aiType === "anime" ||
         (journeyTypeArray.length === 1 && journeyTypeArray[0] === "anime");
       const filteredJourneyItems = filterByExcludedTitles(
         aiResponse.items,
-        sanitizedExcludeTitles,
+        allExcludeTitles,
       );
-      const hasExclusions = sanitizedExcludeTitles.length > 0;
+      const hasExclusions = allExcludeTitles.length > 0;
       const journeyItems = isAnimeOnlyJourney
         ? filteredJourneyItems.slice(0, hasExclusions ? 16 : 12)
         : filteredJourneyItems;
 
       const enrichmentPromises = journeyItems.map(
         async (raw: JourneyItemRaw): Promise<JourneyItem> => {
-          const typeArray = Array.isArray(type) ? type : [type];
+          const typeArray = Array.isArray(aiType) ? aiType : [aiType];
           const isAll = typeArray.includes("all");
 
           // Determine the most appropriate single type for enrichment.
@@ -379,7 +506,7 @@ export async function POST(request: NextRequest) {
         ensureMultiTypeLabel(
           journeyTitle,
           aiResponse.description ?? "",
-          type,
+          aiType,
         );
       const response: JourneyResponse = {
         journeyTitle: journeyTitleCorrected,
@@ -391,10 +518,10 @@ export async function POST(request: NextRequest) {
       };
 
       if (useCache) {
-        await setCachedJourneyAsync(trimmedQuery, type, response);
+        await setCachedJourneyAsync(trimmedQuery, aiType, response);
       }
 
-      createSearchSession(trimmedQuery, type, mode).catch((err) =>
+      createSearchSession(trimmedQuery, aiType, mode).catch((err) =>
         console.error("createSearchSession:", err),
       );
 
@@ -403,13 +530,13 @@ export async function POST(request: NextRequest) {
 
     // List mode (default) — skip cache when excluding titles
     const cached = useCache
-      ? await getCachedRecommendationAsync(trimmedQuery, type)
+      ? await getCachedRecommendationAsync(trimmedQuery, aiType)
       : null;
     if (cached) {
       const { title: ct, description: cd } = ensureMultiTypeLabel(
         cached.collectionTitle,
         cached.collectionDescription,
-        type,
+        aiType,
       );
       const filteredItems = (cached.items ?? []).filter(
         (item) => item.externalId != null,
@@ -426,30 +553,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const aiResponse = await generateRecommendations(trimmedQuery, type, {
-      excludeTitles: sanitizedExcludeTitles,
+    const aiResponse = await generateRecommendations(trimmedQuery, aiType, {
+      excludeTitles: allExcludeTitles,
       userContext: userContext ?? undefined,
       streamingServiceOnly: streamingServiceOnly ?? undefined,
+      referenceTitles: sanitizedReferenceTitles.length > 0 ? sanitizedReferenceTitles : undefined,
       maxOutputTokens,
       temperature,
       responseMimeType,
     });
 
-    const typeArray = Array.isArray(type) ? type : [type];
+    const typeArray = Array.isArray(aiType) ? aiType : [aiType];
     const isAnimeOnly =
-      type === "anime" || (typeArray.length === 1 && typeArray[0] === "anime");
+      aiType === "anime" || (typeArray.length === 1 && typeArray[0] === "anime");
     const filteredItems = filterByExcludedTitles(
       aiResponse.items,
-      sanitizedExcludeTitles,
+      allExcludeTitles,
     );
-    const hasExclusions = sanitizedExcludeTitles.length > 0;
+    const hasExclusions = allExcludeTitles.length > 0;
     const itemsToEnrich = isAnimeOnly
       ? filteredItems.slice(0, hasExclusions ? 24 : 12)
       : filteredItems;
 
     const enrichmentPromises = itemsToEnrich.map(
       async (item): Promise<EnrichedRecommendation> => {
-        const typeArray = Array.isArray(type) ? type : [type];
+        const typeArray = Array.isArray(aiType) ? aiType : [aiType];
         const isAll = typeArray.includes("all");
 
         // Determine the most appropriate single type for enrichment.
@@ -490,10 +618,13 @@ export async function POST(request: NextRequest) {
               aiPopularity: item.popularityScore,
             };
           } else {
+            // List path is high-volume — skip the IMDb upgrade (saves 1–2
+            // HTTP round-trips per item). Detail page can still upgrade.
             const enriched = await cachedEnrichMovieOrTV(
               item.title,
               item.year,
               effectiveType,
+              { skipImdbRating: true },
             );
             return {
               ...item,
@@ -543,7 +674,7 @@ export async function POST(request: NextRequest) {
       ensureMultiTypeLabel(
         aiResponse.collectionTitle,
         aiResponse.collectionDescription,
-        type,
+        aiType,
       );
     const response: RecommendationResponse = {
       collectionTitle: correctedTitle,
@@ -553,10 +684,10 @@ export async function POST(request: NextRequest) {
     };
 
     if (useCache) {
-      await setCachedRecommendationAsync(trimmedQuery, type, response);
+      await setCachedRecommendationAsync(trimmedQuery, aiType, response);
     }
 
-    createSearchSession(trimmedQuery, type, mode).catch((err) =>
+    createSearchSession(trimmedQuery, aiType, mode).catch((err) =>
       console.error("createSearchSession:", err),
     );
 

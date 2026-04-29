@@ -39,7 +39,7 @@ Guidelines:
 ["Weekend Binges", "Sci-Fi Masterpieces", "Tears & Tissues", "Rainy Day Reads"]`;
 
     const response = await anthropic.messages.create({
-      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-20250514",
+      model: process.env.CLAUDE_MODEL || "claude-sonnet-4-6",
       max_tokens: 150,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,

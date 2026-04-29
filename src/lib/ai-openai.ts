@@ -4,6 +4,7 @@ import {
   ContentType,
   JourneyAIResponse,
   PromoteItem,
+  ReferenceTitle,
   RefineAnswer,
   RefineResponse,
 } from "./types";
@@ -23,6 +24,7 @@ export async function generateWithOpenAI(
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
     streamingServiceOnly?: string | null;
+    referenceTitles?: ReferenceTitle[];
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -47,6 +49,7 @@ export async function generateWithOpenAI(
           excludeTitles: options.excludeTitles,
           userContext: options.userContext,
           streamingServiceOnly: options.streamingServiceOnly,
+          referenceTitles: options.referenceTitles,
         }),
       },
       { role: "user", content: query },
@@ -69,6 +72,7 @@ export async function generateJourneyWithOpenAI(
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
     streamingServiceOnly?: string | null;
+    referenceTitles?: ReferenceTitle[];
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -93,6 +97,7 @@ export async function generateJourneyWithOpenAI(
           excludeTitles: options.excludeTitles,
           userContext: options.userContext,
           streamingServiceOnly: options.streamingServiceOnly,
+          referenceTitles: options.referenceTitles,
         }),
       },
       { role: "user", content: query },

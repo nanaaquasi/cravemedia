@@ -22,6 +22,10 @@ import SaveCollectionModal from "@/components/SaveCollectionModal";
 import ShareModal from "@/components/ShareModal";
 import AddToCollectionModal from "@/components/AddToCollectionModal";
 import { VALID_CONTENT_TYPES } from "@/config/media-types";
+import {
+  readReferenceTitles,
+  storeReferenceTitles,
+} from "@/lib/reference-titles-storage";
 
 // ...
 
@@ -90,8 +94,10 @@ function SearchContent() {
       return;
     }
     const controller = new AbortController();
+    const referenceTitles = readReferenceTitles(q, contentType);
     fetchRecommendations(q, contentType, viewMode, {
       signal: controller.signal,
+      referenceTitles: referenceTitles.length > 0 ? referenceTitles : undefined,
     });
     return () => {
       controller.abort();
@@ -334,9 +340,14 @@ function SearchContent() {
     (feedback: string) => {
       if (!q) return;
       const refinedQuery = `${q} (refine: ${feedback})`;
+      // Carry "Similar To" reference titles into the refined query.
+      const existingRefs = readReferenceTitles(q, contentType);
+      if (existingRefs.length > 0) {
+        storeReferenceTitles(refinedQuery, contentType, existingRefs);
+      }
       updateSearchParams({ q: refinedQuery });
     },
-    [q, updateSearchParams],
+    [q, contentType, updateSearchParams],
   );
 
   const handleRefresh = useCallback(() => {
@@ -347,7 +358,11 @@ function SearchContent() {
         : viewMode === "journey" && journeyResults
           ? journeyResults.items.map((i) => i.title)
           : [];
-    fetchRecommendations(q, contentType, viewMode, { excludeTitles });
+    const referenceTitles = readReferenceTitles(q, contentType);
+    fetchRecommendations(q, contentType, viewMode, {
+      excludeTitles,
+      referenceTitles: referenceTitles.length > 0 ? referenceTitles : undefined,
+    });
   }, [q, contentType, viewMode, results, journeyResults, fetchRecommendations]);
 
   const handleMoreLikeThis = useCallback(

@@ -5,6 +5,7 @@ import {
   ContentType,
   JourneyResponse,
   RecommendationResponse,
+  ReferenceTitle,
 } from "@/lib/types";
 import { useLocalStorage } from "./useLocalStorage";
 
@@ -14,10 +15,19 @@ function getCacheKey(
   query: string,
   type: ContentType | ContentType[],
   mode: RecommendMode,
+  referenceTitles?: ReferenceTitle[],
 ): string {
   const q = query.trim().toLowerCase().replace(/\s+/g, " ");
   const typeStr = Array.isArray(type) ? [...type].sort().join(",") : type;
-  return `${mode}:${typeStr}:${q}`;
+  // Reference titles change the result, so include their titles in the cache key.
+  const refKey =
+    referenceTitles && referenceTitles.length > 0
+      ? `:refs=${[...referenceTitles]
+          .map((r) => r.title.toLowerCase())
+          .sort()
+          .join("|")}`
+      : "";
+  return `${mode}:${typeStr}:${q}${refKey}`;
 }
 
 const MAX_CACHED_SEARCHES = 20;
@@ -55,14 +65,16 @@ export function useRecommendations() {
       mode: RecommendMode = "list",
       options?: {
         excludeTitles?: string[];
+        referenceTitles?: ReferenceTitle[];
         signal?: AbortSignal;
       },
     ) => {
       if (!query.trim()) return;
 
       const excludeTitles = options?.excludeTitles ?? [];
+      const referenceTitles = options?.referenceTitles ?? [];
       const signal = options?.signal;
-      const cacheKey = getCacheKey(query, type, mode);
+      const cacheKey = getCacheKey(query, type, mode, referenceTitles);
       const useCache = excludeTitles.length === 0;
       const cached = useCache ? searchResultsCache.get(cacheKey) : undefined;
       if (cached) {
@@ -82,7 +94,13 @@ export function useRecommendations() {
         const response = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query, type, mode, excludeTitles }),
+          body: JSON.stringify({
+            query,
+            type,
+            mode,
+            excludeTitles,
+            ...(referenceTitles.length > 0 ? { referenceTitles } : {}),
+          }),
           signal,
         });
 

@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { X, Search, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { EnrichedRecommendation, ContentType } from "@/lib/types";
+import {
+  EnrichedRecommendation,
+  ContentType,
+  ReferenceTitle,
+} from "@/lib/types";
 import { SearchMode } from "@/components/SearchForm";
 import { getTypeLabel } from "@/config/media-types";
 
@@ -16,7 +20,20 @@ interface SimilarToModalProps {
     mode: SearchMode;
     type: ContentType;
     synthesizedQuery: string;
+    referenceTitles: ReferenceTitle[];
   }) => void;
+}
+
+/** Convert search-result items into reference titles for the recommendation API. */
+function toReferenceTitles(items: EnrichedRecommendation[]): ReferenceTitle[] {
+  return items.map((item) => ({
+    title: item.title,
+    type: item.type,
+    year: item.year,
+    creator: item.creator,
+    description: item.description,
+    genres: item.genres,
+  }));
 }
 
 const MAX_SELECTIONS = 3;
@@ -129,6 +146,7 @@ export default function SimilarToModal({
       mode,
       type: derivedType,
       synthesizedQuery,
+      referenceTitles: toReferenceTitles(selectedItems),
     });
   };
 
