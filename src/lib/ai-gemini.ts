@@ -4,6 +4,7 @@ import {
   ContentType,
   JourneyAIResponse,
   PromoteItem,
+  ReferenceTitle,
   RefineAnswer,
   RefineResponse,
 } from "./types";
@@ -23,6 +24,7 @@ export async function generateWithGemini(
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
     streamingServiceOnly?: string | null;
+    referenceTitles?: ReferenceTitle[];
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -44,6 +46,7 @@ export async function generateWithGemini(
         excludeTitles: options.excludeTitles,
         userContext: options.userContext,
         streamingServiceOnly: options.streamingServiceOnly,
+        referenceTitles: options.referenceTitles,
       }),
       maxOutputTokens: options.maxOutputTokens || 3000,
       temperature: options.temperature ?? 0.4,
@@ -66,6 +69,7 @@ export async function generateJourneyWithGemini(
     excludeTitles?: string[];
     userContext?: import("./types").UserRecommendContext;
     streamingServiceOnly?: string | null;
+    referenceTitles?: ReferenceTitle[];
     maxOutputTokens?: number;
     temperature?: number;
     responseMimeType?: string;
@@ -87,6 +91,7 @@ export async function generateJourneyWithGemini(
         excludeTitles: options.excludeTitles,
         userContext: options.userContext,
         streamingServiceOnly: options.streamingServiceOnly,
+        referenceTitles: options.referenceTitles,
       }),
       maxOutputTokens: options.maxOutputTokens || 4000,
       temperature: options.temperature ?? 0.4,

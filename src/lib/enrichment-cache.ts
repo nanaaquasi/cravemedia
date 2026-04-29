@@ -46,15 +46,19 @@ export async function cachedEnrichMovieOrTV(
   title: string,
   year: number,
   type: "movie" | "tv",
+  options?: { skipImdbRating?: boolean },
 ): Promise<EnrichmentResult> {
   const normalizedTitle = normalize(title);
   const yearNum = typeof year === "number" ? year : Number(year) || 0;
-  const key = `${REDIS_KEY_PREFIX}tmdb:${type}:${normalizedTitle}:${yearNum}`;
+  // Vary cache key by IMDb-mode so the fast-path response doesn't poison the
+  // detail-page cache (which expects IMDb-grade ratings).
+  const variant = options?.skipImdbRating ? ":noimdb" : "";
+  const key = `${REDIS_KEY_PREFIX}tmdb:${type}:${normalizedTitle}:${yearNum}${variant}`;
 
   const cached = await getCachedEnrichment(key);
   if (cached) return cached;
 
-  const result = await enrichMovieOrTV(title, year, type);
+  const result = await enrichMovieOrTV(title, year, type, options);
   await setCachedEnrichment(key, result);
   return result;
 }

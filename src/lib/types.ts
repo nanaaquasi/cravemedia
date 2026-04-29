@@ -146,3 +146,17 @@ export interface UserRecommendContext {
   recentlyWatched: Array<{ title: string; type: string; rating?: number }>;
   recentlyRated: Array<{ title: string; rating: number }>;
 }
+
+/**
+ * A reference title the user wants "more like X" recommendations for.
+ * Carries enough metadata for the AI to match medium/format/themes even when
+ * the title isn't in its training data (e.g. very recent releases).
+ */
+export interface ReferenceTitle {
+  title: string;
+  type: "movie" | "tv" | "book" | "anime";
+  year?: string | number | null;
+  creator?: string | null;
+  description?: string | null;
+  genres?: string[] | null;
+}

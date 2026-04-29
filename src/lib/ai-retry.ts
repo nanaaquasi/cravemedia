@@ -24,13 +24,22 @@ function isRetryable(err: unknown): boolean {
 /**
  * Wraps an async function with retry logic for rate limit (429) and
  * temporary overload (503) errors. Uses exponential backoff.
+ *
+ * Pass a custom `isRetryable` predicate to override which errors are retried
+ * (e.g. when a fallback layer wants to bypass retries on quota errors and
+ * jump to a different provider instead).
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  options?: { maxRetries?: number; baseDelayMs?: number },
+  options?: {
+    maxRetries?: number;
+    baseDelayMs?: number;
+    isRetryable?: (err: unknown) => boolean;
+  },
 ): Promise<T> {
   const maxRetries = options?.maxRetries ?? MAX_RETRIES;
   const baseDelayMs = options?.baseDelayMs ?? BASE_DELAY_MS;
+  const retryPredicate = options?.isRetryable ?? isRetryable;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -40,7 +49,7 @@ export async function withRetry<T>(
       lastError = err;
       if (
         attempt < maxRetries &&
-        isRetryable(err)
+        retryPredicate(err)
       ) {
         const delay = baseDelayMs * Math.pow(2, attempt);
         console.warn(

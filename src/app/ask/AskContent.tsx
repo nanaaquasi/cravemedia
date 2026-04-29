@@ -4,7 +4,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { track } from "@vercel/analytics";
-import { ContentType, EnrichedRecommendation } from "@/lib/types";
+import {
+  ContentType,
+  EnrichedRecommendation,
+  ReferenceTitle,
+} from "@/lib/types";
 import { useIntentRefine } from "@/hooks/useIntentRefine";
 import SearchForm, { SearchMode } from "@/components/SearchForm";
 import IntentRefineStep from "@/components/IntentRefineStep";
@@ -13,6 +17,7 @@ import HowItWorksModal from "@/components/HowItWorksModal";
 import { Play } from "lucide-react";
 import { ENABLED_MEDIA_TYPES } from "@/config/media-types";
 import { ensureQueryReflectsTypes } from "@/lib/query-utils";
+import { storeReferenceTitles } from "@/lib/reference-titles-storage";
 import {
   HERO_POSTERS,
   PLACEHOLDER_PROMPTS,
@@ -49,6 +54,9 @@ export default function AskContent() {
   );
   const [pendingQuery, setPendingQuery] = useState("");
   const [pendingMode, setPendingMode] = useState<SearchMode>("list");
+  const [pendingReferenceTitles, setPendingReferenceTitles] = useState<
+    ReferenceTitle[]
+  >([]);
   const [showTypeSelect, setShowTypeSelect] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
   const [isSimilarToModalOpen, setIsSimilarToModalOpen] = useState(false);
@@ -66,6 +74,7 @@ export default function AskContent() {
   const handleSubmit = useCallback((query: string) => {
     track("Search", { query: query.trim() });
     setPendingQuery(query);
+    setPendingReferenceTitles([]);
     const inferred = inferContentTypesFromQuery(query);
     setInitialTypeSelection(inferred);
     setContentType(inferred);
@@ -86,6 +95,10 @@ export default function AskContent() {
       let query = refine.refinedQuery || pendingQuery;
       query = ensureQueryReflectsTypes(query, contentType);
 
+      if (pendingReferenceTitles.length > 0) {
+        storeReferenceTitles(query, contentType, pendingReferenceTitles);
+      }
+
       const typeStr = Array.isArray(contentType)
         ? contentType.join(",")
         : contentType;
@@ -99,6 +112,7 @@ export default function AskContent() {
     pendingQuery,
     contentType,
     pendingMode,
+    pendingReferenceTitles,
     router,
     isNavigating,
   ]);
@@ -129,10 +143,12 @@ export default function AskContent() {
       mode: SearchMode;
       type: ContentType;
       synthesizedQuery: string;
+      referenceTitles: ReferenceTitle[];
     }) => {
       setPendingQuery(params.synthesizedQuery);
       setContentType(params.type);
       setPendingMode(params.mode);
+      setPendingReferenceTitles(params.referenceTitles);
       setShowTypeSelect(false);
       setShowModeSelect(false);
       setInitialTypeSelection(params.type);
@@ -155,6 +171,7 @@ export default function AskContent() {
   const handleCancelRefine = useCallback(() => {
     refine.reset();
     setPendingQuery("");
+    setPendingReferenceTitles([]);
     setShowTypeSelect(false);
     setShowModeSelect(false);
     setIsNavigating(false);
@@ -168,14 +185,26 @@ export default function AskContent() {
     setShowModeSelect(false);
     setIsNavigating(true);
 
-    let query = ensureQueryReflectsTypes(pendingQuery, contentType);
+    const query = ensureQueryReflectsTypes(pendingQuery, contentType);
+
+    if (pendingReferenceTitles.length > 0) {
+      storeReferenceTitles(query, contentType, pendingReferenceTitles);
+    }
+
     const typeStr = Array.isArray(contentType)
       ? contentType.join(",")
       : contentType;
     const params = new URLSearchParams({ q: query, type: typeStr });
     if (pendingMode === "journey") params.set("mode", "journey");
     router.push(`/search?${params.toString()}`);
-  }, [refine, pendingQuery, contentType, pendingMode, router]);
+  }, [
+    refine,
+    pendingQuery,
+    contentType,
+    pendingMode,
+    pendingReferenceTitles,
+    router,
+  ]);
 
   const isRefining =
     showTypeSelect || showModeSelect || refine.step !== "idle" || isNavigating;

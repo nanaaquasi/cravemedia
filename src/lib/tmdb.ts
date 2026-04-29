@@ -846,6 +846,15 @@ export async function enrichMovieOrTV(
   title: string,
   year: number,
   type: "movie" | "tv",
+  options?: {
+    /**
+     * Skip the IMDb-rating lookup (saves 1–2 extra HTTP round-trips per item:
+     * `/external_ids` on TMDB + OMDB). The TMDB rating is used instead.
+     * Useful for the high-volume list path; detail pages can still upgrade
+     * to IMDb later via `getImdbRatingForTmdbId`.
+     */
+    skipImdbRating?: boolean;
+  },
 ): Promise<{
   posterUrl: string | null;
   rating: number | null;
@@ -880,20 +889,22 @@ export async function enrichMovieOrTV(
       Math.round((result.vote_average || details.vote_average) * 10) / 10;
     let ratingSource: "imdb" | "tmdb" = "tmdb";
 
-    try {
-      const extData = await tmdbFetch<{ imdb_id?: string | null }>(
-        `${type === "movie" ? "/movie" : "/tv"}/${result.id}/external_ids`,
-      );
-      const imdbId = extData?.imdb_id?.trim();
-      if (imdbId?.startsWith("tt")) {
-        const imdbRating = await getImdbRating(imdbId);
-        if (imdbRating != null) {
-          rating = imdbRating;
-          ratingSource = "imdb";
+    if (!options?.skipImdbRating) {
+      try {
+        const extData = await tmdbFetch<{ imdb_id?: string | null }>(
+          `${type === "movie" ? "/movie" : "/tv"}/${result.id}/external_ids`,
+        );
+        const imdbId = extData?.imdb_id?.trim();
+        if (imdbId?.startsWith("tt")) {
+          const imdbRating = await getImdbRating(imdbId);
+          if (imdbRating != null) {
+            rating = imdbRating;
+            ratingSource = "imdb";
+          }
         }
+      } catch {
+        // Keep TMDB fallback
       }
-    } catch {
-      // Keep TMDB fallback
     }
 
     return {
